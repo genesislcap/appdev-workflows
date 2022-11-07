@@ -1,0 +1,83 @@
+name: Lint On Commit
+
+on:
+  push
+    
+env:
+  REPO_NAME: ${{ github.event.repository.name }}
+    
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x]
+    
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      
+      - name: Env Setup
+        run:  |
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
+      
+      - name: Sonar Setup
+        run:  |
+              echo "Sonar Setup:"
+              date
+              
+              echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
+              echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
+      - name: Artifactory Setup
+        run: |
+              echo "Artifactory:"
+              date
+              #chmod 664 /usr/local/etc/npmrc
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:username ${{secrets.JFROG_USERNAME}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email ${{secrets.JFROG_EMAIL}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              cat ~/.npmrc
+              
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/github-packages/
+          scope: '@genesislcap'
+      
+      - name: Cache Bootstrap
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+        id:   cache-bootstrap
+        
+      - uses:  actions/cache@v2
+        with:
+          path: ${{ steps.cache-bootstrap.outputs.dir }}
+          key: ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
+            ${{ runner.os }}- 
+          
+      - name: Bootstrap
+        run: |
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:username ${{secrets.JFROG_USERNAME}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email ${{secrets.JFROG_EMAIL}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config get
+              npm run bootstrap
+          
+      - name: Install
+        run:  npm install
+          
+      - name: ESLint
+        run: npm run lint:eslint:all
