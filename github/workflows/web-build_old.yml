@@ -3,7 +3,8 @@
 name: Web Deploy
 
 on:
-  workflow_call:
+  release:
+    branches: [ develop1 ]
     
 env:
   REPO_NAME: ${{ github.event.repository.name }}
@@ -30,9 +31,9 @@ jobs:
       - name: Env Setup
         run:  |
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "VERSION=$( git describe --tag --abbrev=0)" >> $GITHUB_ENV
+              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags --abbrev=0).zip" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
       
       - name: Sonar Setup
         run:  |
@@ -57,47 +58,59 @@ jobs:
           registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/github-packages/
           scope: '@genesislcap'
           
-      - name: Install and NPM Config
+      - name: Bootstrap
+        if: steps.cache-bootstrap.outputs.cache-hit != 'true'
         run:  |
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:username ${{secrets.JFROG_USERNAME}}
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth ${{secrets.JFROG_NPM_AUTH_TOKEN}}
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email ${{secrets.JFROG_EMAIL}}
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              echo "**************************************************************************************************************"
-              echo "Install:"
-              echo "**************************************************************************************************************"
-              npm i
+              echo "Bootstrap:"
+              date
+              npm run bootstrap -ddd
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}    
       
-    
+      - name: Cache Bootstrap
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+        id:   cache-bootstrap
+        
+      - uses:  actions/cache@v2
+        with:
+          path: ${{ steps.cache-bootstrap.outputs.dir }}
+          key: ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
+            ${{ runner.os }}- 
+          
+      - name: Install
+        run:  npm install
+          
       - name: Build
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
         run: |
               echo "Building Prod:"
               echo $(pwd)
               date
               npm run build
-              pwd
-              ls -larth
-              echo "**************************************************************************************************************"
-              ls -lrt www
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-            
+          
+      - name: ESLint
+        run: npm run lint:eslint:all
+          
       - name: Package and Publish
         run:  |
               echo "Package:"
               date
               sudo apt-get install zip unzip
               echo $(pwd)
-              ln -s ./src/ src
-              cd ./www/build
-              ls
-              pwd
+              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
+              cd packages/apps/${{ env.PRODUCT_NAME }}/dist
               zip -r ${{ env.OUTPUT }} *
-              ls 
               pwd
               echo ${{ env.OUTPUT }}
               ls | grep zip
-              #curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
