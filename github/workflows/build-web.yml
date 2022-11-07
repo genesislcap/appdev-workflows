@@ -4,6 +4,17 @@ name: Web Deploy
 
 on:
   workflow_call:
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JFROG_NPM_AUTH_TOKEN:
+        required: true
+      GPR_READ_TOKEN:
+        required: true
     
 env:
   REPO_NAME: ${{ github.event.repository.name }}
