@@ -57,7 +57,7 @@ jobs:
               echo "Server Version: ${{ env.SERVER_VERSION }}"
               if [[ -z  "${{ env.CLIENT_NAME }}" ]]
               then
-                echo "Check your Tag naming convention. It should be "CLIENTNAME_[a-zA-Z]-[0-9].[0-9].[0-9]"
+                echo "Check your Tag naming convention. It should be CLIENTNAME_[a-zA-Z]-[0-9].[0-9].[0-9]"
                 exit 1
               fi
               
