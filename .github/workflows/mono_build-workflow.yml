@@ -15,10 +15,7 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: true
       GPR_READ_TOKEN:
-        required: true
-      GITHUB_TOKEN:
-        required: true
-        
+        required: true        
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -61,7 +58,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3.7.3
         with:
           publish_dir: ../client/web/dist
-          github_token: ${{secrets.GITHUB_TOKEN}}
+          github_token: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Env Set-Up
         run:  |
