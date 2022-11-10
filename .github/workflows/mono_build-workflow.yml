@@ -18,8 +18,7 @@ env:
 
 jobs:
   build:
-    env:
-          REPO_NAME: ${{ github.event.repository.name }}
+    env:          
           JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
           JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
           JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
