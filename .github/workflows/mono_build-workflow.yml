@@ -18,6 +18,8 @@ on:
         required: true        
       GRADLE_PROPERTIES:
         required: true
+      SLACK_WEBHOOK:
+        required: true
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
