@@ -1,19 +1,29 @@
 name: gradle-Build-workflow
 on:
-  push:
-    tags:
-    - '*'
-    # branches:
-    # - "DCD-244"
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+    
 env:
+  REPO_NAME: ${{ inputs.repo_name }}
+
+jobs:
+  build:
+    env:
           REPO_NAME: ${{ github.event.repository.name }}
           JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
           JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
           JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
           JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-jobs:
-  build:
-
     runs-on: ubuntu-latest
 
     strategy:
