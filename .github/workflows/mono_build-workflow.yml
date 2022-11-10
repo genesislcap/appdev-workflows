@@ -16,6 +16,8 @@ on:
         required: true
       GPR_READ_TOKEN:
         required: true
+      GITHUB_TOKEN:
+        required: true
         
     
 env:
@@ -23,11 +25,7 @@ env:
 
 jobs:
   build:
-    env:          
-          JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
-          JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
-          JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-          JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+  
     runs-on: ubuntu-latest
 
     strategy:
