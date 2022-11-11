@@ -119,7 +119,7 @@ jobs:
               # echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-$(grep "site_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g').zip" >> $GITHUB_ENV
               echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
               # echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               # echo "SERVER_VERSION=$(grep "server_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               echo "AUTH_VERSION=$(grep "genesis_fw_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
