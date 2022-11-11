@@ -43,36 +43,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-      - name: Environment Variables
-        run: |
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
-              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              # echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-$(grep "site_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g').zip" >> $GITHUB_ENV
-              echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
-              # echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-              # echo "SERVER_VERSION=$(grep "server_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "AUTH_VERSION=$(grep "genesis_fw_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "GENESIS_VERSION=$(grep "genesis_auth_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "WEB_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
-              echo "SERVER_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
-                
-              
-      - name: check env variables
-        run: |
-              echo "$(git describe --tags)"
-              echo "Product Name: ${{ env.PRODUCT_NAME }}"
-              echo "Version: ${{ env.VERSION }}"
-              echo "Product Base: ${{ env.PRODUCT_BASE }}"
-              echo "Output: ${{ env.OUTPUT }}"
-              echo "Client Directory: ${{ env.CLIENT_DIR }}"
-              echo "Client Name is : ${{ env.CLIENT_NAME }}"
-              echo "Web Version: ${{ env.WEB_VERSION }}"
-              echo "Server Version: ${{ env.SERVER_VERSION }}"
-              echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
-              echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"   
+          
       - name: Bootstrap
         working-directory: ./client
         run: npm run bootstrap
@@ -140,7 +111,36 @@ jobs:
 
      
 
-      
+      - name: Environment Variables
+        run: |
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              # echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-$(grep "site_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g').zip" >> $GITHUB_ENV
+              echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
+              # echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+              # echo "SERVER_VERSION=$(grep "server_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              echo "AUTH_VERSION=$(grep "genesis_fw_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              echo "GENESIS_VERSION=$(grep "genesis_auth_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              echo "WEB_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "SERVER_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+                
+              
+      - name: check env variables
+        run: |
+              echo "$(git describe --tags)"
+              echo "Product Name: ${{ env.PRODUCT_NAME }}"
+              echo "Version: ${{ env.VERSION }}"
+              echo "Product Base: ${{ env.PRODUCT_BASE }}"
+              echo "Output: ${{ env.OUTPUT }}"
+              echo "Client Directory: ${{ env.CLIENT_DIR }}"
+              echo "Client Name is : ${{ env.CLIENT_NAME }}"
+              echo "Web Version: ${{ env.WEB_VERSION }}"
+              echo "Server Version: ${{ env.SERVER_VERSION }}"
+              echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
+              echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
       - name: Download server, web and latest auth/genesis-distribution from JFROG
         run: |
              mkdir web_downloads
