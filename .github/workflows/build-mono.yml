@@ -127,7 +127,7 @@ jobs:
               echo "WEB_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "HOME=$(pwd)" >> $GITHUB_ENV
-              echo "SITE_OUTPUT=$(echo "${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}") >> $GITHUB_ENV"
+              echo "SITE_OUTPUT=$(echo "${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}")" >> $GITHUB_ENV
               
       - name: check env variables
         run: |
