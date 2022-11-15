@@ -149,7 +149,7 @@ jobs:
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
              cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/* site-specific
-             zip -r ${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }} site-specific/*
+             zip -r "${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}" site-specific/*
              echo $(pwd)
              ls -a
             
