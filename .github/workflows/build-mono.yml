@@ -146,22 +146,15 @@ jobs:
       - name: Package + Deploy Site
         run: |
              sudo apt-get install zip
-             cd /home/runner/work/edcm/edcm//server/jvm/
+             cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
-             cp -R edcm-site-specific/src/main/resources/* site-specific
+             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* site-specific
              zip -r site-specific site-specific/*
              echo $(pwd)
              ls -a
             
-             #  sudo apt-get install zip
-             #  cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
-             #  zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
-             #  echo $(pwd)
-             #  ls -a
-             #  mv  *.zip ${{ env.HOME }}/files_for_rpm/tmp/server
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T *.zip
-             #  curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUTSITE}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUTSITE}}
-
+            
       - name: assign module versions
         run: |
              echo "AUTH_VERSION=$(echo "$(echo "$(grep "implementation" server/jvm/${{ env.PRODUCT_NAME }}-deploy/build.gradle.kts -A 5 | grep "auth" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
@@ -180,7 +173,7 @@ jobs:
              #download server into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
              #download server into server_downloads folder
-             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/site/${{env.CLIENT_NAME}}/edcm-0.0.4".zip
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/site/"${{ env.CLIENT_NAME }}"/edcm-0.0.4.zip
             
             
              #download modules into server_downloads folder
