@@ -158,7 +158,7 @@ jobs:
              cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/* site-specific
              zip -r  ${{ env.SITE_OUTPUT }} site-specific/*
              echo $(pwd)
-             ls  | grep "bnym-site-specific-5.0.0.zip"
+             ls  -a
             
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T ${{ env.SITE_OUTPUT }}.zip
             
