@@ -127,6 +127,7 @@ jobs:
               echo "WEB_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "HOME=$(pwd)" >> $GITHUB_ENV
+              echo "SITE_OUTPUT=$(echo ${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}) >> $GITHUB_ENV"
               
       - name: check env variables
         run: |
@@ -149,9 +150,9 @@ jobs:
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
              cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/* site-specific
-             zip -r site-specific-version  site-specific/*
+             zip -r  ${{ env.SITE_OUTPUT }} site-specific/*
              echo $(pwd)
-             ls -a
+             ls -a ${{ env.SITE_OUTPUT }}
             
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T *.zip
             
