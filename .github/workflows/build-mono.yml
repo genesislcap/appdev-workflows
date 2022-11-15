@@ -148,7 +148,7 @@ jobs:
              sudo apt-get install zip
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
-             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* site-specific
+             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* ${{ env.OUTPUTSITE }}
              zip -r ${{ env.OUTPUTSITE }} site-specific/*
              echo $(pwd)
              ls -a
@@ -180,6 +180,10 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/genesis-distribution/"${{ env.GENESIS_VERSION }}"/genesis-distribution-"${{ env.GENESIS_VERSION }}"-bin.zip
              #download server into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
+             #download server into server_downloads folder
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/site/${{env.CLIENT_NAME}}/edcm-0.0.4".zip
+            
+            
              #download modules into server_downloads folder
              cd server/jvm/snt
              echo "this is the present directory: $(pwd)"
