@@ -142,7 +142,7 @@ jobs:
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
        
-       - name: Package + Deploy Site
+      - name: Package + Deploy Site
         run: |
              sudo apt-get install zip
              cd ${{ env.HOME }}//server/jvm/
@@ -151,8 +151,8 @@ jobs:
              zip -r site-specific site-specific/*
              echo $(pwd)
              ls -a
-            #  mv  *.zip ${{ env.HOME }}/files_for_rpm/tmp/server
-           # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/" -T *.zip
+             #  mv  *.zip ${{ env.HOME }}/files_for_rpm/tmp/server
+             # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/" -T *.zip
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUTSITE}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUTSITE}}
 
       - name: assign module versions
