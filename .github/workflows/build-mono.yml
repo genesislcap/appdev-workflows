@@ -160,7 +160,7 @@ jobs:
              echo $(pwd)
              ls -a ${{ env.SITE_OUTPUT }}
             
-             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T *.zip
+             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T ${{ env.SITE_OUTPUT }}.zip
             
       - name: assign module versions
         run: |
