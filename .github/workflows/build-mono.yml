@@ -132,7 +132,7 @@ jobs:
       - name: Environment Variables1
         run: |
               # echo "GENESIS_VERSION=$(grep "genesis_auth_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "SITE_OUTPUT=$(echo "${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}")" >> $GITHUB_ENV
+              echo "SITE_OUTPUT=$(echo "${{ env.CLIENT_NAME }}-site-specific-${{ env.SERVER_VERSION }}.zip")" >> $GITHUB_ENV
                       
       - name: check env variables
         run: |
