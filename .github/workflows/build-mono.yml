@@ -148,8 +148,8 @@ jobs:
              sudo apt-get install zip
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
-             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* edcm-site-specific-BNYM_4.0.0
-             zip -r edcm-site-specific-BNYM_4.0.0 site-specific/*
+             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* site-specific
+             zip -r ${{ env.PRODUCT_NAME }}-site-specific-${{ env.SERVER_VERSION }} site-specific/*
              echo $(pwd)
              ls -a
             
@@ -170,8 +170,7 @@ jobs:
       - name: Download server, web and latest auth/genesis-distribution from JFROG
         run: |
              mkdir web_downloads
-             mkdir server_downloads
-             cp ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* server_downloads
+             mkdir server_downloads             
              echo "current directory: $(pwd)"
              echo "files in pwd: $(ls -a)"
              #download auth distribution into server_downloads folder
