@@ -148,8 +148,8 @@ jobs:
              sudo apt-get install zip
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
-             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* ${{ env.OUTPUTSITE }}
-             zip -r ${{ env.OUTPUTSITE }} site-specific/*
+             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* edcm-site-specific-BNYM_4.0.0
+             zip -r edcm-site-specific-BNYM_4.0.0 site-specific/*
              echo $(pwd)
              ls -a
             
