@@ -153,11 +153,11 @@ jobs:
              echo $(pwd)
              ls -a
             
-            #  sudo apt-get install zip
-            #  cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
-            #  zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
-            #  echo $(pwd)
-            #  ls -a
+             #  sudo apt-get install zip
+             #  cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             #  zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
+             #  echo $(pwd)
+             #  ls -a
              #  mv  *.zip ${{ env.HOME }}/files_for_rpm/tmp/server
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/" -T *.zip
              #  curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUTSITE}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUTSITE}}
