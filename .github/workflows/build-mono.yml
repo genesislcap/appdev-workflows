@@ -143,6 +143,7 @@ jobs:
               echo "Server Version: ${{ env.SERVER_VERSION }}"
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
+              echo "SITE_OUTPUT Version: ${{ env.SITE_OUTPUT }}"
        
       - name: Package + Deploy Site
         run: |
