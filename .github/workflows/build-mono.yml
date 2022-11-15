@@ -116,17 +116,17 @@ jobs:
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              # echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
+              echo "OUTPUTSITE=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-$(grep "site_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g').zip" >> $GITHUB_ENV
               echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
               # echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               # echo "SERVER_VERSION=$(grep "server_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "AUTH_VERSION=$(grep "genesis_fw_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              echo "GENESIS_VERSION=$(grep "genesis_auth_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              # echo "AUTH_VERSION=$(grep "genesis_fw_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              # echo "GENESIS_VERSION=$(grep "genesis_auth_version" $(find . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               echo "WEB_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
-                
+              echo "HOME=$(pwd)" >> $GITHUB_ENV
               
       - name: check env variables
         run: |
@@ -141,11 +141,30 @@ jobs:
               echo "Server Version: ${{ env.SERVER_VERSION }}"
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
+       
+       - name: Package + Deploy Site
+        run: |
+             sudo apt-get install zip
+             cd ${{ env.HOME }}//server/jvm/
+             mkdir site-specific
+             cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* site-specific
+             zip -r site-specific site-specific/*
+             echo $(pwd)
+             ls -a
+             mv  *.zip ${{ env.HOME }}/files_for_rpm/tmp/server
+           # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/" -T *.zip
+             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUTSITE}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUTSITE}}
+
+      - name: assign module versions
+        run: |
+             echo "AUTH_VERSION=$(echo "$(echo "$(grep "implementation" server/jvm/demo-deploy/build.gradle.kts -A 5 | grep "auth" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
+             echo "GENESIS_VERSION=$(echo "$(echo "$(grep "implementation" server/jvm/demo-deploy/build.gradle.kts -A 5 | grep "genesis-distribution" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
+
       - name: Download server, web and latest auth/genesis-distribution from JFROG
         run: |
              mkdir web_downloads
              mkdir server_downloads
-             #cp ${{ env.PRODUCT_BASE }}/site/${{ env.PRODUCT_NAME }}/${{env.OUTPUT}} server_downloads
+             cp ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUT}} server_downloads
              echo "current directory: $(pwd)"
              echo "files in pwd: $(ls -a)"
              #download auth distribution into server_downloads folder
