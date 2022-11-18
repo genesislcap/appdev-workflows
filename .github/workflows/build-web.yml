@@ -39,7 +39,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [${{ inputs.node_ver }}]
+        node-version: ${{ inputs.node_ver }}
     
     steps:
       - uses: actions/checkout@v2
