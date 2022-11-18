@@ -9,6 +9,9 @@ on:
       repo_name:
         required: true
         type: string
+      node_ver:
+        required: true
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
@@ -36,7 +39,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [16.x]
+        node-version: [${{ inputs.node_ver }}]
     
     steps:
       - uses: actions/checkout@v2
