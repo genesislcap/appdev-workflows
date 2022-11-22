@@ -113,7 +113,7 @@ jobs:
       
       - name: Publish to Artifactory 
         run: |
-           if ${{ inputs.repo_name }} == tam2-server; then
+           if: ${{ inputs.repo_name }} == 'tam2-server' then
             # cd ${{ env.PRODUCT_BASE }}/tam-distribution/target/
             # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             
