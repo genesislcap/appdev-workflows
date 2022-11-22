@@ -120,11 +120,11 @@ jobs:
             # cd ../..
             # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
             echo "flag set to true"
-          else
+           else
             # cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
             # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             echo "flag set to false"
-          fi
+           fi
      
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
