@@ -16,7 +16,8 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
-    
+      SLACK_WEBHOOK:
+        required: true
 env:
   REPO_NAME: ${{ inputs.repo_name }}
     
@@ -110,15 +111,10 @@ jobs:
            
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
-      
-      # - name: Publish to Artifactory  TAM        
-      #   if: ${{ inputs.repo_name == 'tam2-server' }}
-      #   run: |
-      #    echo "flag set to true"
-      # - name: Publish to Artifactory 
-      #    if: ${{ inputs.repo_name != 'tam2-server' }}
-      #   run: |
-      #    echo "flag set to false"
+            
+            # cd ../..
+            # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
+     
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
