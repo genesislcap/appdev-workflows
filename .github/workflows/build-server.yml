@@ -111,12 +111,12 @@ jobs:
       #       cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
       #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
       
-      - name: Publish to Artifactory  TAM
-        if: ${{ inputs.repo_name }} == 'tam2-server'
+      - name: Publish to Artifactory  TAM        
+        if: ${{ inputs.repo_name == 'tam2-server' }}
         run: |
          echo "flag set to true"
       - name: Publish to Artifactory 
-        if: ${{ inputs.repo_name }} != 'tam2-server'
+        if: ${{ inputs.repo_name != 'tam2-server' }}
         run: |
          echo "flag set to false"
       - name: Slack Notification
