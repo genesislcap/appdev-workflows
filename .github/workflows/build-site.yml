@@ -119,6 +119,7 @@ jobs:
              cd ../server_downloads   
              else
               echo "Product Name: ${{ env.PRODUCT_NAME }}"
+              cd ../..
               cd server_downloads
              fi
              
