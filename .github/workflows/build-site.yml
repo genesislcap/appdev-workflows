@@ -49,7 +49,7 @@ jobs:
               
       - name: Environment Variables1
         run: |
-              echo "WEB_VERSION=$(grep "web_version" $(find ${env.CLIENTDIR}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+              echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               
       - name: check env variables
@@ -104,7 +104,7 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"
-             if: ${{ env.WEB_VERSION  != '' }}             
+             if[[ ${{ env.WEB_VERSION  != '' }} ]]            
               then
              #download web
              echo "PWD after module download: $(pwd)"
