@@ -105,7 +105,7 @@ jobs:
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"
              
-             if[ ${{ env.WEB_VERSION  != '' }} ]          
+             if [[ "$PRODUCT_NAME" != *"tam"* ]]
              then
              #download web
              echo "PWD after module download: $(pwd)"
@@ -117,6 +117,8 @@ jobs:
              unzip \*.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
                 
+             else
+              echo "Product Name: ${{ env.PRODUCT_NAME }}"
              fi
              
              cd ../server_downloads
