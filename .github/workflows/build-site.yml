@@ -53,7 +53,7 @@ jobs:
       - name: Environment Variables1
         run: |
               # echo "WEB_VERSION=$(grep "web_version" $(find ${CLIENTDIR} -name "product.yml" ) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-              cho "SERVER_VERSION=$(grep "server_version" $(tam2-site-specific-arden/snt/product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              echo "SERVER_VERSION=$(grep "server_version" $(tam2-site-specific-arden/snt/product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               # echo "SERVER_VERSION=$(echo "$(echo "$(grep "server_version" tam2-site-specific-arden/snt/product.yml -A 5 | cut -d"\"" -f2)")")" >> $GITHUB_ENV
 
       - name: check env variables
