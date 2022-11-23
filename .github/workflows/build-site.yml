@@ -104,6 +104,8 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"
+             if: ${{ env.WEB_VERSION  != '' }}             
+              then
              #download web
              echo "PWD after module download: $(pwd)"
              cd ../..
@@ -113,6 +115,9 @@ jobs:
              echo "List of files in pwd:$(ls -a)"
              unzip \*.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
+                exit 1
+              fi
+             
              cd ../server_downloads
              echo "displaying files in server_downloads folder: $(ls -a)"
              unzip \*.zip
