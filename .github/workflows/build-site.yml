@@ -103,35 +103,32 @@ jobs:
              if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
              echo "this is the present directory: $(pwd)"
-             echo "LIST of FILES: $(ls -a)"
-             
+             echo "LIST of FILES: $(ls -a)"             
              if [[ "$PRODUCT_NAME" != *"tam"* ]]
              then
-             #download web
-             echo "PWD after module download: $(pwd)"
-             cd ../..
-             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
-             cd web_downloads
-             echo "this is the present directory: $(pwd)"
-             echo "List of files in pwd:$(ls -a)"
-             unzip \*.zip
-             tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
-             cd ../server_downloads   
+               #download web
+               echo "PWD after module download: $(pwd)"
+               cd ../..
+               wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
+               cd web_downloads
+               echo "this is the present directory: $(pwd)"
+               echo "List of files in pwd:$(ls -a)"
+               unzip \*.zip
+               tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
+               cd ../server_downloads   
              else
-             echo "Product Name: ${{ env.PRODUCT_NAME }}"
-             #download web
-             echo "PWD after module download: $(pwd)"
-             cd ../..
-             cd web_downloads
-             echo "this is the present directory: $(pwd)"
-             echo "List of files in pwd:$(ls -a)"
-             #  unzip \*.zip
-             touch temp
-             tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
-             cd ../server_downloads   
+               echo "Product Name: ${{ env.PRODUCT_NAME }}"
+               #download web
+               echo "PWD after module download: $(pwd)"
+               cd ../..
+               cd web_downloads
+               echo "this is the present directory: $(pwd)"
+               echo "List of files in pwd:$(ls -a)"
+               #  unzip \*.zip
+               touch temp
+               tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
+               cd ../server_downloads   
              fi
-             
-             
              echo "displaying files in server_downloads folder: $(ls -a)"
              unzip \*.zip
              ls
@@ -140,6 +137,7 @@ jobs:
              ls -lart /tmp/*.tar*
         env:
           JAVA_TOOL_OPTIONS: ${{'-Xmx8192m' }}
+          
       - name: Create RPM
         run: |
             sudo apt-get install rpm
