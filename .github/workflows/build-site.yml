@@ -170,7 +170,7 @@ jobs:
               sed -i "s/genesisUser/$PRODUCT_NAME/g" /tmp/install.sh
             fi
             mvn versions:set -DnewVersion=$VERSION
-            mvn rpm:rpm || cat /home/runner/work/tam2-site-specific/tam2-site-specific/target/rpm/genesis-tam2/SPECS/genesis-tam2.spec
+            { mvn rpm:rpm } || { cat /home/runner/work/tam2-site-specific/tam2-site-specific/target/rpm/genesis-tam2/SPECS/genesis-tam2.spec }
             ls -larth
       - name: Upload RPM
         run: |
