@@ -44,20 +44,14 @@ jobs:
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags).zip" >> $GITHUB_ENV
               echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              # echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV
+              # echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
               
-              # echo "WEB_VERSION=$(grep "web_version" $(find ${CLIENTDIR} -name product.yml ) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-              # echo "SERVER_VERSION=$(grep "server_version" $(find ${CLIENTDIR} -name product.yml ) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              # echo "SERVER_VERSION=$(echo "$(echo "$(grep "server_version" server/jvm/${{ env.PRODUCT_NAME }}-deploy/build.gradle.kts -A 5 | grep "genesis-distribution" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
       - name: Environment Variables1
         run: |
-              # echo "WEB_VERSION=$(grep "web_version" $(find ${CLIENTDIR} -name "product.yml" ) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "WEB_VERSION=$(grep "web_version" $(find ${env.CLIENTDIR}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              # echo "SERVER_VERSION=$(echo "$(echo "$(grep "server_version" tam2-site-specific-arden/snt/product.yml -A 5 | cut -d"\"" -f2)")")" >> $GITHUB_ENV
-              # echo "GENESIS_VERSION=$(echo "$(echo "$(grep "server_version" tam2-site-specific-arden/snt/product.yml -A 5 | grep "genesis-distribution" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
-
+              
       - name: check env variables
         run: |
               echo "$(git describe --tags)"
