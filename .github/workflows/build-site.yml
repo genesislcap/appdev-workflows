@@ -170,13 +170,10 @@ jobs:
               sed -i "s/genesisUser/$PRODUCT_NAME/g" /tmp/install.sh
             fi
             mvn versions:set -DnewVersion=$VERSION
-            trap "mvn rpm:rpm; exit" SIGINT
-            while true
-            do
-             cat /home/runner/work/tam2-site-specific/tam2-site-specific/target/rpm/genesis-tam2/SPECS/genesis-tam2.spec
-             exit 0
-            done
-            ls -larth
+            if ! mvn rpm:rpm; then
+              cat /home/runner/work/tam2-site-specific/tam2-site-specific/target/rpm/genesis-tam2/SPECS/genesis-tam2.spec
+            fi
+            ls -larth /home/runner/work/tam2-site-specific/tam2-site-specific/target/rpm/genesis-tam2/SPECS/
       - name: Upload RPM
         run: |
           echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
