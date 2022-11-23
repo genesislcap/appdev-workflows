@@ -116,12 +116,13 @@ jobs:
              echo "List of files in pwd:$(ls -a)"
              unzip \*.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
-                
+             cd ../server_downloads   
              else
               echo "Product Name: ${{ env.PRODUCT_NAME }}"
+              cd server_downloads
              fi
              
-             cd ../server_downloads
+             
              echo "displaying files in server_downloads folder: $(ls -a)"
              unzip \*.zip
              ls
