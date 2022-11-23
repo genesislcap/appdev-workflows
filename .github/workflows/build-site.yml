@@ -126,6 +126,7 @@ jobs:
              echo "this is the present directory: $(pwd)"
              echo "List of files in pwd:$(ls -a)"
              #  unzip \*.zip
+             touch temp
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
              cd ../server_downloads   
              fi
