@@ -90,7 +90,9 @@ jobs:
       - name: set version 
         run: |
            echo "Version: ${{ env.VERSION }}"
-           mvn versions:set -DnewVersion=${{ env.VERSION }}  
+           mvn versions:set -DnewVersion=${{ env.VERSION }}
+           cat ~/.m2/settings.xml
+           
 
       - name: Build
         run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml package
