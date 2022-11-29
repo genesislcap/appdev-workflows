@@ -83,6 +83,10 @@ jobs:
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
               echo "Bootstrap:"
               date
+              if [[ "$PRODUCT_NAME" != *"tam"* ]]
+              then
+              cd client
+              fi
               npm run bootstrap -ddd
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}    
@@ -109,6 +113,10 @@ jobs:
               echo "Building Prod:"
               echo $(pwd)
               date
+              if [[ "$PRODUCT_NAME" != *"tam"* ]]
+              then
+              cd client/web
+              fi
               npm run build
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -123,7 +131,14 @@ jobs:
               sudo apt-get install zip unzip
               echo $(pwd)
               ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
+              if [[ "$PRODUCT_NAME" != *"tam"* ]]
+              then
+              cd client/web/dist              
+              else
               cd packages/apps/${{ env.PRODUCT_NAME }}/dist
+              fi
+              cd client/web/dist
+
               zip -r ${{ env.OUTPUT }} *
               pwd
               echo ${{ env.OUTPUT }}
