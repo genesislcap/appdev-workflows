@@ -73,39 +73,21 @@ jobs:
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
 
-          
-         
       - name: Bootstrap
         run: npm run bootstrap
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}} 
-      - name: Cache Bootstrap
-        run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-        id:   cache-bootstrap
-        
-      - uses:  actions/cache@v2
-        with:
-          path: ${{ steps.cache-bootstrap.outputs.dir }}
-          key: ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-bootstrap-${{ hashFiles('**/package-lock.json') }}
-            ${{ runner.os }}- 
-          
-      - name: Install
-        run:  npm install
-          
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
+
       - name: Build
         working-directory: packages/apps/${{ env.PRODUCT_NAME }}
+        run: npm run build      
+    
+      - name: Lint Check
         run: |
-              echo "Building Prod:"
-              echo $(pwd)
-              date
-              npm run build
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          echo "LINT_CHECK=$(grep -Fxq "lint" $(cat package.json))" >> $GITHUB_ENV
           
       - name: ESLint
+        if: ${{env.LINT_CHECK==1 }} 
         run: npm run lint:eslint:all
           
       - name: Package and Publish
