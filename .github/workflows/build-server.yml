@@ -118,7 +118,7 @@ jobs:
       - name: Publish to Artifactory 
         if: ${{ inputs.repo_name != 'tam2-server' }}
         run: |         
-             cd ../..
+             cd ${{ env.PRODUCT_BASE }}/
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
      
       - name: Slack Notification
