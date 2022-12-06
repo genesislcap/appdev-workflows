@@ -84,7 +84,13 @@ jobs:
           path: ${{github.workspace}}/reports
       - name: Env 
         run: |
-           echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
+           if [[ "$REPO_NAME" == "axes-gateway" ]]           
+           then
+            echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3)" >> $GITHUB_ENV 
+           else
+            echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
+            
+           fi
            echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
           
       - name: set version 
