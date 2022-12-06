@@ -107,12 +107,9 @@ jobs:
               date
               sudo apt-get install zip unzip
               echo $(pwd)
-              ln -s ./src/ src
-              cd ./www/build
-              ls
-              pwd
+              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
+              cd packages/apps/${{ env.PRODUCT_NAME }}/dist
               zip -r ${{ env.OUTPUT }} *
-              ls 
               pwd
               echo ${{ env.OUTPUT }}
               ls | grep zip
