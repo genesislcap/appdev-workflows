@@ -84,7 +84,7 @@ jobs:
           path: ${{github.workspace}}/reports
       - name: Env 
         run: |
-           if [[ "$REPO_NAME" == "axes-gateway" ]]           
+           if [[ "${{ inputs.repo_name }}" == "axes-gateway" ]]           
            then
             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3)" >> $GITHUB_ENV 
            else
