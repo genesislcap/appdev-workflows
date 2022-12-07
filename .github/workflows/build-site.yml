@@ -39,7 +39,7 @@ jobs:
 
       - name: Environment Variables
         run: |
-             if [[ "$REPO_NAME" =="axes-gateway-site-specific ]]         
+             if [[ "$REPO_NAME" =="axes-gateway-site-specific" ]]         
               then
                echo "PRODUCT_NAME="axes-gateway"
               else
