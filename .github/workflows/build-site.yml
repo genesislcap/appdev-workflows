@@ -112,8 +112,7 @@ jobs:
              echo "LIST of FILES: $(ls -a)"             
              
              
-            #  if [[ "$REPO_NAME" == "axes-gateway-site-specific" && "$REPO_NAME" == "tam2-server"  ]]            
-             if [ "$WEB_VERSION" == "" ]; then
+             if [ "$WEB_VERSION" == "" ];then
              
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
