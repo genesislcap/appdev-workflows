@@ -111,7 +111,8 @@ jobs:
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"             
              
-             if: ${{ inputs.repo_name != 'tam2-server' && inputs.repo_name != 'axes-gateway' }}
+             
+             if [[ "$REPO_NAME" == "axes-gateway-site-specific" && "$REPO_NAME" == "tam2-server"  ]]
              then
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
