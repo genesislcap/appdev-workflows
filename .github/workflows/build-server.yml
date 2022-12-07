@@ -120,7 +120,7 @@ jobs:
       #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
      
       - name: Publish to Artifactory 
-        if: ${{ inputs.repo_name != 'tam2-server' }} && ${{ inputs.repo_name != 'axes-gateway' }}
+        if: ${{ inputs.repo_name != 'tam2-server' && inputs.repo_name != 'axes-gateway' }}
         run: |
            
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
