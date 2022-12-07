@@ -39,7 +39,7 @@ jobs:
 
       - name: Environment Variables
         run: |
-             if: ${{ inputs.repo_name =="axes-gateway-site-specific }}          
+             if [[ "$REPO_NAME" =="axes-gateway-site-specific ]]         
               then
                echo "PRODUCT_NAME="axes-gateway"
               else
@@ -110,7 +110,7 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"             
-             if [[ "$WEB_VERSION" != ""]]
+             if [[ "$env.WEB_VERSION" != ""]]
              then
                #download web
                echo "PWD after module download: $(pwd)"
