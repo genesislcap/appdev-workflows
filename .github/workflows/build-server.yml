@@ -33,94 +33,94 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v2
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-          cache: 'maven'
+      # - name: Set up JDK 11
+      #   uses: actions/setup-java@v2
+      #   with:
+      #     java-version: '11'
+      #     distribution: 'adopt'
+      #     cache: 'maven'
           
-      - name: Env Set-Up
-        run: |
-             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
-             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
-             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
-             echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
-             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
+      # - name: Env Set-Up
+      #   run: |
+      #        echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
+      #        echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
+      #        echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+      #        echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
+      #        echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
  
-      - name: maven-settings-xml-action
-        uses: whelk-io/maven-settings-xml-action@v20
-        with:
-          repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}},{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" }]'
-          plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}, { "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" } ]'
-          servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
-          active_profiles: '["github"]'
+      # - name: maven-settings-xml-action
+      #   uses: whelk-io/maven-settings-xml-action@v20
+      #   with:
+      #     repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}},{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" }]'
+      #     plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}, { "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" } ]'
+      #     servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
+      #     active_profiles: '["github"]'
 
-      - name: Cache Maven Dependencies
-        id: cache-maven-dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-            ${{ runner.os }}-
+      # - name: Cache Maven Dependencies
+      #   id: cache-maven-dependencies
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: ~/.m2
+      #     key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+      #       ${{ runner.os }}-
      
-      - name: Depcheck
-        uses: dependency-check/Dependency-Check_Action@1.0.0
-        id: Depcheck
-        with:
-          project: 'test'
-          path: '.'
-          format: 'HTML'
-        env:
-          JAVA_HOME: /opt/jdk
+      # - name: Depcheck
+      #   uses: dependency-check/Dependency-Check_Action@1.0.0
+      #   id: Depcheck
+      #   with:
+      #     project: 'test'
+      #     path: '.'
+      #     format: 'HTML'
+      #   env:
+      #     JAVA_HOME: /opt/jdk
 
-      - name: 'Publish Test Report'
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: 'test-reports'
-          path: ${{github.workspace}}/reports
-      - name: Env 
-        run: |
+      # - name: 'Publish Test Report'
+      #   if: always()
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: 'test-reports'
+      #     path: ${{github.workspace}}/reports
+      # - name: Env 
+      #   run: |
     
-           echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
+      #      echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
      
-           echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
+      #      echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
           
-      - name: set version 
-        run: |
-           echo "Version: ${{ env.VERSION }}"
-           mvn versions:set -DnewVersion=${{ env.VERSION }}
-           cat ~/.m2/settings.xml
+      # - name: set version 
+      #   run: |
+      #      echo "Version: ${{ env.VERSION }}"
+      #      mvn versions:set -DnewVersion=${{ env.VERSION }}
+      #      cat ~/.m2/settings.xml
            
 
-      - name: Build
-        run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+      # - name: Build
+      #   run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
 
-      - name: Publish to Artifactory  TAM
-        if: ${{ inputs.repo_name == 'tam2-server' }}
-        run: |
+      # - name: Publish to Artifactory  TAM
+      #   if: ${{ inputs.repo_name == 'tam2-server' }}
+      #   run: |
            
-            cd ${{ env.PRODUCT_BASE }}/tam-distribution/target/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
+      #       cd ${{ env.PRODUCT_BASE }}/tam-distribution/target/
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             
-            cd ../..
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
+      #       cd ../..
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
      
-      - name: Publish to Artifactory axes-gateway
-        if: ${{ inputs.repo_name == 'axes-gateway' }}
-        run: |
+      # - name: Publish to Artifactory axes-gateway
+      #   if: ${{ inputs.repo_name == 'axes-gateway' }}
+      #   run: |
            
-            cd ${{ env.PRODUCT_BASE }}/${{ inputs.repo_name }}-distribution/target/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/" -T *.zip
+      #       cd ${{ env.PRODUCT_BASE }}/${{ inputs.repo_name }}-distribution/target/
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/" -T *.zip
             
-            cd ${{ env.PRODUCT_BASE }}/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
+      #       cd ${{ env.PRODUCT_BASE }}/
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
      
       - name: Publish to Artifactory 
-        if: ${{ inputs.repo_name != 'tam2-server' }}
+        if: ${{ inputs.repo_name != 'tam2-server' }} && ${{ inputs.repo_name != 'axes-gateway' }}
         run: |
            
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
