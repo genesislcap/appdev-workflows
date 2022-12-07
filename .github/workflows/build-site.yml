@@ -39,7 +39,13 @@ jobs:
 
       - name: Environment Variables
         run: |
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              if [[ "$REPO_NAME" == "axes-gateway-site-specific ]]           
+              then
+               echo "PRODUCT_NAME="axes-gateway"
+              else
+                echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              
+              fi
               echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
@@ -104,7 +110,7 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"             
-             if [[ "$PRODUCT_NAME" != *"tam"* ]]
+             if [[ "$WEB_VERSION" != ""]]
              then
                #download web
                echo "PWD after module download: $(pwd)"
