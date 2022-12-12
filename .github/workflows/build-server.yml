@@ -45,7 +45,7 @@ jobs:
           
       - name: Env Set-Up
         run: |
-             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
              echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
              echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
@@ -54,7 +54,8 @@ jobs:
       - name: Env Setup
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' }}
         run:  |
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
+             echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+			 echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
 
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
@@ -90,12 +91,6 @@ jobs:
         with:
           name: 'test-reports'
           path: ${{github.workspace}}/reports
-      - name: Env 
-        run: |
-    
-           echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
-     
-           echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
           
       - name: set version 
         run: |
