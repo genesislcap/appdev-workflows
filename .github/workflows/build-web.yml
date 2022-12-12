@@ -56,8 +56,7 @@ jobs:
       - name: Env Setup
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' }}
         run:  |
-              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ env.VERSION }}.zip" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
       
       - name: Sonar Setup
         run:  |
