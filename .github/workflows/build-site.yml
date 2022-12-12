@@ -3,24 +3,7 @@
 
 name: Site Deploy
 
-on:
-  workflow_call:
-    inputs:
-      repo_name:
-        required: true
-        type: string
-      branch:
-        required: false
-        type: string
-    secrets:
-      JFROG_USERNAME:
-        required: true
-      JFROG_EMAIL:
-        required: true
-      JFROG_PASSWORD:
-        required: true
-      SLACK_WEBHOOK:
-        required: true
+
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
