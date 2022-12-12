@@ -61,8 +61,8 @@ jobs:
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              sed -i "s/${{ env.WEB_VERSION }}/develop/g" "${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/snt/product.yml"
-              sed -i "s/${{ env.SERVER_VERSION }}/develop/g" "${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/snt/product.yml"
+              sed -i "s/${{ env.WEB_VERSION }}/develop/g" "${{ env.PRODUCT_BASE }}//${{ env.CLIENT_DIR }}/snt/product.yml"
+              sed -i "s/${{ env.SERVER_VERSION }}/develop/g" "${{ env.PRODUCT_BASE }}//${{ env.CLIENT_DIR }}/snt/product.yml"
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
 
       - name: check env variables
