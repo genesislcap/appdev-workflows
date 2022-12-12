@@ -42,21 +42,18 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: '0'
-      
+
       - name: Env Setup
-        if: ${{ inputs.version }}
         run:  |
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "VERSION=${{ env.REPO_NAME }}" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ env.VERSION }}.zip" >> $GITHUB_ENV
 
       - name: Env Setup
-        if: ${{ inputs.version != 'develop' || inputs.version != 'main' }}
+        if: ${{ inputs.version }}
         run:  |
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
-              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              echo "VERSION=${{ env.REPO_NAME }}" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ env.VERSION }}.zip" >> $GITHUB_ENV
       
       - name: Sonar Setup
