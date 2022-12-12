@@ -9,6 +9,9 @@ on:
       repo_name:
         required: true
         type: string
+      branch:
+        required: false
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
@@ -42,12 +45,18 @@ jobs:
           
       - name: Env Set-Up
         run: |
+             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
              echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
-             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
              echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
  
+      - name: Env Setup
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' }}
+        run:  |
+              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ env.VERSION }}-bin.zip" >> $GITHUB_ENV
+
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
         with:
