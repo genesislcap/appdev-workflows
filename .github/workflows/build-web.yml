@@ -52,6 +52,7 @@ jobs:
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ env.VERSION }}.zip" >> $GITHUB_ENV
 
       - name: Env Setup
+        if: ${{ inputs.version != 'develop' || inputs.version != 'main' }}
         run:  |
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
