@@ -55,7 +55,7 @@ jobs:
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' }}
         run:  |
              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-			 echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
+	     echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
 
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
