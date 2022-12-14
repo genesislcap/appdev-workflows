@@ -68,7 +68,7 @@ jobs:
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
 
       - name: Env Setup
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' }}
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run: |
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
@@ -109,6 +109,7 @@ jobs:
              echo pom-${{ env.SERVER_VERSION }}.xml
              echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
              echo "GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")" >> $GITHUB_ENV
+
       - name: Download server, web and latest auth/genesis-distribution from JFROG
         run: |
              mkdir web_downloads
@@ -130,8 +131,6 @@ jobs:
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"             
              
-             
-                       
              if [ "$WEB_VERSION" == "" ]; then
              
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
@@ -145,8 +144,6 @@ jobs:
                touch temp
                tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                cd ../server_downloads  
-
-                 
              else
                #download web
                echo "PWD after module download: $(pwd)"
