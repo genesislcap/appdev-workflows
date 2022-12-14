@@ -106,7 +106,7 @@ jobs:
 
       - name: Publish to Artifactory 
         run: |
-            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/target/
+            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             
             cd ${{ env.PRODUCT_BASE }}/
