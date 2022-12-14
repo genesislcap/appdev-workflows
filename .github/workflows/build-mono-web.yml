@@ -5,6 +5,9 @@ on:
       repo_name:
         required: true
         type: string
+      branch:
+        required: false
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
