@@ -12,6 +12,9 @@ on:
       branch:
         required: false
         type: string
+      artifact_location:
+        required: true
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
@@ -98,41 +101,17 @@ jobs:
            mvn versions:set -DnewVersion=${{ env.VERSION }}
            cat ~/.m2/settings.xml
            
-
       - name: Build
         run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
 
-      - name: Publish to Artifactory  TAM
-        if: ${{ inputs.repo_name == 'tam2-server' }}
-        run: |
-           
-            cd ${{ env.PRODUCT_BASE }}/tam-distribution/target/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
-            
-            cd ../..
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T *.xml
-     
-      - name: Publish to Artifactory axes-gateway
-        if: ${{ inputs.repo_name == 'axes-gateway' }}
-        run: |
-           
-            cd ${{ env.PRODUCT_BASE }}/${{ inputs.repo_name }}-distribution/target/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/" -T *.zip
-            
-            cd ${{ env.PRODUCT_BASE }}/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
-     
       - name: Publish to Artifactory 
-        if: ${{ inputs.repo_name != 'tam2-server' && inputs.repo_name != 'axes-gateway' }}
         run: |
-           
-            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/
+            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/target/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             
             cd ${{ env.PRODUCT_BASE }}/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
-     
-     
+          
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
