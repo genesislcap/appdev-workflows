@@ -55,12 +55,13 @@ jobs:
               do 
                   if [ -d "$i/snt" ]
                   then
-                    echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+                    echo "base folder is ${{ env.PRODUCT_BASE }}"
+                    echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.PRODUCT_BASE }}/$i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+                    echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.PRODUCT_BASE }}/$i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
                     sed -i "s/${{ env.WEB_VERSION }}/${{ inputs.branch }}/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
                     sed -i "s/${{ env.SERVER_VERSION }}/${{ inputs.branch }}/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
                   else
-                    echo "$i not a directory"
+                    echo "$i not a client directory"
                  fi
               done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
