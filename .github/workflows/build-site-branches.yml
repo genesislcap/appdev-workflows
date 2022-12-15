@@ -57,8 +57,8 @@ jobs:
                   then
                     WEB_VERSION=$(grep web_version $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')"
                     SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')"
-                    sed -i "s/${{ env.WEB_VERSION }}/${{ inputs.branch }}/g" $i/snt/product.yml
-                    sed -i "s/${{ env.SERVER_VERSION }}/${{ inputs.branch }}/g" $i/snt/product.yml
+                    sed -i "s/${WEB_VERSION}/${{ inputs.branch }}/g" $i/snt/product.yml
+                    sed -i "s/${SERVER_VERSION}/${{ inputs.branch }}/g" $i/snt/product.yml
                   else
                     echo "$i not a client directory"
                  fi
