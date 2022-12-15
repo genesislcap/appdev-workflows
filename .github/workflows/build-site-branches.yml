@@ -55,10 +55,8 @@ jobs:
               do 
                   if [ -d "$i/snt" ]
                   then
-                    WEB_VERSION=$(grep web_version $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
-                    SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
-                    sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
-                    sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
+                    sed -i "s/$(grep web_version $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')/${{ inputs.branch }}/g" $i/snt/product.yml
+                    sed -i "s/$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')/${{ inputs.branch }}/g" $i/snt/product.yml
                   else
                     echo "$i not a client directory"
                  fi
