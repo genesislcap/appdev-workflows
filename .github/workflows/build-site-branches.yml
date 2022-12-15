@@ -64,6 +64,8 @@ jobs:
                  fi
               done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+              echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
 
       - name: check env variables
         run: |
