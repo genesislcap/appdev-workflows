@@ -169,8 +169,8 @@ jobs:
              echo "GENESIS_VERSION=$(echo "$(echo "$(grep "implementation" server/jvm/${{ env.PRODUCT_NAME }}-deploy/build.gradle.kts -A 5 | grep "genesis-distribution" -A 2 | grep "version" | cut -d"\"" -f2)")")" >> $GITHUB_ENV
              
              if [ "$AUTH_VERSION" == "" ]; then
-             echo "GENESIS_VERSION=$(grep "genesisVersion" $(find . -name gradle.properties) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-             echo "AUTH_VERSION=$(grep "authVersion" $(find . -name gradle.properties) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+             echo "GENESIS_VERSION=$(grep "genesisVersion" $(find . -name gradle.properties) |  awk -F '=' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+             echo "AUTH_VERSION=$(grep "authVersion" $(find . -name gradle.properties) |  awk -F '=' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
              
              fi
              
