@@ -60,7 +60,7 @@ jobs:
                     sed -i "s/${{ env.WEB_VERSION }}/${{ inputs.branch }}/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
                     sed -i "s/${{ env.SERVER_VERSION }}/${{ inputs.branch }}/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
                   else
-                    echo "not a directory"
+                    echo "$i not a directory"
                  fi
               done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
