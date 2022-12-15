@@ -55,8 +55,8 @@ jobs:
               do 
                   if [ -d "$i/snt" ]
                   then
-                    echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+                    echo "WEB_VERSION=$(grep web_version $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+                    echo "SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
                     echo "$WEB_VERSION $SERVER_VERSION"
                   else
                     echo "$i not a client directory"
