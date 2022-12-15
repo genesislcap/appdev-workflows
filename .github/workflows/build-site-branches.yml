@@ -65,8 +65,8 @@ jobs:
                  fi
               done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-              echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-              echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              [[ ! -z "$WEB_VERSION" ]] && echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              [[ ! -z "$SERVER_VERSION" ]] && echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
 
       - name: check env variables
         run: |
@@ -75,11 +75,14 @@ jobs:
               echo "Version: ${{ env.VERSION }}"
               echo "Product Base: ${{ env.PRODUCT_BASE }}"
               echo "Output: ${{ env.OUTPUT }}"
+              echo "SERVER_VERSION: ${{ env.SERVER_VERSION }}"
+              echo "WEB_VERSION: ${{ env.WEB_VERSIOB }}"
 
       - name: Download server pom and assign auth and genesis versions
         run: |
              curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
              echo pom-${{ env.SERVER_VERSION }}.xml
+             cat pom-${{ env.SERVER_VERSION }}.xml
              echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
              echo "GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")" >> $GITHUB_ENV
                #download auth distribution into server_downloads folder
