@@ -69,12 +69,12 @@ jobs:
               for i in ./*
               do 
                   if [ -d "$i/snt" ]
-				          then
+                  then
                     echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
                     echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
                     sed -i "s/${{ env.WEB_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
                     sed -i "s/${{ env.SERVER_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
-			           else
+                  else
                     echo "not a directory"
                  fi
               done
@@ -193,6 +193,7 @@ jobs:
             fi
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
+	    
       - name: Upload RPM
         run: |
           echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
