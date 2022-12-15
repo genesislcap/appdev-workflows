@@ -57,19 +57,27 @@ jobs:
               echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
               
-      - name: Environment Variables1
+      - name: Environment Variables for web and server
         run: |
               echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
 
-      - name: Env Setup
+      - name: Env Setup for nightly builds off default-branch
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run: |
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-              echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-              echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              sed -i "s/${{ env.WEB_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/snt/product.yml
-              sed -i "s/${{ env.SERVER_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/snt/product.yml
+              for i in ./*
+              do 
+                  if [ -d "$i/snt" ]
+				          then
+                    echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+                    sed -i "s/${{ env.WEB_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
+                    sed -i "s/${{ env.SERVER_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
+			           else
+                    echo "not a directory"
+                 fi
+              done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
 
       - name: check env variables
