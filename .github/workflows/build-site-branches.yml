@@ -182,5 +182,3 @@ jobs:
                 curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/" -T *.rpm 
             fi
             done
-           env:
-          JAVA_TOOL_OPTIONS: ${{'-Xmx8192m' }}	
