@@ -125,8 +125,8 @@ jobs:
                     if [[ $(grep -c "genesis_modules" $i/snt/product.yml) -ge 1 ]]; then
                         echo "$(sed -e '1,/genesis_modules/d'  < $i/snt/product.yml | grep "^  - { ")" > /tmp/"$CLIENT_NAME"_edited_product.yml
                         while read line
-                            do
-                             echo wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
+                          do
+                            wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
                           done < /tmp/"$CLIENT_NAME"_edited_product.yml
                         echo "Modules required for $CLIENT_NAME required are-->" && cat /tmp/"$CLIENT_NAME"_edited_product.yml
                         rm /tmp/"$CLIENT_NAME"_edited_product.yml
@@ -134,7 +134,8 @@ jobs:
                     
                     echo "The present directory is -->" && echo "$(pwd)"
                     echo "The downloaded files in the client downloads directory are -->" && echo $(ls -a ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
-                    cd ${{ env.PRODUCT_BASE }}                   
+                    cd ${{ env.PRODUCT_BASE }}
+
                     if [ "$WEB_VERSION" == "" ]; then
                       echo "Product Name: ${{ env.PRODUCT_NAME }} does not have a requirement for web, creating an empty zipped up folder for deployment requirements"
                       cd "$CLIENT_NAME"_web_downloads
@@ -159,7 +160,7 @@ jobs:
                 cp -r ${{env.PRODUCT_BASE}}/distros  "$CLIENT_NAME"_server_downloads
                 echo "displaying files in "$CLIENT_NAME"_server_downloads folder-->" && echo "$(ls -alrt)"
                 unzip \*.zip
-                ls
+                echo "The total files after unzipping the downloaded artifacts -->
                 rm *.zip
                 tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
                 ls -lart /tmp/*.tar*
