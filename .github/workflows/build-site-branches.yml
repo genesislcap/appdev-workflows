@@ -159,7 +159,7 @@ jobs:
                     fi
                 echo "Copy all the distributions into the same location as the site-specific and the downloaded modules location"
                 cp -r ${{env.PRODUCT_BASE}}/distros  $CLIENT_NAME_server_downloads
-                echo "displaying files in $CLIENT_NAME_server_downloads folder-->" && ls -alrt"
+                echo "displaying files in $CLIENT_NAME_server_downloads folder-->" && echo "$(ls -alrt)"
                 unzip \*.zip
                 ls
                 rm *.zip
