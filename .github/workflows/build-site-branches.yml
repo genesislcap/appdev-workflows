@@ -78,13 +78,21 @@ jobs:
               echo "SERVER_VERSION: ${{ env.SERVER_VERSION }}"
               echo "WEB_VERSION: ${{ env.WEB_VERSIOB }}"
 
-      - name: Download server pom and assign auth and genesis versions
+      - name: Download server + assign
         run: |
              curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
              echo pom-${{ env.SERVER_VERSION }}.xml
-             cat pom-${{ env.SERVER_VERSION }}.xml
              echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
              echo "GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")" >> $GITHUB_ENV
+
+      - name: Download server pom and assign auth and genesis versions
+        run: |
+            #  curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
+            #  echo pom-${{ env.SERVER_VERSION }}.xml
+            #  cat pom-${{ env.SERVER_VERSION }}.xml
+            #  echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
+            #  echo "GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")" >> $GITHUB_ENV
+             
                #download auth distribution into server_downloads folder
              mkdir distros
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}/distros" https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
