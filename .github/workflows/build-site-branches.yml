@@ -107,7 +107,7 @@ jobs:
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
              pwd
-             for i in ./*
+             for i in *
               do 
                 if [ -d "$i/snt" ]
                 then
