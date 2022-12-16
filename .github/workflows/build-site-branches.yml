@@ -131,10 +131,10 @@ jobs:
                         rm /tmp/$CLIENT_NAME_edited_product.yml
                     fi
                     
-                    echo "The present directory is-->" && pwd
-                    ls -a
+                    echo "The present directory is -->" && echo "$(pwd)"
+                    echo "The downloaded files in the client downloads directory are -->" && echo "$(ls -a ${{env.PRODUCT_BASE}}/$CLIENT_NAME_server_downloads)"
                     cd ${{ env.PRODUCT_BASE }}
-                    mkdir $CLIENT_NAME_web_downloads
+                    mkdir "$CLIENT_NAME"_web_downloads
                     ls -la
                     
                     if [ "$WEB_VERSION" == "" ]; then
