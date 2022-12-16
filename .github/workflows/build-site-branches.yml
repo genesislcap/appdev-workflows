@@ -153,7 +153,7 @@ jobs:
                       echo "Product Name: ${{ env.PRODUCT_NAME }} required web to be installed ..."
                       wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P ${{ env.PRODUCT_BASE }}/$"CLIENT_NAME"_web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
                       echo "PWD after web module download-->" && echo "$(pwd)"
-                      echo "List of files in pwd:$(ls -a)"
+                      echo "List of files in present location are --> $(ls -a)"
                       unzip \*.zip
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                       cd ../"$CLIENT_NAME"_server_downloads   
