@@ -136,7 +136,7 @@ jobs:
                     fi
                     
                     echo "The present directory is -->" && echo "$(pwd)"
-                    echo "The downloaded files in the client downloads directory are -->" && echo $(ls -a ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
+                    echo "The downloaded files in the client downloads directory are -->" && echo $(ls -l ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
                     cd ${{ env.PRODUCT_BASE }}
 
                     if [ "$WEB_VERSION" == "" ]; then
@@ -160,7 +160,7 @@ jobs:
                     fi
 
                     echo "Copy all the distributions into the same location as the site-specific and the downloaded modules location"
-                    cp -r ${{env.PRODUCT_BASE}}/distros  "$CLIENT_NAME"_server_downloads
+                    cp -r ${{env.PRODUCT_BASE}}/distros/*   ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads/
                     echo "displaying files in "$CLIENT_NAME"_server_downloads folder-->" && echo "$(ls -alrt)"
                     unzip \*.zip
                     echo "The total files after unzipping the downloaded artifacts -->"
