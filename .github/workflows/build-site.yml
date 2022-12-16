@@ -193,7 +193,7 @@ jobs:
             fi
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
-	    
+
       - name: Upload RPM
         run: |
           echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
