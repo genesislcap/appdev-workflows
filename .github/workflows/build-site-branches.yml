@@ -111,9 +111,9 @@ jobs:
               do 
                 if [ -d "$i/snt" ]
                 then
-                   
+                    echo "CLIENT_DIR=$i"
                     echo "CLIENT_DIR=$i" >> $GITHUB_ENV
-                    echo "CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")"
+                    echo "CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")" >> $GITHUB_ENV
                     mkdir ${{ env.CLIENT_NAME }}_server_downloads
                     cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
                     # Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders
