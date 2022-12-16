@@ -107,8 +107,8 @@ jobs:
                     CLIENT_DIR=$i
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
                     echo "Client directory is-->" && echo "$CLIENT_DIR"
-                    echo "Client name is-->" && echo "CLIENT_NAME"
-                    echo "Create client specific downloads dir for rpm creation-->" && mkdir $CLIENT_NAME_server_downloads
+                    echo "Client name is-->" && echo "$CLIENT_NAME"
+                    echo "Create client specific downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
                     echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
                     
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
