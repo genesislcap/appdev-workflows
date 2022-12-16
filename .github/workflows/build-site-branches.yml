@@ -82,7 +82,7 @@ jobs:
               echo "Output: ${{ env.OUTPUT }}"
               echo "SERVER_VERSION: ${{ env.SERVER_VERSION }}"
               echo "WEB_VERSION: ${{ env.WEB_VERSIOB }}"
-			  echo "AUTH_VERSION: ${{ env.AUTH_VERSION }}"
+              echo "AUTH_VERSION: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION fw : ${{ env.GENESIS_VERSION }}"
 
       - name: Download genesis_framework, pom, server artifacts
@@ -108,16 +108,16 @@ jobs:
                     CLIENT_DIR=$i
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
                     echo "Create client specific downloads dir for rpm creation :" && mkdir $CLIENT_NAME_server_downloads
-					
                     echo "Change location to the client specific src directory :" && cd ${{ env.PRODUCT_BASE }}/$i/src
+                    
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
                     zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
                     
-					echo "upload the site-specific artifac contaiing src/site-specific/* to jfrog"
+                    echo "upload the site-specific artifac contaiing src/site-specific/* to jfrog"
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/$CLIENT_NAME/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}}
                     
-					echo "Copy this site-specific artifact to the $CLIENT_NAME_server_downloads folder"
-					cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/$CLIENT_NAME_server_downloads
+                    echo "Copy this site-specific artifact to the $CLIENT_NAME_server_downloads folder"
+                    cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/$CLIENT_NAME_server_downloads
                     cd ${{ env.PRODUCT_BASE }}
                     echo " Download modules into server_downloads folder in : $CLIENT_NAME_server_downloads "
                     if [[ $(grep -c "genesis_modules" $i/snt/product.yml) -ge 1 ]]; then
@@ -126,15 +126,15 @@ jobs:
                             do
                              echo wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/$CLIENT_NAME_server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
                           done < /tmp/$CLIENT_NAME_edited_product.yml
-						  echo "Modules required for $CLIENT_NAME required are : " && cat cat /tmp/$CLIENT_NAME_edited_product.yml
+                        echo "Modules required for $CLIENT_NAME required are : " && cat cat /tmp/$CLIENT_NAME_edited_product.yml
                         rm /tmp/$CLIENT_NAME_edited_product.yml
                     fi
                     
-					echo "The present directory is:" && pwd
+                    echo "The present directory is:" && pwd
                     ls -a
                     cd ${{ env.PRODUCT_BASE }}
                     mkdir $CLIENT_NAME_web_downloads
-					ls -la
+                    ls -la
                     
                     if [ "$WEB_VERSION" == "" ]; then
              
@@ -148,9 +148,9 @@ jobs:
                     else
                       #download web
                       cd $CLIENT_NAME_web_downloads
-					  echo "Product Name: ${{ env.PRODUCT_NAME }} required web to be installed ..."
+                      echo "Product Name: ${{ env.PRODUCT_NAME }} required web to be installed ..."
                       wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}/$CLIENT_NAME_web_downloads" https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
-                      echo "PWD after web module download: $(pwd)"
+                      echo "PWD after web module download" && pwd
                       echo "List of files in pwd:$(ls -a)"
                       unzip \*.zip
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
@@ -158,14 +158,14 @@ jobs:
                     fi
                 echo "Copy all the distributions into the same location as the site-specific and the downloaded modules location"
                 cp -r ${{env.PRODUCT_BASE}}/distros  $CLIENT_NAME_server_downloads
-                echo "displaying files in $CLIENT_NAME_server_downloads folder: $(ls -a)"
+                echo "displaying files in $CLIENT_NAME_server_downloads folder:" && ls -alrt"
                 unzip \*.zip
                 ls
                 rm *.zip
                 tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
                 ls -lart /tmp/*.tar*
-                
-				echo "Start the RPM creation process now for $CLIENT_NAME"
+
+                echo "Start the RPM creation process now for $CLIENT_NAME"
                 echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHByb2plY3QgeG1sbnM9Imh0dHA6Ly9tYXZlbi5hcGFjaGUub3JnL1BPTS80LjAuMCIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIKICAgICAgICAgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vbWF2ZW4uYXBhY2hlLm9yZy9QT00vNC4wLjAgaHR0cDovL21hdmVuLmFwYWNoZS5vcmcveHNkL21hdmVuLTQuMC4wLnhzZCI+CiAgICA8bW9kZWxWZXJzaW9uPjQuMC4wPC9tb2RlbFZlcnNpb24+CiAgICA8Z3JvdXBJZD5nbG9iYWwuZ2VuZXNpczwvZ3JvdXBJZD4KICAgIDxhcnRpZmFjdElkPmdlbmVzaXMtcnBtPC9hcnRpZmFjdElkPgogICAgPHZlcnNpb24+MS4wLjA8L3ZlcnNpb24+CiAgICA8cGFja2FnaW5nPnBvbTwvcGFja2FnaW5nPgogICAgPG5hbWU+Z2VuZXNpcy1ycG08L25hbWU+CiAgICA8cHJvcGVydGllcz4KCQk8cHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz5VVEYtODwvcHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz4KCTwvcHJvcGVydGllcz4KICAgIDxtb2R1bGVzLz4KICAgIDxidWlsZD4KICAgICAgICA8cGx1Z2lucz4KICAgICAgICAgICAgPHBsdWdpbj4KICAgICAgICAgICAgICAgIDxncm91cElkPm9yZy5jb2RlaGF1cy5tb2pvPC9ncm91cElkPgogICAgICAgICAgICAgICAgPGFydGlmYWN0SWQ+cnBtLW1hdmVuLXBsdWdpbjwvYXJ0aWZhY3RJZD4KICAgICAgICAgICAgICAgIDx2ZXJzaW9uPjIuMi4wPC92ZXJzaW9uPgogICAgICAgICAgICAgICAgPGluaGVyaXRlZD5mYWxzZTwvaW5oZXJpdGVkPgogICAgICAgICAgICAgICAgPGNvbmZpZ3VyYXRpb24+CiAgICAgICAgICAgICAgICAgICAgPG5hbWU+Z2VuZXNpcy1QUk9EVUNUPC9uYW1lPgogICAgICAgICAgICAgICAgICAgIDxsaWNlbnNlPihjKSBnZW5lc2lzLmdsb2JhbDwvbGljZW5zZT4KICAgICAgICAgICAgICAgICAgICA8bmVlZGFyY2g+eDg2XzY0PC9uZWVkYXJjaD4KICAgICAgICAgICAgICAgICAgICA8Z3JvdXA+R2VuZXNpcyBQbGF0Zm9ybTwvZ3JvdXA+CiAgICAgICAgICAgICAgICAgICAgPHBvc3RpbnN0YWxsU2NyaXB0bGV0PgogICAgICAgICAgICAgICAgICAgICAgICA8c2NyaXB0RmlsZT4vdG1wL2luc3RhbGwuc2g8L3NjcmlwdEZpbGU+CiAgICAgICAgICAgICAgICAgICAgPC9wb3N0aW5zdGFsbFNjcmlwdGxldD4KICAgICAgICAgICAgICAgICAgICA8bWFwcGluZ3M+CiAgICAgICAgICAgICAgICAgICAgICAgIDxtYXBwaW5nPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpcmVjdG9yeT4vdG1wLzwvZGlyZWN0b3J5PgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGZpbGVtb2RlPjc1MDwvZmlsZW1vZGU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8dXNlcm5hbWU+cm9vdDwvdXNlcm5hbWU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8Z3JvdXBuYW1lPnJvb3Q8L2dyb3VwbmFtZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2VzPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2U+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxsb2NhdGlvbj4vdG1wL2dlbmVzaXNfUFJPRFVDVF9wYWNrYWdlLnRhci5nejwvbG9jYXRpb24+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zb3VyY2U+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3NvdXJjZXM+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvbWFwcGluZz4KICAgICAgICAgICAgICAgICAgICAgICAgPG1hcHBpbmc+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGlyZWN0b3J5Pi90bXAvPC9kaXJlY3Rvcnk+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZmlsZW1vZGU+NzUwPC9maWxlbW9kZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDx1c2VybmFtZT5yb290PC91c2VybmFtZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxncm91cG5hbWU+cm9vdDwvZ3JvdXBuYW1lPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNvdXJjZXM+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNvdXJjZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPGxvY2F0aW9uPi90bXAvZ2VuZXNpc19QUk9EVUNUX3dlYi50YXIuZ3o8L2xvY2F0aW9uPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvc291cmNlPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zb3VyY2VzPgogICAgICAgICAgICAgICAgICAgICAgICA8L21hcHBpbmc+CiAgICAgICAgICAgICAgICAgICAgPC9tYXBwaW5ncz4KICAgICAgICAgICAgICAgIDwvY29uZmlndXJhdGlvbj4KICAgICAgICAgICAgPC9wbHVnaW4+CiAgICAgICAgPC9wbHVnaW5zPgogICAgPC9idWlsZD4KPC9wcm9qZWN0Pg==" | base64 -d > pom.xml
 
                 sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
@@ -180,17 +180,17 @@ jobs:
                 sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
 				
                 echo "RPM %post spec - install.sh created"
-				echo "Replace the generic users in the install script with the client user used for installation ...."
+                echo "Replace the generic users in the install script with the client user used for installation ...."
                 sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
-				echo "Setting the maven version"
+                echo "Setting the maven version"
                 mvn versions:set -DnewVersion=$VERSION
-				echo "Triggering RPM creation"
+                echo "Triggering RPM creation"
                 mvn rpm:rpm        
-                echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
-                echo "RPM NAME: ${{ env.RPM_NAME }}"
+                echo "PRODUCT NAME ${{ env.PRODUCT_NAME }}"
+                echo "RPM NAME ${{ env.RPM_NAME }}"
                 ls target/rpm/
                 cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME}
-				echo "RPM created, files in the location are : " && ls -lart
+                echo "RPM created, files in the location are :" && ls -lart
                 echo "Uploading to https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/"
                 curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/" -T *.rpm 
               fi
