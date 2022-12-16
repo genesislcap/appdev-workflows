@@ -106,10 +106,12 @@ jobs:
         run: |
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
+             pwd
              for i in ./*
               do 
                 if [ -d "$i/snt" ]
                 then
+                    echo "in"
                     echo "CLIENT_DIR=$i" >> $GITHUB_ENV
                     echo "CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
                     mkdir ${{ env.CLIENT_NAME }}_server_downloads
