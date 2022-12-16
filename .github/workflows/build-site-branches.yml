@@ -113,13 +113,13 @@ jobs:
                 then
                     echo "CLIENT_DIR=$i"
                     echo "CLIENT_DIR=$i" >> $GITHUB_ENV
-                    echo "CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")" >> $GITHUB_ENV
-                    mkdir ${{ env.CLIENT_NAME }}_server_downloads
+                    echo "CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")" 
+                    mkdir ${{ CLIENT_NAME }}_server_downloads
                     cd ${{ env.PRODUCT_BASE }}/$i/src
                     # Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders
                     zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
                     # upload the site-specific artifac contaiing src/site-specific/* to jfrog
-                    curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUT}}
+                    curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}}
                     cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/${{ env.CLIENT_NAME }}_server_downloads
                     cd snt
                     #download modules into server_downloads folder
