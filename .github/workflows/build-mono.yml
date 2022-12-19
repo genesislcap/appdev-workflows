@@ -105,7 +105,7 @@ jobs:
            echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
            echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
            
-      - name: Web Env Set-Up for nightly job 2
+      - name: Server Env Set-Up for nightly job 1
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run:  |
            echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
@@ -142,6 +142,7 @@ jobs:
       - name: Server Env Set-Up for nightly job
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run:  |
+             echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
              echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
              echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
              echo "OUTPUTSITE=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
