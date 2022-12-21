@@ -57,7 +57,7 @@ jobs:
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
 
       - name: Env Setup for nightly build
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
         run:  |
               echo "VERSION=${{ inputs.branch }} >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
