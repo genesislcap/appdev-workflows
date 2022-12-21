@@ -67,8 +67,8 @@ jobs:
               echo "Sonar Setup:"
               date
               combined=""
-              echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
-              for i in "${{ env.PRODUCT_BASE }}"/packages/apps/*
+              echo "sonar.projectKey=${{ env.REPO_NAME }} > sonar-project.properties
+              for i in ${{ env.PRODUCT_BASE }}/packages/apps/*
                do
                  if [ -d "$i/dist" ]
                    then
@@ -77,7 +77,7 @@ jobs:
                      echo $combined
                  fi
                done
-              echo "sonar.sources="$combined" >> sonar-project.properties     
+              echo "sonar.sources=$combined" >> sonar-project.properties     
               cat sonar-project.properties
               
       - name: Artifactory Setup
