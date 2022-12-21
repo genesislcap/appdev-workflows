@@ -68,7 +68,8 @@ jobs:
               date
               combined=""
               echo "sonar.projectKey=${{ env.REPO_NAME }} > sonar-project.properties
-              for i in ${{ env.PRODUCT_BASE }}/packages/apps/*
+              cd ${{ env.PRODUCT_BASE }}/packages/apps/
+              for i in ./*
                do
                  if [ -d "$i" ]
                    then
@@ -79,6 +80,7 @@ jobs:
                done
               echo "sonar.sources=$combined >> sonar-project.properties     
               cat sonar-project.properties
+              cd ${{ env.PRODUCT_BASE }}
               
       - name: Artifactory Setup
         run: |
@@ -113,7 +115,8 @@ jobs:
               sudo apt-get install zip unzip
               echo $(pwd)
               mkdir -p ${{ env.PRODUCT_BASE }}/web
-              for i in "${{ env.PRODUCT_BASE }}/packages/apps/*
+              cd ${{ env.PRODUCT_BASE }}/packages/apps/
+              for i in ./*
                do
                  if [ -d "${{ env.PRODUCT_BASE }}/packages/apps/$i/dist" ]
                    then
