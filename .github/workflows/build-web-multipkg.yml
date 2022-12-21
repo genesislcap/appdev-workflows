@@ -87,7 +87,7 @@ jobs:
         run: |
               echo "Artifactory:"
               date
-              cp ${{ secrets.NPM_SETTING }} ~/.npmrc
+              echo "${{ secrets.NPM_SETTING }}" >  ~/.npmrc
               chmod 664 ~/.npmrc
               cat ~/.npmrc
               
