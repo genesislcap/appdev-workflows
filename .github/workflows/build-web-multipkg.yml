@@ -67,9 +67,9 @@ jobs:
               echo "Sonar Setup:"
               date
               combined=""
-              echo "sonar.projectKey=${{ env.REPO_NAME }} > sonar-project.properties
-              cd ${{ env.PRODUCT_BASE }}/packages/apps/
-              ls -l
+              echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
+              cd "${{ env.PRODUCT_BASE }}"/packages/apps/
+              ls -lart
               for i in ./*
                do
                  if [ -d "$i" ]
@@ -79,7 +79,7 @@ jobs:
                      echo $combined
                  fi
                done
-              echo "sonar.sources=$combined >> sonar-project.properties     
+              echo "sonar.sources="$combined >> sonar-project.properties     
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
               
