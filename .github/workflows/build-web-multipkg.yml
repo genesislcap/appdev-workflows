@@ -102,9 +102,7 @@ jobs:
         run: |
           npm run bootstrap
           npm install
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
-
+          
       - name: Build
         working-directory: packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build      
