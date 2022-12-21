@@ -92,6 +92,7 @@ jobs:
               echo "${{ secrets.NPM_SETTING }}" >  ~/.npmrc
               chmod 664 ~/.npmrc
               cat ~/.npmrc
+              npm config ls -l
               npm run bootstrap
               npm install
           
