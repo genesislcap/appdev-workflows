@@ -101,7 +101,6 @@ jobs:
               npm install
           
       - name: Build
-        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build      
              
       - name: Package and Publish
