@@ -83,6 +83,13 @@ jobs:
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
               
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
+          
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
@@ -90,18 +97,8 @@ jobs:
               echo "${{ secrets.NPM_SETTING }}" >  ~/.npmrc
               chmod 664 ~/.npmrc
               cat ~/.npmrc
-              
-      - name: Configure Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
-
-      - name: Bootstrap
-        run: |
-          npm run bootstrap
-          npm install
+              npm run bootstrap
+              npm install
           
       - name: Build
         working-directory: packages/apps/${{ env.PRODUCT_NAME }}
