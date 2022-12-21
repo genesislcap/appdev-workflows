@@ -70,7 +70,7 @@ jobs:
               echo "sonar.projectKey=${{ env.REPO_NAME }} > sonar-project.properties
               for i in ${{ env.PRODUCT_BASE }}/packages/apps/*
                do
-                 if [ -d "$i/dist" ]
+                 if [ -d "$i" ]
                    then
                      token=${{ env.PRODUCT_BASE }}/packages/apps/$i/dist
                      combined="${combined}${combined:+,}$token"
