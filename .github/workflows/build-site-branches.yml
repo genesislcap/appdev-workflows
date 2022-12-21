@@ -42,7 +42,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Env Variable Setup for nightly builds off default-branch
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
         run: |
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
