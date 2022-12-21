@@ -69,6 +69,7 @@ jobs:
               combined=""
               echo "sonar.projectKey=${{ env.REPO_NAME }} > sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}/packages/apps/
+              ls -l
               for i in ./*
                do
                  if [ -d "$i" ]
