@@ -21,6 +21,8 @@ on:
         required: true
       NPM_SETTING:
         required: true
+      GPR_READ_TOKEN:
+        required: true
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -95,6 +97,8 @@ jobs:
               npm config ls -l
               npm run bootstrap
               npm install
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
           
       - name: Build
         run: npm run build      
