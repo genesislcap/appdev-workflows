@@ -80,26 +80,28 @@ jobs:
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
                             
+      - name: Artifactory Setup
+        run: |
+              echo "Artifactory:"
+              date
+              #chmod 664 /usr/local/etc/npmrc
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="
+              cat ~/.npmrc
+              
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/ 
+          registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-          
-      - name: Install and NPM Config
-        run:  |
-             echo 'always-auth=true' >> ~/.npmrc
-             echo 'email=support@genesis.global' >> ~/.npmrc
-             echo '@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/' >> ~/.npmrc
-             echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
-             echo '@genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/' >> ~/.npmrc
-             echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
-             chmod 664 ~/.npmrc
-             npm run bootstrap
-             npm i
+
+      - name: Bootstrap
+        run: npm run bootstrap
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }} 
           
       - name: Build
         run: npm run build      
