@@ -84,7 +84,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://genesislcap.jfrog.io/artifactory/api/npm/github-packages/
+          registry-url: https://npm.pkg.github.com/ 
           scope: '@genesislcap'
           
       - name: Install and NPM Config
@@ -95,6 +95,7 @@ jobs:
              echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
              echo '@genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/' >> ~/.npmrc
              echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
+             chmod 664 ~/.npmrc
              npm run bootstrap
              npm i
         env:
