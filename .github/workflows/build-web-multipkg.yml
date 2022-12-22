@@ -84,20 +84,22 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://genesislcap.jfrog.io/artifactory/api/npm/npm/
+          registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/github-packages/
           scope: '@genesislcap'
           
       - name: Install and NPM Config
         run:  |
-              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              npm config set //genesislcap.jfrog.io/artifactory/api/npm/npm/:_auth ${{ secrets.JFROG_NPM_AUTH_TOKEN }}
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:username ${{secrets.JFROG_USERNAME}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email ${{secrets.JFROG_EMAIL}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
               echo "**************************************************************************************************************"
               echo "Install:"
               echo "**************************************************************************************************************"
-              npm run bootstrap
-              npm install
+              npm i
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }} 
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
           
       - name: Build
         run: npm run build      
