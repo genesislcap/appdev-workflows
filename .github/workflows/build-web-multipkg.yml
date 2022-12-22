@@ -91,13 +91,11 @@ jobs:
         run: |
               echo "Artifactory:"
               date
-              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth true
 
       - name: Bootstrap
         run: npm run bootstrap
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.JFROG_NPM_AUTH_TOKEN }} 
           
       - name: Build
         run: npm run build      
