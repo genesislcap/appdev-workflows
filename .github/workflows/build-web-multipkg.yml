@@ -91,8 +91,6 @@ jobs:
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="
               npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="
-              npm config set @mono-public:registry=https://npm.pkg.github.com:443/mono-public
-              npm config set //npm.pkg.github.com:443/:_authToken=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
               cat ~/.npmrc
               
       - name: Configure Node ${{ matrix.node-version }}
