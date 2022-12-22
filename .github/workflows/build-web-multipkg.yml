@@ -90,7 +90,7 @@ jobs:
       - name: Install and NPM Config
         run:  |
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:username ${{secrets.JFROG_USERNAME}}
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_authToken ${{secrets.JFROG_NPM_AUTH_TOKEN}}
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email ${{secrets.JFROG_EMAIL}}
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
               echo "**************************************************************************************************************"
