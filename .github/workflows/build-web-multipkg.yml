@@ -90,14 +90,14 @@ jobs:
       - name: Install and NPM Config
         run:  |
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_authToken ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth ${{ secrets.JFROG_NPM_AUTH_TOKEN }}
               echo "**************************************************************************************************************"
               echo "Install:"
               echo "**************************************************************************************************************"
               npm run bootstrap
               npm install
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}} 
+          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }} 
           
       - name: Build
         run: npm run build      
