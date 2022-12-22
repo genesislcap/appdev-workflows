@@ -96,7 +96,7 @@ jobs:
               #chmod 664 /usr/local/etc/npmrc
               npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              cat ~/.npmrc
+              which .npmrc
 
       - name: Bootstrap
         run: npm run bootstrap
