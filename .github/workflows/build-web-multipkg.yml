@@ -82,26 +82,28 @@ jobs:
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
               
+      - name: Artifactory Setup
+        run: |
+              echo "Artifactory:"
+              date
+              #chmod 664 /usr/local/etc/npmrc
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              cat ~/.npmrc
+              
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-         
-      - name: Artifactory Setup
-        run: |
-              echo "Artifactory:"
-              date
-              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth true
 
       - name: Bootstrap
         run: |
-          npm config ls -l
-          npm run bootstrap
+           npm config ls -l
+           npm run bootstrap
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}  
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}} 
           
       - name: Build
         run: npm run build      
