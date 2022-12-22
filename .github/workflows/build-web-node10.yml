@@ -87,23 +87,23 @@ jobs:
       - name: Bootstrap
         run: |
             cd $PRODUCT_BASE
-					  pwd
-					  npm install
+            pwd
+            npm install
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
 
       - name: Build Debug
         run: |
             cd ${{ env.PRODUCT_BASE }}
-					  rm -rf ${{ env.PRODUCT_BASE }}/dist
-					  node --max_old_space_size=2350 .//node_modules//@angular//cli//bin//ng build --base-href=/debug/
-					  mv ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }} ${{ env.PRODUCT_BASE }}/dist/debug
+            rm -rf ${{ env.PRODUCT_BASE }}/dist
+            node --max_old_space_size=2350 .//node_modules//@angular//cli//bin//ng build --base-href=/debug/
+            mv ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }} ${{ env.PRODUCT_BASE }}/dist/debug
             
       - name: Build Prod
         run: |
             cd ${{ env.PRODUCT_BASE }}
-					  pwd
-					  node --max_old_space_size=2350 .//node_modules//@angular//cli//bin//ng build --prod=true --base-href=/
+            pwd
+            node --max_old_space_size=2350 .//node_modules//@angular//cli//bin//ng build --prod=true --base-href=/
     
       - name: Lint Check
         run: |
@@ -121,8 +121,8 @@ jobs:
               echo $(pwd)
               
               mv ${{ env.PRODUCT_BASE }}/dist/debug ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/.
-					    cd ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/
-					    zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
+              cd ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
 
               pwd
               echo ${{ env.OUTPUT }}
