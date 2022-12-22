@@ -126,5 +126,5 @@ jobs:
 
               pwd
               echo ${{ env.OUTPUT }}
-              ls -lrt *.zip
+              ls -lrt
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
