@@ -84,13 +84,13 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+          registry-url: https://genesislcap.jfrog.io/artifactory/api/npm/npm/
           scope: '@genesislcap'
           
       - name: Install and NPM Config
         run:  |
-              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth ${{ secrets.JFROG_NPM_AUTH_TOKEN }}
+              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              npm config set //genesislcap.jfrog.io/artifactory/api/npm/npm/:_auth ${{ secrets.JFROG_NPM_AUTH_TOKEN }}
               echo "**************************************************************************************************************"
               echo "Install:"
               echo "**************************************************************************************************************"
