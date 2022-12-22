@@ -85,8 +85,12 @@ jobs:
               echo "Artifactory:"
               date
               #chmod 664 /usr/local/etc/npmrc
-              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config set always-auth=true
+              npm config set email=support@genesis.global
+              npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="
+              npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="
               cat ~/.npmrc
               
       - name: Configure Node ${{ matrix.node-version }}
