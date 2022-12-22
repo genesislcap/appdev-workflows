@@ -48,17 +48,17 @@ jobs:
 
       - name: Env Setup
         run:  |
-              echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              echo "REPO_NAME=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f2 | xargs)" >> $GITHUB_ENV
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f3 | cut -d'-' -f1 | cut -d'_' -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "VERSION=$( git describe --tag --abbrev=0)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(readlink -f $(find . -name angular.json) | rev | cut -c14- | rev)" >> $GITHUB_ENV
-              echo "PACKAGE_NAME=$(grep outputPath $(find . -name angular.json) | cut -d"/" -f2 | rev | cut -c3- | rev)>> $GITHUB_ENV
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags --abbrev=0).zip" >> $GITHUB_ENV
+              echo "PACKAGE_NAME=$(grep outputPath $(find . -name angular.json) | cut -d'/' -f2 | rev | cut -c3- | rev)" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f3 | cut -d'-' -f1 | cut -d"_" -f2)-web-$(git describe --tags --abbrev=0).zip" >> $GITHUB_ENV
               
       - name: Env Setup for nightly build
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run:  |
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f3 | cut -d'-' -f1 | cut -d'_' -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
       
       - name: Sonar Setup
         run:  |
