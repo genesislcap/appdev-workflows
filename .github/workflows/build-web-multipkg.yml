@@ -23,6 +23,8 @@ on:
         required: true
       JFROG_NPM_AUTH_TOKEN:
         required: true
+      GPR_READ_TOKEN:
+        required: true
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -96,6 +98,8 @@ jobs:
 
       - name: Bootstrap
         run: npm run bootstrap
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}  
           
       - name: Build
         run: npm run build      
