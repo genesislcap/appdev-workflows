@@ -82,7 +82,9 @@ jobs:
           scope: '@genesislcap'
 
       - name: Bootstrap
-        run: npm run bootstrap
+        run: |
+           npm config ls -l
+           npm run bootstrap
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
 
