@@ -39,7 +39,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [16.x]
+        node-version: [14.x]
     
     steps:
       - uses: actions/checkout@v2
@@ -89,13 +89,14 @@ jobs:
           
       - name: Install and NPM Config
         run:  |
-              npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              npm config set //genesislcap.jfrog.io/artifactory/api/npm/npm/:_authToken ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-              echo "**************************************************************************************************************"
-              echo "Install:"
-              echo "**************************************************************************************************************"
-              npm run bootstrap
-              npm i
+             echo 'always-auth=true' >> ~/.npmrc
+             echo 'email=support@genesis.global' >> ~/.npmrc
+             echo '@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/' >> ~/.npmrc
+             echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
+             echo '@genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/' >> ~/.npmrc
+             echo '//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth="YnVpbGQ6QVA2NXV2Y21xclhLM1NOQnFRd1ZtcDZ2OW85UDlxNTMzb1BQWHo="' >> ~/.npmrc
+             npm run bootstrap
+             npm i
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
           
