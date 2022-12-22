@@ -150,13 +150,7 @@ jobs:
              
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
-               echo "PWD after module download: $(pwd)"
-               if [[ "$REPO_NAME" == "bets-site-specific" ]]  
-               then
-               cd ..
-               else
-               cd ../..
-               fi
+               echo "PWD after module download: $(pwd)"               
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
@@ -167,7 +161,12 @@ jobs:
              else
                #download web
                echo "PWD after module download: $(pwd)"
+               if [[ "$REPO_NAME" == "bets-site-specific" ]]  
+               then
+               cd ..
+               else
                cd ../..
+               fi
                wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
                cd web_downloads
                echo "this is the present directory: $(pwd)"
