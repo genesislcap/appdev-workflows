@@ -86,17 +86,13 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-          
+         
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
               date
-              #chmod 664 /usr/local/etc/npmrc
               npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              which .npmrc
 
       - name: Bootstrap
         run: npm run bootstrap
