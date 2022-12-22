@@ -123,7 +123,7 @@ jobs:
               mv ${{ env.PRODUCT_BASE }}/dist/debug ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/.
               cd ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/
               zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
-
+              cd ${{ env.PRODUCT_BASE }}
               pwd
               echo ${{ env.OUTPUT }}
               ls -lrt
