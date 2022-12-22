@@ -134,7 +134,12 @@ jobs:
              #download server into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
              #download modules into server_downloads folder
+             if [[ "$REPO_NAME" == "bets-site-specific" ]]  
+             then
+             cd snt
+             else
              cd ${{ env.CLIENT_DIR }}/snt
+             fi
              echo "this is the present directory: $(pwd)"
              if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
@@ -146,7 +151,12 @@ jobs:
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
                echo "PWD after module download: $(pwd)"
+               if [[ "$REPO_NAME" == "bets-site-specific" ]]  
+               then
+               cd ..
+               else
                cd ../..
+               fi
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
