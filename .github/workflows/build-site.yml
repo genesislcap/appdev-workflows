@@ -146,7 +146,7 @@ jobs:
              echo "this is the present directory: $(pwd)"
              echo "LIST of FILES: $(ls -a)"             
              
-             if [ "$WEB_VERSION" == "" ]; then
+             if [ "${{ env.WEB_VERSION }}" == "" ]; then
              
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
