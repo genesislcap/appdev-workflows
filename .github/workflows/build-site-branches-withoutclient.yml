@@ -116,7 +116,7 @@ jobs:
                 if [ "$i" == "./snt" ]
                 then
                     CLIENT_DIR=""
-                    CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
+                    CLIENT_NAME="genesis"
                     echo "Client directory is empty-->" && echo "$CLIENT_DIR"
                     echo "Client name is-->" && echo "$CLIENT_NAME"
                     echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
