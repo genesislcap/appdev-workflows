@@ -55,13 +55,7 @@ jobs:
               pwd
               for i in ./*
               do 
-                  if [ "$i" == "./snt" ]
-                  then
-                    WEB_VERSION=$(grep "web_version" $(find ./snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
-                    SERVER_VERSION=$(grep server_version $(find  ./snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
-                    [[ ! -z "$WEB_VERSION" ]] && sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" ./snt/product.yml
-                    [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" ./snt/product.yml
-                  else if [ -d "$i/snt" ] 
+                  if [ -d "$i/snt" ] 
                   then
                     WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
@@ -96,7 +90,7 @@ jobs:
               echo "Product Base: ${{ env.PRODUCT_BASE }}"
               echo "Output: ${{ env.OUTPUT }}"
               echo "SERVER_VERSION: ${{ env.SERVER_VERSION }}"
-              echo "WEB_VERSION: ${{ env.WEB_VERSIOB }}"
+              echo "WEB_VERSION: ${{ env.WEB_VERSION }}"
               echo "AUTH_VERSION: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION fw : ${{ env.GENESIS_VERSION }}"
 
