@@ -51,23 +51,18 @@ jobs:
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-              echo "The current location is :"
-              pwd
+              echo "Setting server version in this block and web version in the main block below as some componenets do not have web"
               for i in ./*
               do 
                   if [ -d "$i/snt" ] 
                   then
-                    WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
-                    [[ ! -z "$WEB_VERSION" ]] && sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
                     [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
-                    cat $i/snt/product.yml
                   else
                     echo "$i not a client directory"
                  fi
               done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-              [[ ! -z "$WEB_VERSION" ]] && echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               [[ ! -z "$SERVER_VERSION" ]] && echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
 
       - name: Env Variable setup for auth and genesis fw versions
@@ -91,7 +86,6 @@ jobs:
               echo "Product Base: ${{ env.PRODUCT_BASE }}"
               echo "Output: ${{ env.OUTPUT }}"
               echo "SERVER_VERSION: ${{ env.SERVER_VERSION }}"
-              echo "WEB_VERSION: ${{ env.WEB_VERSION }}"
               echo "AUTH_VERSION: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION fw : ${{ env.GENESIS_VERSION }}"
 
@@ -114,7 +108,7 @@ jobs:
              echo "This is the base directory->" && echo "$(pwd)"
              for i in ./*
               do 
-                if [[ "$i" == "./snt" || -d "$i/snt" ]]
+                if [ -d "$i/snt" ]
                 then
                     CLIENT_DIR=$i
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
@@ -124,6 +118,9 @@ jobs:
                     echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
                     echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
                     
+					WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
+					[[ ! -z "$WEB_VERSION" ]] && sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
+					
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
                     zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
                     
@@ -149,7 +146,7 @@ jobs:
                     echo "The downloaded files in the client downloads directory are -->" && echo $(ls -l ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
                     cd ${{ env.PRODUCT_BASE }}
 
-                    if [ "${{ env.WEB_VERSION }}" == "" ]; then
+                    if [ "$WEB_VERSION" == "" ]; then
                       echo "Product Name: ${{ env.PRODUCT_NAME }} does not have a requirement for web, creating an empty zipped up folder for deployment requirements"
                       cd "$CLIENT_NAME"_web_downloads
                       echo "this is the present directory: $(pwd)"
@@ -161,7 +158,7 @@ jobs:
                       #download web
                       cd "$CLIENT_NAME"_web_downloads
                       echo "Product Name: ${{ env.PRODUCT_NAME }} required web to be installed ..."
-                      wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P ${{ env.PRODUCT_BASE }}/"$CLIENT_NAME"_web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
+                      wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P ${{ env.PRODUCT_BASE }}/"$CLIENT_NAME"_web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"$WEB_VERSION".zip
                       echo "PWD after web module download-->" && echo "$(pwd)"
                       echo "List of files in present location are --> $(ls -a)"
                       unzip \*.zip
