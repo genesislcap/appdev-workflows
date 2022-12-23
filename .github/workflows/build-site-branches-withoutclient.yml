@@ -61,12 +61,6 @@ jobs:
                     SERVER_VERSION=$(grep server_version $(find  ./snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
                     [[ ! -z "$WEB_VERSION" ]] && sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" ./snt/product.yml
                     [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" ./snt/product.yml
-                  else if [ -d "$i/snt" ] 
-                  then
-                    WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
-                    SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
-                    [[ ! -z "$WEB_VERSION" ]] && sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
-                    [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
                   else
                     echo "$i not a client directory"
                  fi
@@ -119,11 +113,11 @@ jobs:
              echo "This is the base directory->" && echo "$(pwd)"
              for i in ./*
               do 
-                if [[ "$i" == "./snt" || -d "$i/snt" ]]
+                if [ "$i" == "./snt" ]
                 then
-                    CLIENT_DIR=$i
+                    CLIENT_DIR=""
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
-                    echo "Client directory is-->" && echo "$CLIENT_DIR"
+                    echo "Client directory is empty-->" && echo "$CLIENT_DIR"
                     echo "Client name is-->" && echo "$CLIENT_NAME"
                     echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
                     echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
@@ -139,9 +133,9 @@ jobs:
                     cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads
                     cd ${{ env.PRODUCT_BASE }}
                     echo " Download modules into server_downloads folder in : $CLIENT_NAME_server_downloads "
-                    if [[ $(grep -c "genesis_modules" $i/snt/product.yml) -ge 1 ]]; then
+                    if [[ $(grep -c "genesis_modules" ./snt/product.yml) -ge 1 ]]; then
                         set +x -e
-                        echo "$(sed -e '1,/genesis_modules/d'  < $i/snt/product.yml | grep "^  - { ")" > /tmp/"$CLIENT_NAME"_edited_product.yml
+                        echo "$(sed -e '1,/genesis_modules/d'  < ./snt/product.yml | grep "^  - { ")" > /tmp/"$CLIENT_NAME"_edited_product.yml
                         while read line
                           do
                             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
