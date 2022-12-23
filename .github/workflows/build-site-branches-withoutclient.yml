@@ -124,13 +124,13 @@ jobs:
                     echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
                     
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
-                    zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
+                    zip -r ${{ env.PRODUCT_BASE }}/snt/${{ env.OUTPUT }} site-specific/*
                     
                     echo "upload the site-specific artifac contaiing src/site-specific/* to jfrog"
-                    curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/$CLIENT_NAME/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}}
+                    curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/$CLIENT_NAME/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/snt/${{env.OUTPUT}}
                     
                     echo "Copy this site-specific artifact to the $CLIENT_NAME_server_downloads folder"
-                    cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads
+                    cp ${{ env.PRODUCT_BASE }}/snt/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads
                     cd ${{ env.PRODUCT_BASE }}
                     echo " Download modules into server_downloads folder in : $CLIENT_NAME_server_downloads "
                     if [[ $(grep -c "genesis_modules" ./snt/product.yml) -ge 1 ]]; then
