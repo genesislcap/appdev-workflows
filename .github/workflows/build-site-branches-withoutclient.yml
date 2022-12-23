@@ -148,7 +148,8 @@ jobs:
                     echo "The downloaded files in the client downloads directory are -->" && echo $(ls -l ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
                     cd ${{ env.PRODUCT_BASE }}
 
-                    if [ "$WEB_VERSION" == "" ]; then
+                    if [ "${{ env.WEB_VERSION }}" == "" ]; then
+                    
                       echo "Product Name: ${{ env.PRODUCT_NAME }} does not have a requirement for web, creating an empty zipped up folder for deployment requirements"
                       cd "$CLIENT_NAME"_web_downloads
                       echo "this is the present directory: $(pwd)"
