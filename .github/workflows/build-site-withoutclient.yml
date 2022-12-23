@@ -46,19 +46,12 @@ jobs:
 
       - name: Environment Variables
         run: |
-              if [[ "$REPO_NAME" == "axes-gateway-site-specific" ]]  
-              then
-               echo "PRODUCT_NAME=axes-gateway">> $GITHUB_ENV               
-               echo "OUTPUT=axes-gateway-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV              
-              else
-                echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-                echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV              
-              fi
-
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV              
               echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
+              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ) || echo genesis )" >> $GITHUB_ENV
         
       - name: Environment Variables for web and server
         run: |
@@ -71,7 +64,6 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-
               
       - name: Env Setup for nightly builds off default-branch
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
@@ -79,12 +71,12 @@ jobs:
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               for i in ./*
               do 
-                  if [ -d "$i/snt" ]
+                 if [ "$i" == "./snt" ]
                   then
-                    echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
-                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-                    sed -i "s/${{ env.WEB_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
-                    sed -i "s/${{ env.SERVER_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
+                    echo "WEB_VERSION=$(grep "web_version" $(find $i -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+                    sed -i "s/${{ env.WEB_VERSION }}/develop/g" $i/snt/product.yml
+                    sed -i "s/${{ env.SERVER_VERSION }}/develop/g" $i/snt/product.yml
                   else
                     echo "not a directory"
                  fi
