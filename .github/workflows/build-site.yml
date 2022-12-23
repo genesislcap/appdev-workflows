@@ -67,7 +67,7 @@ jobs:
               echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               
-      - name: Env Setup for nightly builds off default-branch
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
