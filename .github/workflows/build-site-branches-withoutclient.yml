@@ -121,7 +121,7 @@ jobs:
                     echo "Client name is-->" && echo "$CLIENT_NAME"
                     echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
                     echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
-                    echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
+                    echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/snt/src
                     
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
                     zip -r ${{ env.PRODUCT_BASE }}/snt/${{ env.OUTPUT }} site-specific/*
