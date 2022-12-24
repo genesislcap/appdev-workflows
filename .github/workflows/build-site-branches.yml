@@ -122,7 +122,6 @@ jobs:
                     echo "***************************************"
                     echo "Debug web : $WEB_VERSION"
                     [[ ! -z "$WEB_VERSION" ]] && $WEB_VERSION="${{ inputs.branch }}"
-                    ## sed -i "s/$WEB_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
                     cat $i/snt/product.yml
                     echo "***************************************"
                     
