@@ -114,14 +114,15 @@ jobs:
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
                     echo "Client directory is-->" && echo "$CLIENT_DIR"
                     echo "Client name is-->" && echo "$CLIENT_NAME"
-                    echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
-                    echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
-                    echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
                     
                     [[ $(grep "web_version" $i/snt/product.yml) ]] && WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     echo "Debug web : $WEB_VERSION"
                     [[ ! -z "$WEB_VERSION" ]] && $WEB_VERSION="${{ inputs.branch }}"
                     cat $i/snt/product.yml
+                    
+                    echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
+                    echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
+                    echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
                     
                     echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
                     zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
