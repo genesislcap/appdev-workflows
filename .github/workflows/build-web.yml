@@ -61,7 +61,12 @@ jobs:
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run:  |
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-      
+
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+              
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
@@ -69,6 +74,7 @@ jobs:
               
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
+              
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
