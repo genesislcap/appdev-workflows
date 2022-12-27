@@ -12,6 +12,10 @@ on:
       branch:
         required: false
         type: string
+      product_name:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
