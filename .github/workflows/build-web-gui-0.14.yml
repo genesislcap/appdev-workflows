@@ -9,6 +9,10 @@ on:
       repo_name:
         required: true
         type: string
+      product_name:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
@@ -72,7 +76,12 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/github-packages/
           scope: '@genesislcap'
-          
+
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+      
       - name: Install and NPM Config
         run:  |
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
