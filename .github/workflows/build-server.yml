@@ -15,6 +15,10 @@ on:
       artifact_location:
         required: true
         type: string
+      product_name:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
