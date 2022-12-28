@@ -56,7 +56,6 @@ jobs:
               do 
                   if [ -d "$i/snt" ] 
                   then
-                    echo "first one"
                     cat $i/snt/product.yml
                     SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
                     [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
