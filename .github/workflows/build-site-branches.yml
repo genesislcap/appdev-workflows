@@ -179,7 +179,12 @@ jobs:
                     echo "RPM %post spec - install.sh created"
 
                     echo "Replace the generic users in the install script with the client user used for installation ...."
-                    sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
+                    if [ "$PRODUCT_NAME" == "wm_aqs" ] 
+                    then
+                       sed -i "s/genesisUser/aqs/g" /tmp/install.sh
+                    else
+                       sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
+                    fi 
 
                     echo "Setting the maven version"
                     mvn versions:set -DnewVersion=$VERSION
