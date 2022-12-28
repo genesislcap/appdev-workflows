@@ -52,19 +52,8 @@ jobs:
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "Setting server version in this block and web version in the main block below as some componenets do not have web"
-              for i in ./*
-              do 
-                  if [ -d "$i/snt" ] 
-                  then
-                    SERVER_VERSION=$(grep server_version $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
-                    [[ ! -z "$SERVER_VERSION" ]] && sed -i "s/$SERVER_VERSION/${{ inputs.branch }}/g" $i/snt/product.yml
-                    cat $i/snt/product.yml
-                  else
-                    echo "$i not a client directory"
-                 fi
-              done
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-              [[ ! -z "$SERVER_VERSION" ]] && echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              echo "SERVER_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
 
       - name: Env Variable setup for auth and genesis fw versions
         run: |
