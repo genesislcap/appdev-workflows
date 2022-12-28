@@ -106,14 +106,13 @@ jobs:
         run: |
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
-             echo "This is the base directory->" && echo "$(pwd)"
+             echo "This is the base directory->" && cat aqs-site-specific-idb/snt/product.yml"
              for i in ./*
               do 
                 if [ -d "$i/snt" ]
                 then
                     CLIENT_DIR=$i
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
-                    cat $i/snt/product.yml
                     [[ $(grep "web_version" $i/snt/product.yml) ]] && WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     echo "Debug web : $WEB_VERSION"
                     [[ ! -z "$WEB_VERSION" ]] && WEB_VERSION="${{ inputs.branch }}"
