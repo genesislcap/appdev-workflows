@@ -95,7 +95,7 @@ jobs:
         run: |
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
-             echo "This is the base directory->" && $(pwd)
+             echo "This is the base directory->" && echo "$(pwd)"
              for i in ./*
               do 
                 if [ -d "$i/snt" ]
