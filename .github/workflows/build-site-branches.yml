@@ -106,7 +106,7 @@ jobs:
         run: |
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
-             echo "This is the base directory->" && cat aqs-site-specific-idb/snt/product.yml"
+             echo "This is the base directory->" && cat aqs-site-specific-idb/snt/product.yml
              for i in ./*
               do 
                 if [ -d "$i/snt" ]
