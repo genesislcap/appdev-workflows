@@ -69,7 +69,6 @@ jobs:
       - name: Env Variable setup for auth and genesis fw versions
         run: |
              set +x -e
-             cat aqs-site-specific-idb/snt/product.yml
              curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
              echo pom-${{ env.SERVER_VERSION }}.xml
              echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
