@@ -113,8 +113,6 @@ jobs:
                 then
                     CLIENT_DIR=$i
                     CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
-                    echo "Client directory is-->" && echo "$CLIENT_DIR"
-                    echo "Client name is-->" && echo "$CLIENT_NAME"
                     cat $i/snt/product.yml
                     [[ $(grep "web_version" $i/snt/product.yml) ]] && WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     echo "Debug web : $WEB_VERSION"
