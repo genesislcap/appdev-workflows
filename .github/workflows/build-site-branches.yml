@@ -69,6 +69,7 @@ jobs:
       - name: Env Variable setup for auth and genesis fw versions
         run: |
              set +x -e
+             cat aqs-site-specific-idb/snt/product.yml
              curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
              echo pom-${{ env.SERVER_VERSION }}.xml
              echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
@@ -106,7 +107,7 @@ jobs:
         run: |
              sudo apt-get install zip
              cd ${{ env.PRODUCT_BASE }}
-             echo "This is the base directory->" && cat aqs-site-specific-idb/snt/product.yml
+             echo "This is the base directory->" && $(pwd)
              for i in ./*
               do 
                 if [ -d "$i/snt" ]
@@ -116,7 +117,6 @@ jobs:
                     [[ $(grep "web_version" $i/snt/product.yml) ]] && WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     echo "Debug web : $WEB_VERSION"
                     [[ ! -z "$WEB_VERSION" ]] && WEB_VERSION="${{ inputs.branch }}"
-                    cat $i/snt/product.yml
 
                     echo "Create client specific server downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_server_downloads
                     echo "Create client specific web downloads dir for rpm creation-->" && mkdir "$CLIENT_NAME"_web_downloads
