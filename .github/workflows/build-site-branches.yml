@@ -204,4 +204,6 @@ jobs:
                     echo "$i is not a directory or does not have a snt folder in it"
                   fi
               cd ${{ env.PRODUCT_BASE }}
+              echo "reset the web version for the next loop"
+              WEB_VERSION=""
               done
