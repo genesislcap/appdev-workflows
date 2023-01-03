@@ -90,7 +90,6 @@ jobs:
              #download server into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}/distros"  https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
 
-             
       - name: Package + Deploy Site per client
         run: |
              sudo apt-get install zip
@@ -195,10 +194,8 @@ jobs:
                     echo "PRODUCT NAME ${{ env.PRODUCT_NAME }}"
                     echo "RPM NAME ${{ env.RPM_NAME }}"
                     ls target/rpm/
-                    cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME}
-                    echo "RPM created, files in the location are-->" && echo "$(ls -lart)"
-
-                    echo "Uploading to https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/"
+                    cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME} && echo "$(ls -lart)"
+                    echo "RPM created. Uploading to https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/"
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/" -T *.rpm 
                   else
                     echo "$i is not a directory or does not have a snt folder in it"
