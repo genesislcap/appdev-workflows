@@ -128,8 +128,6 @@ jobs:
                         echo "Modules required for $CLIENT_NAME required are-->" && cat /tmp/"$CLIENT_NAME"_edited_product.yml
                         rm /tmp/"$CLIENT_NAME"_edited_product.yml
                     fi
-                    
-                    echo "The present directory is -->" && echo "$(pwd)"
                     echo "The downloaded files in the client downloads directory are -->" && echo $(ls -l ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
                     cd ${{ env.PRODUCT_BASE }}
 
