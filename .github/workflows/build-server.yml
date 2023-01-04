@@ -18,6 +18,9 @@ on:
       product_name:
         required: false
         type: string
+      module_name:
+        required: false
+        type: string         
 
     secrets:
       JFROG_USERNAME:
@@ -68,6 +71,11 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+              
+      - name: Env Setup for VERSION if module_name is present
+        if: ${{ inputs.module_name }}
+        run: |
+              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
       
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
