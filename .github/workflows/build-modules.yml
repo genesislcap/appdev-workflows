@@ -55,33 +55,22 @@ jobs:
           
       - name: Env Set-Up
         run: |
-             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
+             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV 
              echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
              echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
  
-      - name: Env Setup
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
-        run: |
-             echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
-             
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-              
-      - name: Env Setup for VERSION if module_name is present
-        if: ${{ inputs.module_name }}
-        run: |
-              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
-      
+
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
         with:
-          repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}},{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" }]'
-          plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}, { "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" } ]'
+          repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}]'
+          plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}]'
           servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
           active_profiles: '["github"]'
 
@@ -95,23 +84,6 @@ jobs:
             ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
             ${{ runner.os }}-
      
-      - name: Depcheck
-        uses: dependency-check/Dependency-Check_Action@1.0.0
-        id: Depcheck
-        with:
-          project: 'test'
-          path: '.'
-          format: 'HTML'
-        env:
-          JAVA_HOME: /opt/jdk
-
-      - name: 'Publish Test Report'
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: 'test-reports'
-          path: ${{github.workspace}}/reports
-          
       - name: set version 
         run: |
            echo "Version: ${{ env.VERSION }}"
@@ -127,7 +99,10 @@ jobs:
             cd ${{ env.PRODUCT_BASE }}
             ls -lart
             for i in $( grep -F "<module>" pom.xml); do 
-               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/target
-               pwd
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/
+               \pwd
                ls -larth
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/target
             done
+            cd ${{ env.PRODUCT_BASE }}            
+            JAVA_TOOL_OPTIONS="-Xmx4096m" mvn deploy
