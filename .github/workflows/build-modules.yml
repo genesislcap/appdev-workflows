@@ -127,7 +127,7 @@ jobs:
             cd ${{ env.PRODUCT_BASE }}
             ls -lart
             for i in $( grep -F "<module>" pom.xml); do 
-               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/target
                pwd
                ls -larth
             done
