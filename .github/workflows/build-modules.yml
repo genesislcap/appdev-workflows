@@ -126,8 +126,8 @@ jobs:
         run: |
             cd ${{ env.PRODUCT_BASE }}
             ls -lart
-            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
-            ls -lart
-            
-
-   
+            for i in $( grep -F "<module>" pom.xml); do 
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")
+               pwd
+               ls -larth
+            done
