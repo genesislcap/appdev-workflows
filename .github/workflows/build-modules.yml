@@ -121,5 +121,13 @@ jobs:
            
       - name: Build
         run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+        
+      - name: Publish to Artifactory 
+        run: |
+            cd ${{ env.PRODUCT_BASE }}
+            ls -lart
+            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
+            ls -lart
+            
 
    
