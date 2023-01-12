@@ -129,6 +129,8 @@ jobs:
   sonarcloud:
     name: SonarCloud
     uses: ./.github/workflows/sonarcloud.yml
+    with:
+      repo_name: $${{ inputs.repo_name }}
     secrets: inherit
     
       
