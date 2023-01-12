@@ -35,6 +35,12 @@ env:
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+
+  analyze:
+    name: CodeQL Analysis
+    uses: ./.github/workflows/codeql.yml
+    
+    
   build:
     env:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
