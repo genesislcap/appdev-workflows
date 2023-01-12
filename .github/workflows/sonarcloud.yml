@@ -3,6 +3,10 @@ name: SonarCloud
 
 on:
   workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
 
 jobs:
   sonarcloud:
