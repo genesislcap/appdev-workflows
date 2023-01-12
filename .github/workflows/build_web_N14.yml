@@ -15,7 +15,7 @@ on:
       product_name:
         required: false
         type: string
-
+        
     secrets:
       JFROG_USERNAME:
         required: true
@@ -38,7 +38,7 @@ jobs:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+      NPM_SETTING: ${{ secrets.NPM_SETTING }}
     runs-on: ubuntu-latest
     
     strategy:
@@ -58,10 +58,11 @@ jobs:
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
 
       - name: Env Setup for nightly build
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
         run:  |
+              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-
+              
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
@@ -71,24 +72,37 @@ jobs:
         run:  |
               echo "Sonar Setup:"
               date
-              
+              combined=""
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
-              echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
+              cd "${{ env.PRODUCT_BASE }}"/packages/apps/
+              ls -lart
+              for i in ./*
+               do
+                 if [ -d "$i" ]
+                   then
+                     token=${{ env.PRODUCT_BASE }}/packages/apps/$i/dist
+                     combined="${combined}${combined:+,}$token"
+                     echo $combined
+                 fi
+               done
+              echo "sonar.sources="$combined >> sonar-project.properties     
+              cat sonar-project.properties
+              cd ${{ env.PRODUCT_BASE }}
               
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
               date
-              #chmod 664 /usr/local/etc/npmrc
-              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              cat ~/.npmrc
+              npm config set always-auth=true
+              npm config set email=support@genesis.global
+              npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
               
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
+          registry-url: http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
           scope: '@genesislcap'
 
       - name: Bootstrap
@@ -96,30 +110,31 @@ jobs:
            npm config ls -l
            npm run bootstrap
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
-
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          
       - name: Build
-        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build      
-    
-      - name: Lint Check
-        run: |
-          echo "LINT_CHECK=$(grep -Fxq "lint" $(cat package.json))" >> $GITHUB_ENV
-          
-      - name: ESLint
-        if: ${{env.LINT_CHECK==1 }} 
-        run: npm run lint:eslint:all
-          
+             
       - name: Package and Publish
         run:  |
               echo "Package:"
               date
               sudo apt-get install zip unzip
               echo $(pwd)
-              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
-              cd packages/apps/${{ env.PRODUCT_NAME }}/dist
-              zip -r ${{ env.OUTPUT }} *
-              pwd
+              mkdir -p ${{ env.PRODUCT_BASE }}/web
+              cd ${{ env.PRODUCT_BASE }}/packages/apps/
+              for i in ./*
+               do
+                 if [ -d "${{ env.PRODUCT_BASE }}/packages/apps/$i/dist" ]
+                   then
+                     mkdir -f ${{ env.PRODUCT_BASE }}/web/$i
+                     cp -rf ${{ env.PRODUCT_BASE }}/packages/apps/$i/dist/* ${{ env.PRODUCT_BASE }}/web/$i
+                     ls -lart ${{ env.PRODUCT_BASE }}/web/$i
+                 fi
+               done
+               
+              cd ${{ env.PRODUCT_BASE }}/web/
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *				
               echo ${{ env.OUTPUT }}
               ls | grep zip
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
