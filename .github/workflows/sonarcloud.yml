@@ -16,6 +16,11 @@ jobs:
       - name: Env Setup
         run:  |
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              
+      - name: Env Setup
+        run:  |
+              ls -lart ${{ env.PRODUCT_BASE }}
+              ls -lart ${{ env.PRODUCT_BASE }}/src
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
