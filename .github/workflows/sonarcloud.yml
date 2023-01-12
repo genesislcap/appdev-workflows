@@ -18,7 +18,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=genesislcap
-            -Dsonar.projectKey=${{ env.REPO_NAME }}
+            -Dsonar.projectKey=${{ inputs.repo_name }}
             -Dsonar.verbose=true
         env:
           GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
