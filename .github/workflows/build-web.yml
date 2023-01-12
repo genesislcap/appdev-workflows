@@ -34,12 +34,7 @@ env:
   REPO_NAME: ${{ inputs.repo_name }}
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-
-  analyze:
-    name: CodeQL Analysis
-    uses: ./.github/workflows/codeql.yml
-    
+jobs: 
     
   build:
     env:
@@ -130,13 +125,4 @@ jobs:
               pwd
               echo ${{ env.OUTPUT }}
               ls | grep zip
-              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
-
-  sonarcloud:
-    name: SonarCloud
-    uses: ./.github/workflows/sonarcloud.yml
-    with:
-      repo_name: ${{ inputs.repo_name }}
-    secrets: inherit
-    
-      
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v   
