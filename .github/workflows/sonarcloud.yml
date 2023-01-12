@@ -28,6 +28,7 @@ jobs:
             -Dsonar.organization=genesislcap
             -Dsonar.projectKey=genesislcap_${{ inputs.repo_name }}
             -Dsonar.verbose=true
+            -Dsonar.branch.name=devops
         env:
           GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
