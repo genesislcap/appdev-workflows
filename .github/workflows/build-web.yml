@@ -27,6 +27,8 @@ on:
         required: true
       GPR_READ_TOKEN:
         required: true
+      JENKINSGENESIS_SONAR:
+        required: false
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -123,3 +125,8 @@ jobs:
               echo ${{ env.OUTPUT }}
               ls | grep zip
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+
+  sonarcloud:
+    name: SonarCloud
+    uses: ./.github/workflows/sonarcloud.yml
+    secrets: inherit
