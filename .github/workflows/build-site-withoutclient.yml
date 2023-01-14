@@ -126,7 +126,7 @@ jobs:
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
                #download web
                echo "PWD after module download: $(pwd)"               
-               cd web_downloads
+               cd ${{ env.PRODUCT_BASE }}/web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
                #  unzip \*.zip
