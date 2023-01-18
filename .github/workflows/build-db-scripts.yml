@@ -95,6 +95,8 @@ jobs:
             sudo apt install unzip
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
+            ls *.zip
+            pwd
             
       - name: Convert to tar
         run: |
