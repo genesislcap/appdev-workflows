@@ -96,7 +96,7 @@ jobs:
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
             ls ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }}
-            ls ${{ env.PRODUCT_BASE }}/
+            ls ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/
             pwd
             
       - name: Convert to tar
@@ -117,7 +117,7 @@ jobs:
            
       - name: Publish to Artifactory 
         run: |
-            cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
+            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}" -T *.zip
             
       - name: Create RPM
