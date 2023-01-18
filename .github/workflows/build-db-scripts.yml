@@ -101,7 +101,7 @@ jobs:
       - name: Convert to tar
         run: |
            mkdir ${{ env.PRODUCT_NAME }}-1
-           cp "${{ env.OUTPUT }}" ${{ env.tmpdir }}/
+           cp "${{ env.OUTPUT }}" ${{ env.PRODUCT_NAME }}-1/
            (cd ${{ env.PRODUCT_NAME }}-1 && unzip -q "${{ env.OUTPUT }}")
            rm "${{ env.PRODUCT_NAME }}-1/${{ env.OUTPUT }}"
            echo "outfilename=$(echo "${{ env.OUTPUT }}" | rev | cut -d. -f2- | rev).tar)" >> $GITHUB_ENV
