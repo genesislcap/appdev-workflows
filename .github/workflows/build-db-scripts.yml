@@ -100,7 +100,7 @@ jobs:
             
       - name: Convert to tar
         run: |
-           echo ${{ env.PRODUCT_NAME }}-1 | mkdir
+           mkdir ${{ env.PRODUCT_NAME }}-1
            cp "${{ env.OUTPUT }}" ${{ env.tmpdir }}/
            (cd ${{ env.PRODUCT_NAME }}-1 && unzip -q "${{ env.OUTPUT }}")
            rm "${{ env.PRODUCT_NAME }}-1/${{ env.OUTPUT }}"
