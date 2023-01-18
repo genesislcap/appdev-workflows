@@ -95,12 +95,9 @@ jobs:
             sudo apt install unzip
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
-            cd ${{ env.PRODUCT_BASE }}
-            ls
             
       - name: Convert to tar
         run: |
-           cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
            mkdir ${{ env.PRODUCT_NAME }}-1
            cp "${{ env.OUTPUT }}" ${{ env.PRODUCT_NAME }}-1/
            (cd ${{ env.PRODUCT_NAME }}-1 && unzip -q "${{ env.OUTPUT }}")
