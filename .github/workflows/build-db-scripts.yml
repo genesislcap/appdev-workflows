@@ -100,7 +100,8 @@ jobs:
             
       - name: Convert to tar
         run: |
-           echo "tmpdir=$(mktemp -d)" >> $GITHUB_ENV
+           echo "tmpdir=$(echo tempdir)" >> $GITHUB_ENV
+           mkdir ${{ env.tmpdir }}
            cp "${{ env.OUTPUT }}" ${{ env.tmpdir }}/
            (cd ${{ env.tmpdir }} && unzip -q "${{ env.OUTPUT }}")
            rm "${{ env.tmpdir }}/${{ env.OUTPUT }}"
