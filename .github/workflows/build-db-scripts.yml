@@ -148,7 +148,7 @@ jobs:
             sed -i "s/version/${{ env.VERSION }}/g" /tmp/dbinstall.sh
             mvn versions:set -DnewVersion=${{ env.VERSION }}
             mvn rpm:rpm
-            find / -name "*.rpm"
+            find ~/ -name "*.rpm"
             ls
           
       - name: Publish RPM to Artifactory
