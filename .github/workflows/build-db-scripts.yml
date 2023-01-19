@@ -124,7 +124,7 @@ jobs:
       - name: Publish to Artifactory 
         run: |
             cd ${{ env.PRODUCT_BASE }}
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}" -T *.zip
+            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}/" -T *.zip
             
       - name: Create RPM
         run: |
@@ -150,7 +150,7 @@ jobs:
       - name: Publish RPM to Artifactory
         run: |
             cd ${{ env.PRODUCT_BASE }}/target/rpm/genesis-${{ env.PRODUCT_NAME }}-dbscripts/RPMS/x86_64/
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/rpm/${{ inputs.client }}" -T *.rpm
+            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/rpm/${{ inputs.client }}/" -T *.rpm
         
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
