@@ -74,7 +74,10 @@ jobs:
       - name: Set Output
         run: |
               echo "OUTPUT=genesis-${{ env.PRODUCT_NAME }}-dbscripts-${{ env.VERSION }}.zip" >> $GITHUB_ENV
-              echo "outfilename=$(echo "${{ env.OUTPUT }}" | rev | cut -d. -f2- | rev).tar)" >> $GITHUB_ENV
+
+      - name: Set outfilename
+        run: |
+              echo "outfilename=$(echo "${{ env.OUTPUT }}" | rev | cut -d. -f2- | rev).tar" >> $GITHUB_ENV
 
       - name: Depcheck
         uses: dependency-check/Dependency-Check_Action@1.0.0
@@ -95,6 +98,8 @@ jobs:
           
       - name: Package
         run: |
+            echo ${{ env.OUTPUT }}
+            echo ${{ env.outfilename }}
             sudo apt install zip
             sudo apt install unzip
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
@@ -102,8 +107,6 @@ jobs:
             ls ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }}
             echo "${{ env.OUTPUT }}"
             cd ${{ env.PRODUCT_BASE }}
-            ls
-            pwd
             echo "${{ env.PRODUCT_BASE }}"
             ls
             
@@ -116,7 +119,7 @@ jobs:
            (cd ${{ env.PRODUCT_NAME }}-1 && tar cf "${{ env.outfilename }}" * && gzip "${{ env.outfilename }}" )
            mv "${{ env.PRODUCT_NAME }}-1/${{ env.outfilename }}.gz" .
            rm -rf ${{ env.PRODUCT_NAME }}-1
-           echo "Converted ${{ env.output }} to ${{ env.outfilename }} as a tar zip file"
+           echo "Converted ${{ env.OUTPUT }} to ${{ env.outfilename }} as a tar zip file"
            pwd 
            echo "make a copy in the /tmp folder for the rpm to work"
            cp ${{ env.outfilename }}.gz /tmp
