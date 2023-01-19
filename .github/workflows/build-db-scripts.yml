@@ -153,7 +153,7 @@ jobs:
           
       - name: Publish RPM to Artifactory
         run: |
-            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target/rpm
+            cd ${{ env.PRODUCT_BASE }}/target/rpm/genesis-axes-dbscripts/RPMS/x86_64/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/rpm/${{ inputs.client }}" -T *.rpm
         
       - name: Slack Notification
