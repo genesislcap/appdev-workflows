@@ -96,7 +96,8 @@ jobs:
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
             ls ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }}
-            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/
+            cd ${{ env.PRODUCT_BASE }}
+            ls
             pwd
             echo "${{ env.PRODUCT_BASE }}"
             ls
