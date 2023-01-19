@@ -74,6 +74,7 @@ jobs:
       - name: Set Output
         run: |
               echo "OUTPUT=genesis-${{ env.PRODUCT_NAME }}-dbscripts-${{ env.VERSION }}.zip" >> $GITHUB_ENV
+              echo "outfilename=$(echo "${{ env.OUTPUT }}" | rev | cut -d. -f2- | rev).tar)" >> $GITHUB_ENV
 
       - name: Depcheck
         uses: dependency-check/Dependency-Check_Action@1.0.0
@@ -112,7 +113,6 @@ jobs:
            cp "${{ env.OUTPUT }}" ${{ env.PRODUCT_NAME }}-1/
            (cd ${{ env.PRODUCT_NAME }}-1 && unzip -q "${{ env.OUTPUT }}")
            rm "${{ env.PRODUCT_NAME }}-1/${{ env.OUTPUT }}"
-           echo "outfilename=$(echo "${{ env.OUTPUT }}" | rev | cut -d. -f2- | rev).tar)" >> $GITHUB_ENV
            (cd ${{ env.PRODUCT_NAME }}-1 && tar cf "${{ env.outfilename }}" * && gzip "${{ env.outfilename }}" )
            mv "${{ env.PRODUCT_NAME }}-1/${{ env.outfilename }}.gz" .
            rm -rf ${{ env.PRODUCT_NAME }}-1
