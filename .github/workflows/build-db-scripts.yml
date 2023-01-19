@@ -128,7 +128,7 @@ jobs:
       - name: Publish to Artifactory 
         run: |
             cd ${{ env.PRODUCT_BASE }}
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}" -T *.zip
+            #curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}" -T *.zip
             
       - name: Create RPM
         run: |
@@ -148,6 +148,7 @@ jobs:
             sed -i "s/version/${{ env.VERSION }}/g" /tmp/dbinstall.sh
             mvn versions:set -DnewVersion=${{ env.VERSION }}
             mvn rpm:rpm
+            ls
           
       - name: Publish RPM to Artifactory
         run: |
