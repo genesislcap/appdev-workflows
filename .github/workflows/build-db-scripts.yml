@@ -127,7 +127,7 @@ jobs:
            
       - name: Publish to Artifactory 
         run: |
-            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-distribution/target
+            cd ${{ env.PRODUCT_BASE }}
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}" -T *.zip
             
       - name: Create RPM
