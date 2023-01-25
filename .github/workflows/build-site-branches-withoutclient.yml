@@ -138,6 +138,7 @@ jobs:
                         echo "$(sed -e '1,/genesis_modules/d'  < ./snt/product.yml | grep "^  - { ")" > /tmp/"$CLIENT_NAME"_edited_product.yml
                         while read line
                           do
+                            echo "$line"
                             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
                           done < /tmp/"$CLIENT_NAME"_edited_product.yml
                         echo "Modules required for $CLIENT_NAME required are-->" && cat /tmp/"$CLIENT_NAME"_edited_product.yml
