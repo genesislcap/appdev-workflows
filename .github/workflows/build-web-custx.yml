@@ -120,8 +120,12 @@ jobs:
               date
               sudo apt-get install zip unzip
               echo $(pwd)
-              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
-              cd packages/apps/${{ env.PRODUCT_NAME }}/dist
+              mkdir web
+              mkdir web/admin
+              mkdir web/client
+              cp -rf packages/apps/custx-admin/dist/* web/admin
+              cp -rf packages/apps/custx-client/dist/* web/client
+              cd web
               zip -r ${{ env.OUTPUT }} *
               pwd
               echo ${{ env.OUTPUT }}
