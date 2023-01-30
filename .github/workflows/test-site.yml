@@ -1,0 +1,233 @@
+# This is a workflow to being called from appdev-devops repo in genesiscicd
+#  NPM web build workflow v0.0.1
+
+name: Site Deploy
+
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: false
+        type: string
+  
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      SLACK_WEBHOOK:
+        required: true
+
+
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    env:
+      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
+      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
+      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
+      SLACK_WEBHOOK: ${{secrets.SLACK_WEBHOOK}}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+          
+     - name: GitHub Tag Name example
+       run: |
+         echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+         echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+
+      - name: Environment Variables
+        run: |
+              if [[ "$REPO_NAME" == "axes-gateway-site-specific" ]]  
+              then
+               echo "PRODUCT_NAME=axes-gateway">> $GITHUB_ENV               
+               echo "OUTPUT=axes-gateway-site-specific-$(${{ github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV              
+              else
+                echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+                echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(${{  github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV
+              fi
+
+              echo "VERSION=$(${{ github.ref_name }} | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              echo "CLIENT_DIR=$([[ ${{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ ${{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
+              
+      - name: Environment Variables for web and server
+        run: |
+              
+              echo "WEB_VERSION=$(grep "web_version" $(find ${{ env.CLIENT_DIR }}/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+              echo "SERVER_VERSION=$(grep "server_version" $(find  ${{ env.CLIENT_DIR }}/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+              
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+
+      - name: Env Setup for nightly builds off default-branch
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
+        run: |
+              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              for i in ./*
+              do 
+                  if [ -d "$i/snt" ]
+                  then
+                    echo "WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+                    echo "SERVER_VERSION=$(grep "server_version" $(find  $i/snt/ -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+                    sed -i "s/${{ env.WEB_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
+                    sed -i "s/${{ env.SERVER_VERSION }}/develop/g" ${{ env.PRODUCT_BASE }}/$i/snt/product.yml
+                  else
+                    echo "not a directory"
+                 fi
+              done
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+
+      - name: check env variables
+        run: |
+              echo "${{ github.ref_name }}"
+              echo "Product Name: ${{ env.PRODUCT_NAME }}"
+              echo "Version: ${{ env.VERSION }}"
+              echo "Product Base: ${{ env.PRODUCT_BASE }}"
+              echo "Output: ${{ env.OUTPUT }}"
+              echo "Client Directory: ${{ env.CLIENT_DIR }}"
+              echo "Client Name is : ${{ env.CLIENT_NAME }}"
+              echo "Web Version: ${{ env.WEB_VERSION }}"
+              echo "Server Version: ${{ env.SERVER_VERSION }}"
+              if [[ -z  "${{ env.CLIENT_NAME }}" ]]
+              then
+                echo "Check your Tag naming convention. It should be CLIENTNAME_[a-zA-Z]-[0-9].[0-9].[0-9]"
+                exit 1
+              fi
+              
+      - name: Package + Deploy Site
+        run: |
+             sudo apt-get install zip
+             cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
+             echo $(pwd)
+             ls -a
+             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUT}}
+
+      - name: Download server + assign
+        run: |
+             curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.SERVER_VERSION }}.xml'
+             echo pom-${{ env.SERVER_VERSION }}.xml
+             echo "AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")" >> $GITHUB_ENV
+             echo "GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")" >> $GITHUB_ENV
+
+      - name: Download server, web and latest auth/genesis-distribution from JFROG
+        run: |
+             mkdir web_downloads
+             mkdir server_downloads
+             cp ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{env.OUTPUT}} server_downloads
+             echo "current directory: $(pwd)"
+             echo "files in pwd: $(ls -a)"
+             #download auth distribution into server_downloads folder
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
+             #download genesis
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/genesis-distribution/"${{ env.GENESIS_VERSION }}"/genesis-distribution-"${{ env.GENESIS_VERSION }}"-bin.zip
+             #download server into server_downloads folder
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
+             #download modules into server_downloads folder
+            
+             cd ${{ env.CLIENT_DIR }}/snt
+            
+             echo "this is the present directory: $(pwd)"
+             if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
+             echo "this is the present directory: $(pwd)"
+             echo "LIST of FILES: $(ls -a)"             
+             
+             if [ "${{ env.WEB_VERSION }}" == "" ]; then
+             
+               echo "Product Name: ${{ env.PRODUCT_NAME }}"
+               #download web
+               echo "PWD after module download: $(pwd)"               
+               cd web_downloads
+               echo "this is the present directory: $(pwd)"
+               echo "List of files in pwd:$(ls -a)"
+               #  unzip \*.zip
+               touch temp
+               tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
+               cd ../server_downloads  
+             else
+               #download web
+               echo "PWD after module download: $(pwd)"
+               
+               cd ../..
+               
+               wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
+               cd web_downloads
+               echo "this is the present directory: $(pwd)"
+               echo "List of files in pwd:$(ls -a)"
+               unzip \*.zip
+               tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
+               cd ../server_downloads   
+             fi
+             echo "displaying files in server_downloads folder: $(ls -a)"
+             unzip \*.zip
+             ls
+             rm *.zip
+             tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
+             ls -lart /tmp/*.tar*
+        env:
+          JAVA_TOOL_OPTIONS: ${{'-Xmx8192m' }}
+          
+      - name: Create RPM
+        run: |
+            sudo apt-get install rpm
+            touch pom.xml
+            rm pom.xml
+            
+            echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHByb2plY3QgeG1sbnM9Imh0dHA6Ly9tYXZlbi5hcGFjaGUub3JnL1BPTS80LjAuMCIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIKICAgICAgICAgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vbWF2ZW4uYXBhY2hlLm9yZy9QT00vNC4wLjAgaHR0cDovL21hdmVuLmFwYWNoZS5vcmcveHNkL21hdmVuLTQuMC4wLnhzZCI+CiAgICA8bW9kZWxWZXJzaW9uPjQuMC4wPC9tb2RlbFZlcnNpb24+CiAgICA8Z3JvdXBJZD5nbG9iYWwuZ2VuZXNpczwvZ3JvdXBJZD4KICAgIDxhcnRpZmFjdElkPmdlbmVzaXMtcnBtPC9hcnRpZmFjdElkPgogICAgPHZlcnNpb24+MS4wLjA8L3ZlcnNpb24+CiAgICA8cGFja2FnaW5nPnBvbTwvcGFja2FnaW5nPgogICAgPG5hbWU+Z2VuZXNpcy1ycG08L25hbWU+CiAgICA8cHJvcGVydGllcz4KCQk8cHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz5VVEYtODwvcHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz4KCTwvcHJvcGVydGllcz4KICAgIDxtb2R1bGVzLz4KICAgIDxidWlsZD4KICAgICAgICA8cGx1Z2lucz4KICAgICAgICAgICAgPHBsdWdpbj4KICAgICAgICAgICAgICAgIDxncm91cElkPm9yZy5jb2RlaGF1cy5tb2pvPC9ncm91cElkPgogICAgICAgICAgICAgICAgPGFydGlmYWN0SWQ+cnBtLW1hdmVuLXBsdWdpbjwvYXJ0aWZhY3RJZD4KICAgICAgICAgICAgICAgIDx2ZXJzaW9uPjIuMi4wPC92ZXJzaW9uPgogICAgICAgICAgICAgICAgPGluaGVyaXRlZD5mYWxzZTwvaW5oZXJpdGVkPgogICAgICAgICAgICAgICAgPGNvbmZpZ3VyYXRpb24+CiAgICAgICAgICAgICAgICAgICAgPG5hbWU+Z2VuZXNpcy1QUk9EVUNUPC9uYW1lPgogICAgICAgICAgICAgICAgICAgIDxsaWNlbnNlPihjKSBnZW5lc2lzLmdsb2JhbDwvbGljZW5zZT4KICAgICAgICAgICAgICAgICAgICA8bmVlZGFyY2g+eDg2XzY0PC9uZWVkYXJjaD4KICAgICAgICAgICAgICAgICAgICA8Z3JvdXA+R2VuZXNpcyBQbGF0Zm9ybTwvZ3JvdXA+CiAgICAgICAgICAgICAgICAgICAgPHBvc3RpbnN0YWxsU2NyaXB0bGV0PgogICAgICAgICAgICAgICAgICAgICAgICA8c2NyaXB0RmlsZT4vdG1wL2luc3RhbGwuc2g8L3NjcmlwdEZpbGU+CiAgICAgICAgICAgICAgICAgICAgPC9wb3N0aW5zdGFsbFNjcmlwdGxldD4KICAgICAgICAgICAgICAgICAgICA8bWFwcGluZ3M+CiAgICAgICAgICAgICAgICAgICAgICAgIDxtYXBwaW5nPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpcmVjdG9yeT4vdG1wLzwvZGlyZWN0b3J5PgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGZpbGVtb2RlPjc1MDwvZmlsZW1vZGU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8dXNlcm5hbWU+cm9vdDwvdXNlcm5hbWU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8Z3JvdXBuYW1lPnJvb3Q8L2dyb3VwbmFtZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2VzPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2U+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxsb2NhdGlvbj4vdG1wL2dlbmVzaXNfUFJPRFVDVF9wYWNrYWdlLnRhci5nejwvbG9jYXRpb24+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zb3VyY2U+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3NvdXJjZXM+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvbWFwcGluZz4KICAgICAgICAgICAgICAgICAgICAgICAgPG1hcHBpbmc+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGlyZWN0b3J5Pi90bXAvPC9kaXJlY3Rvcnk+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZmlsZW1vZGU+NzUwPC9maWxlbW9kZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDx1c2VybmFtZT5yb290PC91c2VybmFtZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxncm91cG5hbWU+cm9vdDwvZ3JvdXBuYW1lPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNvdXJjZXM+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNvdXJjZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPGxvY2F0aW9uPi90bXAvZ2VuZXNpc19QUk9EVUNUX3dlYi50YXIuZ3o8L2xvY2F0aW9uPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvc291cmNlPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zb3VyY2VzPgogICAgICAgICAgICAgICAgICAgICAgICA8L21hcHBpbmc+CiAgICAgICAgICAgICAgICAgICAgPC9tYXBwaW5ncz4KICAgICAgICAgICAgICAgIDwvY29uZmlndXJhdGlvbj4KICAgICAgICAgICAgPC9wbHVnaW4+CiAgICAgICAgPC9wbHVnaW5zPgogICAgPC9idWlsZD4KPC9wcm9qZWN0Pg==" | base64 -d > pom.xml
+            sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
+            echo "pom completed"
+             
+            if [ $(test -f /tmp/install.sh && echo 1 || echo 0) -eq 1  ]
+            then
+              rm /tmp/install.sh
+            fi
+            
+            echo "install.sh start"
+            echo "IyEvdXNyL2Jpbi9lbnYgYmFzaAoKZXhlYyAxPi9wcm9jLyRQUElEL2ZkLzEKZXhlYyAyPi9wcm9jLyRQUElEL2ZkLzIKCiMjIFNldCB0aGUgcHJvZHVjdCB1c2VyIGFuZCBncm91cCBpZiBzcGVjaWZpZWQKCmdlbmVzaXNfdXNlcj0iZ2VuZXNpc1VzZXIiCmdlbmVzaXNfZ3JwPSJnZW5lc2lzVXNlciIKcm9vdF9kaXI9ImRhdGEiCnNlcnZlcl9kaXI9JChkYXRlICslWSVtJWQtJUglTSkKCmlmIFsgISAkKHRlc3QgLWQgL3Zhci9sb2cvZ2VuZXNpc19zZXJ2aWNlICAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSAgXQp0aGVuCiAgICBzdWRvIGluc3RhbGwgLWQgL3Zhci9sb2cvZ2VuZXNpc19zZXJ2aWNlIC1vICRnZW5lc2lzX3VzZXIgLW0gNzUwCmVsc2UgCiAgICBlY2hvICIvdmFyL2xvZy9nZW5lc2lzX3NlcnZpY2UgaXMgYWxyZWFkeSBwcmVzZW50IgpmaQoKZWNobyAiRGVmYXVsdCBnZW5lc2lzX3VzZXIgaXM6ICRnZW5lc2lzX3VzZXIiCmVjaG8gIkRlZmF1bHQgdXNlciBncm91cCBpcyAkZ2VuZXNpc19ncnAiCmVjaG8gIkRlZmF1bHQgaW5zdGFsbGF0aW9uIGRpcmVjdG9yeSBpczogJGdlbmVzaXNfdXNlciIKCgppZiBbICQodGVzdCAtZiAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mICYmIGVjaG8gMSB8fCBlY2hvIDApIC1lcSAxIF0gJiYgWyAkKGdyZXAgZ2VuZXNpc191c2VyIC1pYyAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mKSAtZ3QgMCBdCnRoZW4KICAgIGVjaG8gIk5ldyBnZW5lc2lzX3VzZXIgcHJvdmlkZWQgaW4gdGhlIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgaXM6ICRnZW5lc2lzX3VzZXIiCiAgICBnZW5lc2lzX3VzZXI9JChncmVwIGdlbmVzaXNfdXNlciAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mIHwgY3V0IC1kICc9JyAtZiAyKQpmaQoKaWYgWyAkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSBdICYmIFsgJChncmVwIGdlbmVzaXNfZ3JwIC1pYyAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mKSAtZ3QgMCBdCnRoZW4KICAgIGVjaG8gIk5ldyBnZW5lc2lzIHVzZXIgZ3JvdXAgcHJvdmlkZWQgaW4gdGhlIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgaXM6ICRnZW5lc2lzX2dycCIKICAgIGdlbmVzaXNfZ3JwPSQoZ3JlcCBnZW5lc2lzX2dycCAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mIHwgY3V0IC1kICc9JyAtZiAyKQpmaQoKaWYgWyAkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSBdICYmIFsgJChncmVwIHJvb3RfZGlyIC1pYyAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mKSAtZ3QgMCBdCnRoZW4KICAgIGVjaG8gIk5ldyBpbnN0YWxsYXRpb24gZGlyZWN0b3J5IHByb3ZpZGVkIGluIHRoZSAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mIGlzOiAkcm9vdF9kaXIiCiAgICByb290X2Rpcj0kKGdyZXAgcm9vdF9kaXIgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiB8IGN1dCAtZCAnPScgLWYgMikKZmkKCiNDcmVhdGUgZ2VuZXNpcyB1c2VyIGlmIGRvZXNuJ3QgZXhpc3QKZWNobyAiQ3JlYXRlICRnZW5lc2lzX3VzZXIgaWYgZG9lc24ndCBleGlzdCIKaWYgWyAkKHRlc3QgLWQgL2hvbWUvJGdlbmVzaXNfdXNlciAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMCBdCnRoZW4KICAgIGVjaG8gIkNyZWF0aW5nICRnZW5lc2lzX3VzZXIgLi4uLiAiCiAgICBzdWRvIGFkZHVzZXIgLW0gJGdlbmVzaXNfdXNlcgogICAgZWNobyAkZ2VuZXNpc191c2VyIiAgICAgICAgICBzb2Z0ICAgICBucHJvYyAgICAgICAgICAxNjM4NCIgfCBzdWRvIHRlZSAtYSAvZXRjL3NlY3VyaXR5L2xpbWl0cy5jb25mCiAgICBlY2hvICRnZW5lc2lzX3VzZXIiICAgICAgICAgIGhhcmQgICAgIG5wcm9jICAgICAgICAgIDE2Mzg0IiB8IHN1ZG8gdGVlIC1hIC9ldGMvc2VjdXJpdHkvbGltaXRzLmNvbmYKICAgIGVjaG8gJGdlbmVzaXNfdXNlciIgICAgICAgICAgc29mdCAgICAgbm9maWxlICAgICAgICAgNjU1MzYiIHwgc3VkbyB0ZWUgLWEgL2V0Yy9zZWN1cml0eS9saW1pdHMuY29uZgogICAgZWNobyAkZ2VuZXNpc191c2VyIiAgICAgICAgICBoYXJkICAgICBub2ZpbGUgICAgICAgICA2NTUzNiIgfCBzdWRvIHRlZSAtYSAvZXRjL3NlY3VyaXR5L2xpbWl0cy5jb25mCmVsc2UKICAgIGVjaG8gIlVzZXIgcHJlc2VudC4gQ2Fycnlpbmcgb24gLi4gICIKZmkKCiMgQmFja3VwIGtleXMgdG8gL3RtcC9rZXlzLwppZiBbWyAtZCAvaG9tZS8kZ2VuZXNpc191c2VyL3J1bi9ydW50aW1lL2tleXMgXV0KdGhlbgogICAgZWNobyAiRGlyZWN0b3J5IGtleXMgZXhpc3RzIGluIHJ1bnRpbWUuIiAKICAgIGVjaG8gIk1vdmluZyBrZXlzIHRvIC90bXAvIgogICAgY3AgLXIgL2hvbWUvJGdlbmVzaXNfdXNlci9ydW4vcnVudGltZS9rZXlzIC90bXAvCmZpCgojIGtpbGwgc2VydmVyCmVjaG8gIktpbGwgc2VydmVycy4uLiIKaWYgWyAkKGdyZXAgR0VORVNJU19IT01FIC1pYyAvaG9tZS8kZ2VuZXNpc191c2VyLy5iYXNocmMpIC1ndCAwIF0KdGhlbgogICAgZWNobyAiU3RvcHBpbmcgdGhlIGdlbmVzaXMgcGxhdGZvcm0iCiAgICBydW51c2VyIC1sICRnZW5lc2lzX3VzZXIgLWMgJ2VjaG8geSB8IGtpbGxTZXJ2ZXIgLS1hbGwnCiAgICBydW51c2VyIC1sICRnZW5lc2lzX3VzZXIgLWMgJ2tpbGxQcm9jZXNzIEdFTkVTSVNfQ0xVU1RFUicgICAKZmkKCiNCYWNrdXAgdGhlIGRhdGFiYXNlIGFjY29yZGluZyB0byB0aGUgY29uZmlnCmVjaG8gIk9ubHkgYmFja3VwIGRiIGlzIGRiX2JhY2t1cCBpcyBtZW50aW9uZWQgaW4gL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiIKaWYgWyAkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSBdICYmIFsgJChncmVwIGRiX2JhY2t1cCAtaWMgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZikgLWd0IDAgXSAmJiBbICQoZ3JlcCBkYl9iYWNrdXAgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiB8IGN1dCAtZCAnPScgLWYgMikgPSAnZmFsc2UnIF0KdGhlbgogICAgZWNobyAiZGJfYmFja3VwIGlzIGZhbHNlIGluIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgb3IgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiBpcyBub3QgZGVmaW5lZCIKZWxzZQogICAgZWNobyAiZGJfYmFja3VwIGlzIHRydWUgaW4gL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiIKICAgIG1rZGlyIC1wIC8kcm9vdF9kaXIvJGdlbmVzaXNfdXNlci9kYmJhY2t1cC8kc2VydmVyX2RpcgogICAgY2hvd24gLVIgJGdlbmVzaXNfdXNlci4kZ2VuZXNpc19ncnAgLyRyb290X2Rpci8kZ2VuZXNpc191c2VyL2RiYmFja3VwLwogICAgcnVudXNlciAtbCAkZ2VuZXNpc191c2VyIC1jICJjZCAvJHJvb3RfZGlyLyRnZW5lc2lzX3VzZXIvZGJiYWNrdXAvJHNlcnZlcl9kaXI7SnZtUnVuIGdsb2JhbC5nZW5lc2lzLmVudmlyb25tZW50LnNjcmlwdHMuRHVtcFRhYmxlIC0tYWxsO2d6aXAgKiIKZmkKCiMgQ3JlYXRlIGluc3RhbGwgbG9nCmVjaG8gIkNyZWF0ZSBpbnN0YWxsIGxvZy4uIgpMT0c9L2hvbWUvJGdlbmVzaXNfdXNlci9nZW5lc2lzSW5zdGFsbF8kKGRhdGUgKyVZLSVtLSVkLSVILSVNKS5sb2cKZWNobyAiR2VuZXNpcyAkZ2VuZXNpc191c2VyIEluc3RhbGwgc3RhcnRlZCBhdCAkKGRhdGUpIiA+PiAkTE9HCmVjaG8gIkdlbmVzaXMgJGdlbmVzaXNfdXNlciBJbnN0YWxsIHN0YXJ0ZWQgYXQgJChkYXRlKSIgCmNob3duICRnZW5lc2lzX3VzZXIuJGdlbmVzaXNfZ3JwICRMT0cKCiMgRXh0cmFjdCBkaXJlY3Rvcnkgc3RydWN0dXJlCmVjaG8gImV4dHJhY3QgdGhlIHNlcnZyIGRpcmVjdG9yeSBzdHJ1Y3R1cmUiCm1rZGlyIC1wIC8kcm9vdF9kaXIvJGdlbmVzaXNfdXNlci9zZXJ2ZXIvJHNlcnZlcl9kaXIvcnVuCmNkIC8kcm9vdF9kaXIvJGdlbmVzaXNfdXNlci9zZXJ2ZXIvJHNlcnZlcl9kaXIvcnVuLyAKdGFyIC14emYgL3RtcC9nZW5lc2lzX3Byb2R1Y3RfbmFtZV9wYWNrYWdlLnRhci5neiAmPiAvZGV2L251bGwKcm0gLWYgL3RtcC9nZW5lc2lzX3Byb2R1Y3RfbmFtZV9wYWNrYWdlLnRhci5negoKI2NvcHkgcnVudGltZQplY2hvICJCYWNrdXAgYW5kIGNvcHkgdGhlIGV4aXN0aW5nIHJ1bnRpbWUgZnJvbSBwcmV2aW91cyBpbnN0YWxsYXRpb25zLCBpZiBhbnkuLi4uIgppZiBbICQodGVzdCAtZCAvaG9tZS8kZ2VuZXNpc191c2VyL3J1bi9ydW50aW1lICYmIGVjaG8gMSB8fCBlY2hvIDApIC1lcSAxIF0KdGhlbgogICAgY3AgLVIgL2hvbWUvJGdlbmVzaXNfdXNlci9ydW4vcnVudGltZSAvJHJvb3RfZGlyLyRnZW5lc2lzX3VzZXIvc2VydmVyLyRzZXJ2ZXJfZGlyL3J1bi8KZmkKCmVjaG8gIlVubGluayBwcmV2aW91cyBydW4gYW5kIGxpbmsgaXQgdG8gdGhlIHJ1biBkaXIgb2YgdGhlIGN1cnJlbnQgaW5zdGFsbGF0aW9uIgp1bmxpbmsgL2hvbWUvJGdlbmVzaXNfdXNlci9ydW4KbG4gLXMgLyRyb290X2Rpci8kZ2VuZXNpc191c2VyL3NlcnZlci8kc2VydmVyX2Rpci9ydW4vIC9ob21lLyRnZW5lc2lzX3VzZXIvcnVuCmNob3duICRnZW5lc2lzX3VzZXIuJGdlbmVzaXNfZ3JwIC9ob21lLyRnZW5lc2lzX3VzZXIvcnVuCgojQ29weSB3ZWIgaWYgZXhpc3RzCmVjaG8gIkNoZWNrIGlmIHdlYiBpcyBiZWluZyBkZXBsb3llZCAuLi4iCmlmIFsgLWYgL3RtcC9nZW5lc2lzX3Byb2R1Y3RfbmFtZV93ZWIudGFyLmd6IF0KdGhlbgogICAgZWNobyAiV2ViIGlzIGJlaW5nIGRlcGxveWVkIHRvbyAuLi4gIgogICAgY2QgLyRyb290X2Rpci8kZ2VuZXNpc191c2VyLwogICAgbWtkaXIgd2ViLSRzZXJ2ZXJfZGlyCiAgICBjZCB3ZWItJHNlcnZlcl9kaXIKICAgICNjaGVjayBpZiB0aGUgd2ViIGFwcCBpcyBub3QgdG8gYmUgc2VydmVkIGZyb20gcm9vdAogICAgZWNobyAiQ2hlY2sgaWYgbmV3IHdlYiBpc250YWxsYXRpb24gZGlyIGhhcyBiZWVuIHByb3ZpZGVkIgogICAgaWYgWyAkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSBdICYmIFsgJChncmVwIHdlYl9wYXRoIC1pYyAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mKSAtZ3QgMCBdCiAgICB0aGVuCiAgICAgICAgd2ViX3BhdGg9JChncmVwIHdlYl9wYXRoIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgfCBjdXQgLWQgJz0nIC1mIDIpCiAgICAgICAgbWtkaXIgJHdlYl9wYXRoCiAgICAgICAgY2QgJHdlYl9wYXRoCiAgICAgICAgZWNobyAibmV3IHdlYiBpc250YWxsYXRpb24gZGlyIGlzIDogJHdlYl9wYXRoIgogICAgZmkKICAgIGVjaG8gIlVubGluayBvbGQgd2ViIGluc3RhbGxhdGlvbiBhbmQgcG9pbnQgaXQgdG8gdGhlIG5ldyB3ZWIgZm9sZGVyIgogICAgdGFyIC14emYgIC90bXAvZ2VuZXNpc19wcm9kdWN0X25hbWVfd2ViLnRhci5neiAmPiAvZGV2L251bGwKICAgIHVubGluayAvJHJvb3RfZGlyLyRnZW5lc2lzX3VzZXIvd2ViCiAgICBsbiAtcyAvJHJvb3RfZGlyLyRnZW5lc2lzX3VzZXIvd2ViLSRzZXJ2ZXJfZGlyLyAvJHJvb3RfZGlyLyRnZW5lc2lzX3VzZXIvd2ViCiAgICBybSAtZiAvdG1wL2dlbmVzaXNfcHJvZHVjdF9uYW1lX3dlYi50YXIuZ3oKZmkKCmNob3duIC1SICRnZW5lc2lzX3VzZXIuJGdlbmVzaXNfZ3JwIC8kcm9vdF9kaXIvJGdlbmVzaXNfdXNlcgoKIyBTZXQgdXAgYmFzaHJjCmVjaG8gIlNldHRpbmcgdXAgYmFzaHJjIGZvciB0aGUgJGdlbmVzaXNfdXNlciBpZiBpdHMgbm90IHByZXNlbnQiCmlmIFsgJChncmVwIEdFTkVTSVNfSE9NRSAtaWMgL2hvbWUvJGdlbmVzaXNfdXNlci8uYmFzaHJjKSAtZXEgMCBdCnRoZW4KICAgIGVjaG8gImV4cG9ydCBHRU5FU0lTX0hPTUU9XCRIT01FL3J1bi8iID4+IC9ob21lLyRnZW5lc2lzX3VzZXIvLmJhc2hyYwogICAgZWNobyAiWyAtZiBcJEdFTkVTSVNfSE9NRS9nZW5lc2lzL3V0aWwvc2V0dXAuc2ggXSAmJiBzb3VyY2UgXCRHRU5FU0lTX0hPTUUvZ2VuZXNpcy91dGlsL3NldHVwLnNoIiA+PiAvaG9tZS8kZ2VuZXNpc191c2VyLy5iYXNocmMKICAgIGVjaG8gImV4cG9ydCBHUk9PVllfSE9NRT0vb3B0L2dyb292eSIgPj4gL2hvbWUvJGdlbmVzaXNfdXNlci8uYmFzaHJjCiAgICBlY2hvICJQQVRIPVwkR1JPT1ZZX0hPTUUvYmluOlwkUEFUSCIgPj4gL2hvbWUvJGdlbmVzaXNfdXNlci8uYmFzaHJjCiAgICBlY2hvICJiYXNocmMgc2V0dXAgY29tcGxldGUuLi4iCmZpCgoKaWYgW1sgKCQodGVzdCAtZiAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mICYmIGVjaG8gMSB8fCBlY2hvIDApIC1lcSAwKSB8fCAoKCQodGVzdCAtZiAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mICYmIGVjaG8gMSB8fCBlY2hvIDApIC1lcSAxKSAmJiAoJChncmVwIHJ1bl9leGVjIC1pYyAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mKSAtZXEgMCkgfHwgKCgkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSkgJiYgKCQoZ3JlcCBydW5fZXhlYyAtaWMgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZikgLWd0IDApICYmICgkKHNlZCAtbiAncy9ecnVuX2V4ZWM9XCguKlwpL1wxL3AnIDwgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZikgIT0gImZhbHNlIikpKSBdXQp0aGVuCiAgZWNobyAicnVuX2V4ZWMgaGFzIGJlZW4gZGVmaW5lZCBpbiAvdG1wL2dlbmVzaXNfaW5zdGFsbC5jb25mIGFzOiAkKHNlZCAtbiAncy9ecnVuX2V4ZWM9XCguKlwpL1wxL3AnIDwgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZikiCiAgCiAgIyBSdW4gY29tbWFuZCB0byBjbGVhciBjYWNoZQogIGVjaG8gIkNoZWNrIGlmIHNpdGUtc3BlY2lmaWMgc2NyaXB0cyBmb2xkZXIgZXhpdHMuLiIKICBydW51c2VyIC1sICRnZW5lc2lzX3VzZXIgLWMgImxzIC1sIC9ob21lLyRnZW5lc2lzX3VzZXIvcnVuLy9zaXRlLXNwZWNpZmljL3NjcmlwdHMvIgogIGVjaG8gIlJ1bm5pbmcgR2VuZXNpcyBjYWNoZSBjbGVhciBjb21tYW5kIgogIHJ1bnVzZXIgLWwgJGdlbmVzaXNfdXNlciAtYyAiSnZtUnVuIC1tb2R1bGVzPWdlbmVzaXMtZW52aXJvbm1lbnQgZ2xvYmFsLmdlbmVzaXMuZW52aXJvbm1lbnQuc2NyaXB0cy5DbGVhckNvZGVnZW5DYWNoZSIKICAKICAjIFJ1biBnZW5lc2lzSW5zdGFsbAogIGVjaG8gIlJ1bm5pbmcgR2VuZXNpcyBJbnN0YWxsIHNjcmlwdCIKICBydW51c2VyIC1sICRnZW5lc2lzX3VzZXIgLWMgJ2dlbmVzaXNJbnN0YWxsJwoKICAjIFJ1biBSZW1hcAogIGVjaG8gIlJ1bm5pbmcgUmVtYXAiCiAgcnVudXNlciAtbCAkZ2VuZXNpc191c2VyIC1jICdlY2hvIHkgfCByZW1hcCAtLWNvbW1pdCAtLWZvcmNlJwplbHNlCiAgZWNobyAiL3RtcC9nZW5lc2lzX2luc3RhbGwgaXMgYWJzZW50IG9yIHJ1bl9leGVjIGhhcyBiZWVuIGRlZmluZWQgaW4gL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiBhczogJChzZWQgLW4gJ3MvXnJ1bl9leGVjPVwoLipcKS9cMS9wJyA8IC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYpIgogIGVjaG8gImdlbmVzaXNJbnN0YWxsIGFuZCByZW1hcCB3aWxsIG5vdCBiZSBydW4iCmZpCgojIFJlc3RvcmUgYmFja3VwcwppZiBbWyAtZCAvdG1wL2tleXMgXV0gCnRoZW4KICAgIGVjaG8gImtleXMgZG8gbm90IGV4aXN0IGluIHJ1bnRpbWUuIFJlc3RvcmluZyBiYWNrdXAiCiAgICBjcCAtciAvdG1wL2tleXMgL2hvbWUvJGdlbmVzaXNfdXNlci9ydW4vcnVudGltZS8KICAgIGVjaG8gIkJhY2t1cCBrZXlzIHJlc3RvcmVkLCBjbGVhbmluZyB1cCIKICAgIHJtIC1yZiAvdG1wL2tleXMvCiAgICBjaG93biAtUiAkZ2VuZXNpc191c2VyOiRnZW5lc2lzX2dycCAvaG9tZS9heGVzL3J1bi9ydW50aW1lL2tleXMKZmkKCmlmIFtbICgkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMCkgfHwgKCgkKHRlc3QgLWYgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZiAmJiBlY2hvIDEgfHwgZWNobyAwKSAtZXEgMSkgJiYgKCQoZ3JlcCBydW5fZXhlYyAtaWMgL3RtcC9nZW5lc2lzX2luc3RhbGwuY29uZikgLWVxIDApIHx8ICgoJCh0ZXN0IC1mIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgJiYgZWNobyAxIHx8IGVjaG8gMCkgLWVxIDEpICYmICgkKGdyZXAgcnVuX2V4ZWMgLWljIC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYpIC1ndCAwKSAmJiAoJChzZWQgLW4gJ3MvXnJ1bl9leGVjPVwoLipcKS9cMS9wJyA8IC90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYpICE9ICJmYWxzZSIpKSkgXV0KdGhlbgogICAgI1N0YXJ0IHRoZSBzZXJ2ZXIKCWVjaG8gIi90bXAvZ2VuZXNpc19pbnN0YWxsLmNvbmYgZmlsZSBhYnNlbnQgb3IgcnVuX2V4ZWMgbm90IGRlZmluZWQgLi4uLiBTdGFydGluZyBzZXJ2ZXJzIC4uLi4iCiAgICBydW51c2VyIC1sICRnZW5lc2lzX3VzZXIgLWMgJ3N0YXJ0U2VydmVyJwpmaQplY2hvICJHZW5lc2lzICRnZW5lc2lzX3VzZXIgSW5zdGFsbCBmaW5pc2hlZCBhdCAkKGRhdGUpIiA+PiAkTE9HCmVjaG8gIkluc3RhbGwuc2ggaGFzIGNvbXBsZXRlZCAuLi4iCg==" | base64 -d > /tmp/install.sh
+
+            sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
+            echo "install.sh end"
+            
+            echo "Replace the generic users in the install script with the client user used for installation ...."
+            if [[ "$PRODUCT_NAME" == "wm_aqs" ]]
+            then
+                sed -i "s/genesisUser/aqs/g" /tmp/install.sh
+            else
+                sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
+            fi
+            mvn versions:set -DnewVersion=$VERSION
+            mvn rpm:rpm
+
+      - name: Upload RPM
+        run: |
+          echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
+          echo "RPM NAME: ${{ env.RPM_NAME }}"
+          ls target/rpm/
+          cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME}
+          ls -lart
+          echo "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/"
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/" -T *.rpm
+
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}    
