@@ -38,28 +38,34 @@ jobs:
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       SLACK_WEBHOOK: ${{secrets.SLACK_WEBHOOK}}
+      GITTAG: ${{ github.ref_name }}
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: '0'
+          
+      - name: GitHub Tag Name example
+        run: |
+          echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
 
       - name: Environment Variables
         run: |
               if [[ "$REPO_NAME" == "axes-gateway-site-specific" ]]  
               then
                echo "PRODUCT_NAME=axes-gateway">> $GITHUB_ENV               
-               echo "OUTPUT=axes-gateway-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV              
+               echo "OUTPUT=axes-gateway-site-specific-$( echo ${{ github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV              
               else
                 echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-                echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV              
+                echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(echo ${{  github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV
               fi
 
-              echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "VERSION=$(echo ${{ github.ref_name }} | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              echo "CLIENT_DIR=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
+              echo "CLIENT_DIR=$([[ $(echo ${{ github.ref_name }}) = [A-Z]* ]] && echo $(ls | grep -- $(echo -${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ $(echo ${{ github.ref_name }}) = [A-Z]* ]] && echo $(ls | grep -- $(echo -${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
               
       - name: Environment Variables for web and server
         run: |
@@ -92,7 +98,7 @@ jobs:
 
       - name: check env variables
         run: |
-              echo "$(git describe --tags)"
+              echo "${{ github.ref_name }}"
               echo "Product Name: ${{ env.PRODUCT_NAME }}"
               echo "Version: ${{ env.VERSION }}"
               echo "Product Base: ${{ env.PRODUCT_BASE }}"
