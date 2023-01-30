@@ -56,16 +56,16 @@ jobs:
               if [[ "$REPO_NAME" == "axes-gateway-site-specific" ]]  
               then
                echo "PRODUCT_NAME=axes-gateway">> $GITHUB_ENV               
-               echo "OUTPUT=axes-gateway-site-specific-$({{ github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV              
+               echo "OUTPUT=axes-gateway-site-specific-$( echo ${{ github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV              
               else
                 echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
                 echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$({{  github.ref_name }} | cut -d"_" -f2).zip" >> $GITHUB_ENV
               fi
 
-              echo "VERSION=$(${{ github.ref_name }} | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "VERSION=$(echo ${{ github.ref_name }} | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              echo "CLIENT_DIR=$([[ {{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$({{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ {{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$({{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
+              echo "CLIENT_DIR=$([[ echo ${{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$({{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ echo ${{ github.ref_name }} = [A-Z]* ]] && echo $(ls | grep -- $(echo -$({{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]")) | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV              
               
       - name: Environment Variables for web and server
         run: |
