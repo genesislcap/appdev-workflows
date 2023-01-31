@@ -155,8 +155,8 @@ jobs:
              if [ "${{ env.WEB_VERSION }}" == "" ]; then
              
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
-               #download web
-               echo "PWD after module download: $(pwd)"               
+               echo "PWD after module download: $(pwd)"
+               cd ${{ env.PRODUCT_BASE }}
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
