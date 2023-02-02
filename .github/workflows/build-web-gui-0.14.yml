@@ -12,6 +12,9 @@ on:
       product_name:
         required: false
         type: string
+      branch:
+        required: false
+        type: string
 
     secrets:
       JFROG_USERNAME:
@@ -53,7 +56,18 @@ jobs:
               echo "VERSION=$( git describe --tag --abbrev=0)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags --abbrev=0).zip" >> $GITHUB_ENV
-      
+ 
+      - name: Env Setup for nightly build
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
+        run:  |
+              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+              
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention 
+ 
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
