@@ -24,6 +24,9 @@ on:
       mvn_options:
         required: false
         type: string
+      build_path:
+        required: false
+        type: string
 
     secrets:
       JFROG_USERNAME:
@@ -117,6 +120,9 @@ jobs:
           
       - name: set version 
         run: |
+           if [ -z "${{ inputs.build_path }}" ]; then
+               cd ${{ inputs.build_path }}
+           fi
            echo "Version: ${{ env.VERSION }}"
            if [ -z "${{ inputs.mvn_options }}" ]; then
                mvn versions:set -DnewVersion=${{ env.VERSION }}
@@ -125,8 +131,13 @@ jobs:
            fi
            cat ~/.m2/settings.xml
            
+           
+           
       - name: Build
         run: | 
+           if [ -z "${{ inputs.build_path }}" ]; then
+               cd ${{ inputs.build_path }}
+           fi
            if [ -z "${{ inputs.mvn_options }}" ]; then
                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
            else
