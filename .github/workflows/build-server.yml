@@ -123,6 +123,8 @@ jobs:
            if [ -z "${{ inputs.build_path }}" ]; then
                cd ${{ inputs.build_path }}
            fi
+           pwd
+           ls -larth
            echo "Version: ${{ env.VERSION }}"
            if [ -z "${{ inputs.mvn_options }}" ]; then
                mvn versions:set -DnewVersion=${{ env.VERSION }}
