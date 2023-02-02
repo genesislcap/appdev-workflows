@@ -121,7 +121,7 @@ jobs:
       - name: set version 
         run: |
            if [ -z "${{ inputs.build_path }}" ]; then
-               cd "${{ env.PRODUCT_BASE }}"
+               cd "${{ inputs.build_path }}"
            fi
            pwd
            ls -larth
@@ -138,7 +138,7 @@ jobs:
       - name: Build
         run: | 
            if [ -z "${{ inputs.build_path }}" ]; then
-               cd "${{ env.PRODUCT_BASE }}"
+               cd "${{ inputs.build_path }}"
            fi
            if [ -z "${{ inputs.mvn_options }}" ]; then
                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
