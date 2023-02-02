@@ -20,7 +20,10 @@ on:
         type: string
       module_name:
         required: false
-        type: string         
+        type: string
+      mvn_options:
+        required: false
+        type: string
 
     secrets:
       JFROG_USERNAME:
@@ -84,15 +87,24 @@ jobs:
             ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
             ${{ runner.os }}-
      
-      - name: set version 
+      - name: set version
         run: |
            echo "Version: ${{ env.VERSION }}"
            mvn versions:set -DnewVersion=${{ env.VERSION }}
            cat ~/.m2/settings.xml
-           JAVA_TOOL_OPTIONS="-Xmx8192m" mvn clean install
+           if [ -z "${{ inputs.mvn_options }}" ]; then
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn clean install
+           else
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn clean install ${{ inputs.mvn_options }}
+           fi
            
       - name: Build
-        run: JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+        run: |
+            if [ -z "${{ inputs.mvn_options }}" ]; then
+                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+            else
+                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }}
+            fi
         
       - name: Publish to Artifactory 
         run: |
