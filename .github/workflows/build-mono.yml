@@ -77,8 +77,11 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-              echo "GENESIS_USER=$(echo "${{ env.PRODUCT_NAME }}" | sed -E 's/[0-9]+//g')" >>$GITHUB_ENV
            
+      - name: Set Genesis User
+        run: |
+              echo "GENESIS_USER=$(echo "${{ env.PRODUCT_NAME }}" | sed -E 's/[0-9]+//g')" >>$GITHUB_ENV
+              
       - name: Change Version in config files
         run: |
               sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
@@ -88,6 +91,7 @@ jobs:
               
       - name: Create product.yml
         run: |
+              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"   
               touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
               echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
               echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
@@ -185,8 +189,7 @@ jobs:
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
               echo "SITE_OUTPUT Version: ${{ env.SITE_OUTPUT }}"
-              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"   
-        
+              
       - name: Package + Deploy Site
         run: |
              sudo apt-get install zip
