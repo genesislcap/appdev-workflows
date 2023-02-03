@@ -91,7 +91,8 @@ jobs:
               
       - name: Create product.yml
         run: |
-              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"   
+              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
+              mkdir -p server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt
               touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
               echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
               echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
