@@ -84,10 +84,10 @@ jobs:
               
       - name: Change Version in config files
         run: |
-              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
-              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
-              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
-              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
+              sed 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
+              sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
+              sed 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
+              sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
               
       - name: Create product.yml
         run: |
