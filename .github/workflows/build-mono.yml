@@ -77,7 +77,27 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-      
+              echo "GENESIS_USER=$(echo "${{ env.PRODUCT_NAME }}" | sed -E 's/[0-9]+//g')" >>$GITHUB_ENV
+           
+      - name: Change Version in config files
+        run: |
+              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
+              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
+              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
+              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
+              
+      - name: Create product.yml
+        run: |
+              touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\ngenesis_products:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\tname: ${{ env.PRODUCT_NAME }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\njava_packages:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\t- java-11-openjdk-devel" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "product.yml:"
+              cat server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+           
       - name: Package and Publish
         run:  |
               echo "Package:"
@@ -110,7 +130,7 @@ jobs:
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
         run:  |
            echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
-           
+      
       - name: Build the Server app
         working-directory: ./server/jvm       
         run: |
@@ -149,7 +169,6 @@ jobs:
              echo "OUTPUTSITE=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-${{ inputs.branch }}.zip" >> $GITHUB_ENV
              echo "SITE_OUTPUT=$(echo "${{ env.PRODUCT_NAME }}-site-specific-${{ inputs.branch }}.zip")" >> $GITHUB_ENV
-             echo "GENESIS_USER=$(echo "${{ env.PRODUCT_NAME }}" | sed -E 's/[0-9]+//g')" >>$GITHUB_ENV
   
       - name: check env variables
         run: |
@@ -166,28 +185,7 @@ jobs:
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
               echo "SITE_OUTPUT Version: ${{ env.SITE_OUTPUT }}"
-              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
-       
-      - name: Change Version in config files
-        run: |
-              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
-              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
-              sed '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
-              sed -i '/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
-              
-        
-      - name: Create product.yml
-        run: |
-              touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\ngenesis_products:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\tname: ${{ env.PRODUCT_NAME }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\njava_packages:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\t- java-11-openjdk-devel" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "product.yml:"
-              cat server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              
+              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"   
         
       - name: Package + Deploy Site
         run: |
