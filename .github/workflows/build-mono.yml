@@ -88,29 +88,7 @@ jobs:
               sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
               sed 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
               sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
-         
-      - name: Product.yml existence
-        run: |
-              if [ -f "server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml" ]; then
-                echo "PRESENCE=$(echo true)" >>$GITHUB_ENV
-                echo true
-              fi
-             
-      - name: Create product.yml
-        if: ${{ env.PRESENCE == 'true' }}
-        run: |
-              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
-              mkdir -p server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt
-              touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\ngenesis_products:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\tname: ${{ env.PRODUCT_NAME }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\njava_packages:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "\t- java-11-openjdk-devel" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-              echo "product.yml:"
-              cat server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
-           
+            
       - name: Package and Publish
         run:  |
               echo "Package:"
@@ -198,6 +176,27 @@ jobs:
               echo "AUTH_VERSION Version: ${{ env.AUTH_VERSION }}"
               echo "GENESIS_VERSION Version: ${{ env.GENESIS_VERSION }}"
               echo "SITE_OUTPUT Version: ${{ env.SITE_OUTPUT }}"
+      - name: Product.yml existence
+        run: |
+              if [ -f "server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml" ]; then
+                echo "PRESENCE=$(echo true)" >>$GITHUB_ENV
+                echo true
+              fi
+             
+      - name: Create product.yml
+        if: ${{ env.PRESENCE == 'true' }}
+        run: |
+              echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
+              mkdir -p server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt
+              touch server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "genesis_user: ${{ env.GENESIS_USER }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "build_rpm: true" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\ngenesis_products:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\tname: ${{ env.PRODUCT_NAME }}" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\njava_packages:\n" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "\t- java-11-openjdk-devel" >> server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
+              echo "product.yml:"
+              cat server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml
               
       - name: Package + Deploy Site
         run: |
