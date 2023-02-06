@@ -91,7 +91,7 @@ jobs:
          
       - name: Product.yml existence
         run: |
-              if [ -f server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml ]; then
+              if [ -f "server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml" ]; then
                echo "PRESENCE=$(echo true)" >>$GITHUB_ENV
               fi
              
