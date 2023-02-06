@@ -97,7 +97,7 @@ jobs:
               fi
              
       - name: Create product.yml
-        if: ${{ env.PRESENCE != true }}
+        if: ${{ env.PRESENCE != 'true' }}
         run: |
               echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
               mkdir -p server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt
