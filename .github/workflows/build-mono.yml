@@ -88,8 +88,14 @@ jobs:
               sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/${{ env.PRODUCT_NAME }}-site-specific/build.gradle.kts
               sed 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
               sed -i 's/version = \"1.0.0-SNAPSHOT\"//g' server/jvm/build.gradle.kts
-              
+         
+      - name: Product.yml existence
+        run: |
+              if [ -f server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt/product.yml ]; then
+               echo "PRESENCE=$(echo true)" >>$GITHUB_ENV
+             
       - name: Create product.yml
+        if: ${{ env.PRESENCE != true }}
         run: |
               echo "GENESIS_USER: ${{ env.GENESIS_USER }}"
               mkdir -p server/jvm/${{ env.PRODUCT_NAME }}-site-specific/snt
