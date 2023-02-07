@@ -27,24 +27,6 @@ on:
       build_path:
         required: false
         type: string
-      mode:
-        required: true
-        type: string
-      github-token:
-        required: true
-        type: string
-      ec2-image-id:
-        required: true
-        type: string
-      ec2-instance-type:
-        required: true
-        type: string
-      subnet-id:
-        required: true
-        type: string
-      security-group-id:
-        required: true
-        type: string
 
     secrets:
       JFROG_USERNAME:
