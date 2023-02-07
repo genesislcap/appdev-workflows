@@ -37,6 +37,13 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: true
+      ec2runner_key:
+        required: true
+      ec2runner_secret:
+        required: true
+      ec2runner_ghtoken:
+        required: true
+
 env:
   REPO_NAME: ${{ inputs.repo_name }}
     
