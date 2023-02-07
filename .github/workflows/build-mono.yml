@@ -182,6 +182,10 @@ jobs:
                 echo "PRESENCE=$(echo true)" >>$GITHUB_ENV
                 echo true
               fi
+            
+      - name: Arbritrary Intermediary Step
+        run: |
+              echo ${{ env.PRESENCE }}
           
       - name: Create product.yml
         if: ${{ env.PRESENCE != 'true' }} 
