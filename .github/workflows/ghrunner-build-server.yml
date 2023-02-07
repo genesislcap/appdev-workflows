@@ -85,11 +85,13 @@ jobs:
             ]
 
   build:
+    name: Steps to build the artifact and upload it to jfrog
+    needs: start-runner
     env:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ steps.start-ec2-runner.outputs.label }}
     
     steps:
       - uses: actions/checkout@v2
