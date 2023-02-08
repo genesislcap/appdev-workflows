@@ -80,7 +80,7 @@ jobs:
           security-group-id: sg-03d25264de6b0f9d9
           aws-resource-tags: >
             [
-              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
             ]
 
