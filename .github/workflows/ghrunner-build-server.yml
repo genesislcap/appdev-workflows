@@ -74,8 +74,8 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-0949dd8676e6947f8
-          ec2-instance-type: t3.medium
+          ec2-image-id: ami-0e4bc4a3f81354049
+          ec2-instance-type: c6a.large
           subnet-id: subnet-09bda6a8d18a2d0b9
           security-group-id: sg-03d25264de6b0f9d9
           aws-resource-tags: >
