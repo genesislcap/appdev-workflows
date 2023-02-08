@@ -169,15 +169,13 @@ jobs:
            fi
            pwd
            ls -larth
+           cat ~/.m2/settings.xml
            echo "Version: ${{ env.VERSION }}"
            if [ -z "${{ inputs.mvn_options }}" ]; then
                mvn versions:set -DnewVersion=${{ env.VERSION }}
            else
                mvn versions:set -DnewVersion=${{ env.VERSION }} ${{ inputs.mvn_options }}
            fi
-           cat ~/.m2/settings.xml
-           
-           
            
       - name: Build
         run: | 
