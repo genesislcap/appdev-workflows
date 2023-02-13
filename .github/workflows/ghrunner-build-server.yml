@@ -210,8 +210,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.ec2runner_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_secret }}
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
           aws-region: eu-west-2
           
       - name: Stop EC2 runner
