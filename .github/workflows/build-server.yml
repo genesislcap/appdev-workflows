@@ -105,7 +105,7 @@ jobs:
         uses: dependency-check/Dependency-Check_Action@1.0.0
         id: Depcheck
         with:
-          project: 'test'
+          project: ${{ inputs.repo_name }}
           path: '.'
           format: 'HTML'
         env:
