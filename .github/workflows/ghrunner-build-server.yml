@@ -76,8 +76,8 @@ jobs:
           github-token: ${{ secrets.ec2runner_ghtoken }}
           ec2-image-id: ami-04c088afcc48366c2
           ec2-instance-type: c6a.2xlarge
-          subnet-id: subnet-09bda6a8d18a2d0b9
-          security-group-id: subnet-0e8b04fceec1e9611
+          subnet-id: subnet-0e8b04fceec1e9611
+          security-group-id: sg-02e77ac5b0b3e635c
           aws-resource-tags: >
             [
               {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
