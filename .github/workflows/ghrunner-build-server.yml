@@ -37,9 +37,9 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: true
-      ec2runner_key:
+      ec2runner_genesisglobal_key:
         required: true
-      ec2runner_secret:
+      ec2runner_genesisglobal_secret:
         required: true
       ec2runner_ghtoken:
         required: true
