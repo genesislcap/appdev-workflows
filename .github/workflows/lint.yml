@@ -21,7 +21,7 @@ on:
       typescript_standard_tsconfig_file:
         required: true
         type: string
-      validate_jcspd:
+      validate_jscpd:
         required: true
         type: string
         
@@ -51,5 +51,5 @@ jobs:
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
           TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
-          VALIDATE_JSCPD: ${{ inputs.validate_jcspd }}
+          VALIDATE_JSCPD: ${{ inputs.validate_jscpd }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
