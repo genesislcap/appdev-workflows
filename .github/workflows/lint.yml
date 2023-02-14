@@ -18,6 +18,13 @@ on:
       es_config_file: 
         required: true
         type: string
+      typescript_standard_tsconfig_file:
+        required: true
+        type: string
+      validate_jcspd:
+        required: true
+        type: string
+        
 
     secrets:
       GPR_READ_TOKEN:
@@ -40,8 +47,9 @@ jobs:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: master
           LOG_LEVEL: ERROR
-          LINTER_RULES_PATH: /
-          CSS_FILE_NAME: .stylelintrc.js
-          TYPESCRIPT_ES_CONFIG_FILE: .eslintrc.js
-          TYPESCRIPT_STANDARD_TSCONFIG_FILE: tsconfig.json
+          LINTER_RULES_PATH: ${{ inputs.linter_rules_path }}
+          CSS_FILE_NAME: ${{ inputs..stylelintrc.js }}
+          TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.es_config_file }}
+          TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
+          VALIDATE_JSCPD: ${{ inputs.validate_jcspd }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
