@@ -1,15 +1,22 @@
 name: Lint Code Base
 
 on:
-  pull_request:
-    branches: 
-      - "*"
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+
+    secrets:
+      GPR_READ_TOKEN:
+        required: true
 
 jobs:
   build:
-    # Name the Job
     name: Lint Code Base
-    # Set the agent to run on
     runs-on: ubuntu-latest
 
     steps:
