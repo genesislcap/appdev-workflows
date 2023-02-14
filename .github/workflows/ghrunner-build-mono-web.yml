@@ -1,0 +1,168 @@
+name: gradle-Build-workflow
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: false
+        type: string
+        
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JFROG_NPM_AUTH_TOKEN:
+        required: true
+      GPR_READ_TOKEN:
+        required: true        
+      GRADLE_PROPERTIES:
+        required: true
+      SLACK_WEBHOOK:
+        required: true
+      ec2runner_genesisglobal_key:
+        required: true
+      ec2runner_genesisglobal_secret:
+        required: true
+      ec2runner_ghtoken:
+        required: true
+    
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+
+jobs:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          role-duration-seconds: 3600
+          role-session-name: GitHubRunnerSession
+          
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          ec2-image-id: ami-04c088afcc48366c2
+          ec2-instance-type: c6a.2xlarge
+          subnet-id: subnet-0974abeb1a6398553
+          security-group-id: sg-02e77ac5b0b3e635c
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+
+  build:
+    name: Steps to build the artifact and upload it to jfrog
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
+          
+      - name: Bootstrap
+        working-directory: ./client
+        run: npm run bootstrap
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+      - name: Build
+        working-directory: ./client/web
+        run: npm run build
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+
+      - name: Env Set-Up
+        run:  |
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
+             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
+            
+      - name: Env Setup for nightly build
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
+        run:  |
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+              
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+      
+            
+      - name: Package and Publish
+        run:  |
+              echo "Package:"
+              date
+              sudo apt-get install zip unzip
+              echo $(pwd)
+              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
+              cd client/web/dist
+              zip -r ${{ env.OUTPUT }} *
+              pwd
+              echo ${{ env.OUTPUT }}
+              ls | grep zip
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+     
+      
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+            
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - build # required to wait when the main job is done
+      
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
+          
