@@ -9,6 +9,15 @@ on:
       branch:
         required: false
         type: string
+      linter_rules_path:
+        required: true
+        type: string
+      css_file_name: 
+        required: true
+        type: string
+      es_config_file: 
+        required: true
+        type: string
 
     secrets:
       GPR_READ_TOKEN:
