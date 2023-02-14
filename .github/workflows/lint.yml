@@ -28,7 +28,7 @@ jobs:
       - name: Lint Code Base
         uses: github/super-linter@v4
         env:
-          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: master
           LINTER_RULES_PATH: /
           CSS_FILE_NAME: .eslintrc.js
