@@ -48,7 +48,7 @@ jobs:
           DEFAULT_BRANCH: master
           LOG_LEVEL: ERROR
           LINTER_RULES_PATH: ${{ inputs.linter_rules_path }}
-          CSS_FILE_NAME: ${{ inputs..stylelintrc.js }}
+          CSS_FILE_NAME: ${{ inputs.css_file_name }}
           TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
           VALIDATE_JSCPD: ${{ inputs.validate_jcspd }}
