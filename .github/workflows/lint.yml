@@ -39,7 +39,9 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: master
+          LOG_LEVEL: ERROR
           LINTER_RULES_PATH: /
           CSS_FILE_NAME: .stylelintrc.js
-          JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.js
+          TYPESCRIPT_ES_CONFIG_FILE: .eslintrc.js
+          TYPESCRIPT_STANDARD_TSCONFIG_FILE: tsconfig.json
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
