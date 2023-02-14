@@ -38,7 +38,7 @@ env:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-    start-runner:
+  start-runner:
     name: Start self-hosted EC2 runner
     runs-on: ubuntu-latest
     outputs:
