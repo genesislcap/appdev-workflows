@@ -16,7 +16,7 @@ on:
         default: .stylelintrc.js
         required: false
         type: string
-      es_config_file: 
+      typescript_es_config_file: 
         default: .eslintrc.js
         required: false
         type: string
@@ -53,7 +53,7 @@ jobs:
           LINTER_RULES_PATH: ${{ inputs.linter_rules_path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
-          TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.es_config_file }}
+          TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.typescript_es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
           VALIDATE_TYPESCRIPT_STANDARD: true
           VALIDATE_TYPESCRIPT_ES: true
