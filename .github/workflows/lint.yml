@@ -13,13 +13,16 @@ on:
         required: true
         type: string
       css_file_name: 
-        required: true
+        default: .stylelintrc.js
+        required: false
         type: string
       es_config_file: 
+        default: .eslintrc.js
         required: true
         type: string
       typescript_standard_tsconfig_file:
-        required: true
+        default: tsconfig.eslint.json
+        required: false
         type: string
         
     secrets:
