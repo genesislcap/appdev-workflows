@@ -55,12 +55,12 @@ jobs:
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
           TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
-          #VALIDATE_TYPESCRIPT_STANDARD: true
+          VALIDATE_TYPESCRIPT_STANDARD: true
           VALIDATE_TYPESCRIPT_ES: true
-          #VALIDATE_JAVASCRIPT_STANDARD: true
-          #VALIDATE_JAVASCRIPT_ES: true
-          #VALIDATE_GITLEAKS: true
-          #VALIDATE_JSON: true
-          #VALIDATE_YAML: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
           
           
