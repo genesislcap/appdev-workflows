@@ -21,7 +21,7 @@ on:
         required: false
         type: string
       typescript_standard_tsconfig_file:
-        default: tsconfig.eslint.json
+        default: tsconfig.json
         required: false
         type: string
         
