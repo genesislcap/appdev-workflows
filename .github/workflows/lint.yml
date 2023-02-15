@@ -49,7 +49,7 @@ jobs:
         uses: github/super-linter/slim@v4
         env:
           VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: master
+          DEFAULT_BRANCH: develop
           LOG_LEVEL: ERROR
           LINTER_RULES_PATH: ${{ inputs.linter_rules_path }}
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
