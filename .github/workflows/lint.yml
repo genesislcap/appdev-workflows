@@ -55,6 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
      
       - name: Lint Check
+        if: always()
         run: |
           echo "LINT_CHECK=$(grep -Fxq "lint" $(cat package.json))" >> $GITHUB_ENV
 
