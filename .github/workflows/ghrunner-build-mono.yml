@@ -250,7 +250,7 @@ jobs:
               
       - name: Package + Deploy Site
         run: |
-             sudo apt-get install zip
+             sudo yum install zip
              cd ${{ env.HOME }}//server/jvm/
              mkdir site-specific
              cp -R ${{ env.PRODUCT_NAME }}-site-specific/src/main/resources/* site-specific
