@@ -169,7 +169,8 @@ jobs:
       - name: Build the Server app
         working-directory: ./server/jvm       
         run: |
-         chmod +x ./gradlew 
+         chmod +x ./gradlew
+         cat ~/.gradle/gradle.properties >>  ./gradle.properties
          ./gradlew assemble -Pversion=${{ env.VERSION }}
       
       - name: Publish to Artifactory 
