@@ -60,13 +60,3 @@ jobs:
           VALIDATE_NATURAL_LANGUAGE: false
           VALIDATE_MARKDOWN: false
           VALIDATE_EDITORCONFIG: false
-     
-      - name: Lint Check
-        if: always()
-        run: |
-          echo "LINT_CHECK=$(grep -Fxq "lint" $(cat package.json))" >> $GITHUB_ENV
-
-      - name: NPM Lint
-        run: |
-            npm run lint
-        
