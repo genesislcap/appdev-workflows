@@ -55,6 +55,7 @@ jobs:
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
           TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.typescript_es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
+          VALIDATE_ALL_CODEBASE: true
           VALIDATE_TYPESCRIPT_STANDARD: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_JAVASCRIPT_STANDARD: true
