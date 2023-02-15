@@ -21,11 +21,7 @@ on:
       typescript_standard_tsconfig_file:
         required: true
         type: string
-      validate_jscpd:
-        required: true
-        type: string
         
-
     secrets:
       GPR_READ_TOKEN:
         required: true
