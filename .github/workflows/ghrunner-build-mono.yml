@@ -179,7 +179,7 @@ jobs:
          fi
          
          cat build.gradle.kts
-         export JAVA_HOME=$(realpath $(dirname $(realpath `which java`))/../..)
+         export JAVA_HOME=$(dirname $(realpath `which java`))
          echo $JAVA_HOME 
          which java
          which javac 
