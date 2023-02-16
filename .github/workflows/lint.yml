@@ -45,9 +45,9 @@ jobs:
             npm install eslint-config-google --save-dev
 
       - name: Lint Code Base
-        uses: github/super-linter/slim@v4
+        uses: github/super-linter@v4
         env:
-          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: develop
           LOG_LEVEL: ERROR
           LINTER_RULES_PATH: ${{ inputs.linter_rules_path }}
@@ -55,7 +55,6 @@ jobs:
           CSS_FILE_NAME: ${{ inputs.css_file_name }}
           TYPESCRIPT_ES_CONFIG_FILE: ${{ inputs.typescript_es_config_file }}
           TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${{ inputs.typescript_standard_tsconfig_file }}
-          VALIDATE_ALL_CODEBASE: true
           VALIDATE_TYPESCRIPT_STANDARD: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_JAVASCRIPT_STANDARD: true
