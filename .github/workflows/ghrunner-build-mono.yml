@@ -185,7 +185,7 @@ jobs:
          which javac 
          java --version
          javac --version
-         ./gradlew assemble -Pversion=${{ env.VERSION }} --scan
+         ./gradlew assemble -Pversion=${{ env.VERSION }} --debug
       
       - name: Publish to Artifactory 
         run: |
