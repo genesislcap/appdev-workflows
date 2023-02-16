@@ -171,6 +171,12 @@ jobs:
         run: |
          chmod +x ./gradlew
          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+         if [ -f "build.gradle.kts" ]  &&  grep "version = "  build.gradle.kts ; then
+             val1=$(grep -n   "version = "  test.kts | cut -d':' -f1)
+             sed -i "$val1 d" build.gradle.kts
+         else 
+             echo "Version is not set in the build.gradle.kts file"
+         fi
          ./gradlew assemble -Pversion=${{ env.VERSION }}
       
       - name: Publish to Artifactory 
