@@ -124,7 +124,7 @@ jobs:
               
       - name: Package + Deploy Site
         run: |
-             sudo apt-get install zip
+             sudo yum install zip
              cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
              zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
              echo $(pwd)
