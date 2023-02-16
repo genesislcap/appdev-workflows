@@ -179,7 +179,9 @@ jobs:
          fi
          
          cat build.gradle.kts
-         
+         echo $JAVA_HOME 
+         which java
+         which javac         
          ./gradlew assemble -Pversion=${{ env.VERSION }} --scan
       
       - name: Publish to Artifactory 
