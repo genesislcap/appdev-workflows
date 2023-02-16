@@ -177,6 +177,9 @@ jobs:
          else 
              echo "Version is not set in the build.gradle.kts file"
          fi
+         
+         cat build.gradle.kts
+         
          ./gradlew assemble -Pversion=${{ env.VERSION }}
       
       - name: Publish to Artifactory 
