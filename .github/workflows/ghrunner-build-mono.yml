@@ -180,7 +180,7 @@ jobs:
          
          cat build.gradle.kts
          
-         ./gradlew assemble -Pversion=${{ env.VERSION }} --full-stacktrace
+         ./gradlew assemble -Pversion=${{ env.VERSION }} --scan
       
       - name: Publish to Artifactory 
         run: |
