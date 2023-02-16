@@ -249,8 +249,6 @@ jobs:
                     ls target/rpm/
                     cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME}
                     echo "RPM created, files in the location are-->" && echo "$(ls -lart)"
-
-                    echo "Uploading to https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/"
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/" -T *.rpm 
                   else
                     echo "$i is not a directory or does not have a snt folder in it"
