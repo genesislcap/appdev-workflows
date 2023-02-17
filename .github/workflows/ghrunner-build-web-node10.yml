@@ -64,7 +64,7 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-0e311ed23cf990687
+          ec2-image-id: ami-0e9c7c1c918cc2f01
           ec2-instance-type: c6a.2xlarge
           subnet-id: subnet-0974abeb1a6398553
           security-group-id: sg-02e77ac5b0b3e635c
@@ -121,6 +121,13 @@ jobs:
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
               
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
+              
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
@@ -128,14 +135,6 @@ jobs:
               #chmod 664 /usr/local/etc/npmrc
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              cat ~/.npmrc
-              
-      - name: Configure Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
 
       - name: Bootstrap
         run: |
