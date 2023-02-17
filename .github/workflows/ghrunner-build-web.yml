@@ -159,7 +159,7 @@ jobs:
         run:  |
               echo "Package:"
               date
-              sudo apt-get install zip unzip
+              sudo yum install zip unzip
               echo $(pwd)
               ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
               cd packages/apps/${{ env.PRODUCT_NAME }}/dist
