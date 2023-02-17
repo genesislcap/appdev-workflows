@@ -133,9 +133,7 @@ jobs:
          else 
              echo "Version is not set in the build.gradle.kts file"
          fi
-         
-         cat build.gradle.kts
-         export JAVA_HOME=/etc/alternatives/jre_11_openjdk
+         echo "Java home is :"
          echo $JAVA_HOME 
          which java
          which javac 
