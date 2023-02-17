@@ -75,6 +75,7 @@ jobs:
               {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
             ]
+            
   build:
     name: Steps to build the artifact and upload it to jfrog
     needs: start-runner
@@ -83,7 +84,7 @@ jobs:
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.start-runner.outputs.label }}
     
     strategy:
       matrix:
