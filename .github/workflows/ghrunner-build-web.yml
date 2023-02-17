@@ -119,8 +119,7 @@ jobs:
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
 
-      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
-        if: ${{ inputs.product_name }}
+      - name: Download and setup node16
         run: |
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
             . ~/.nvm/nvm.sh
