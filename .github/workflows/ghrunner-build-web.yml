@@ -119,18 +119,15 @@ jobs:
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
 
-      - name: Node Setup
-        run: |
-             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-             export NVM_DIR="$HOME/.nvm"
-             . ~/.nvm/nvm.sh
-             nvm install 16
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
               date
-              #chmod 664 /usr/local/etc/npmrc
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
               cat ~/.npmrc
