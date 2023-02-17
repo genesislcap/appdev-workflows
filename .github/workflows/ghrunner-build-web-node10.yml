@@ -169,7 +169,7 @@ jobs:
         run:  |
               echo "Package:"
               date
-              sudo apt-get install zip unzip
+              sudo yum install zip unzip
               echo $(pwd)
               
               mv ${{ env.PRODUCT_BASE }}/dist/debug ${{ env.PRODUCT_BASE }}/dist/${{ env.PACKAGE_NAME }}/.
