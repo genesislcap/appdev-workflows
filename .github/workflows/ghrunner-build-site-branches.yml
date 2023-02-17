@@ -132,7 +132,7 @@ jobs:
 
       - name: Package + Deploy Site per client
         run: |
-             sudo apt-get install zip
+             sudo yum install zip
              cd ${{ env.PRODUCT_BASE }}
              for i in ./*
               do 
