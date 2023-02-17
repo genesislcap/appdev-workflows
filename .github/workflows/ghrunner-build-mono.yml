@@ -181,6 +181,8 @@ jobs:
          cat build.gradle.kts
          export JAVA_HOME=$(realpath $(dirname $(realpath `which java`))/..)
          echo $JAVA_HOME 
+         export PATH=$JAVA_HOME:$PATH
+         echo $PATH
          which java
          which javac 
          java --version
