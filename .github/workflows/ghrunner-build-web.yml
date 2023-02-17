@@ -119,10 +119,13 @@ jobs:
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+          
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
 
       - name: Artifactory Setup
         run: |
