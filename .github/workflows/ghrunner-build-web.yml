@@ -132,7 +132,8 @@ jobs:
               date
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              cat ~/.npmrc
+              locate npmrc
+              cat .npmrc
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}   
 
