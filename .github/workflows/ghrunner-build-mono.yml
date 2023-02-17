@@ -64,7 +64,7 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-04c088afcc48366c2
+          ec2-image-id: ami-03fd4c551f7f8f424
           ec2-instance-type: c6a.2xlarge
           subnet-id: subnet-0974abeb1a6398553
           security-group-id: sg-02e77ac5b0b3e635c
@@ -177,16 +177,6 @@ jobs:
          else 
              echo "Version is not set in the build.gradle.kts file"
          fi
-         
-         cat build.gradle.kts
-         export JAVA_HOME=$(realpath $(dirname $(realpath `which java`))/..)
-         echo $JAVA_HOME 
-         export PATH=$JAVA_HOME:$PATH
-         echo $PATH
-         which java
-         which javac 
-         java --version
-         javac --version
          ./gradlew assemble -Pversion=${{ env.VERSION }}
       
       - name: Publish to Artifactory 
@@ -329,6 +319,7 @@ jobs:
              ls -lart /tmp/*.tar*
         env:
           JAVA_TOOL_OPTIONS: ${{'-Xmx8192m' }}
+          
       - name: Create RPM
         run: |
             sudo yum install rpm
@@ -351,6 +342,7 @@ jobs:
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
             ls -larth
+            
       - name: Upload RPM
         run: |
           echo "PRODUCT NAME: ${{ env.PRODUCT_NAME }}"
