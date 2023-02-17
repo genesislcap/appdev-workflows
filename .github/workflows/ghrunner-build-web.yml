@@ -66,7 +66,7 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-0e311ed23cf990687
+          ec2-image-id: ami-03fd4c551f7f8f424
           ec2-instance-type: c6a.2xlarge
           subnet-id: subnet-0974abeb1a6398553
           security-group-id: sg-02e77ac5b0b3e635c
@@ -115,18 +115,17 @@ jobs:
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
-              date
-              
+              date              
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
-              
-      - name: Configure Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
-          
+
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            . ~/.nvm/nvm.sh
+            nvm install 16
+        
       - name: Artifactory Setup
         run: |
               echo "Artifactory:"
