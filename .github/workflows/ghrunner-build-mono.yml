@@ -179,7 +179,7 @@ jobs:
          fi
          
          cat build.gradle.kts
-         export JAVA_HOME=/etc/alternatives/jre_11_openjdk
+         export JAVA_HOME=$(realpath $(dirname $(realpath `which java`))/..)
          echo $JAVA_HOME 
          which java
          which javac 
