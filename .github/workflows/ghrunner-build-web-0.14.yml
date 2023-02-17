@@ -73,6 +73,8 @@ jobs:
               {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
             ]
+            
+
   build:
     name: Steps to build the artifact and upload it to jfrog
     needs: start-runner
