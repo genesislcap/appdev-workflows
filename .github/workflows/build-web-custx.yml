@@ -131,7 +131,9 @@ jobs:
               #chmod 664 /usr/local/etc/npmrc
               npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_authToken=${{secrets.JFROG_NPM_AUTH_TOKEN}}
               npm config set @mono-public:registry=https://npm.pkg.github.com/mono-public/
+              npm config set //npm.pkg.github.com/mono-public/:always-auth true
               npm config set //npm.pkg.github.com/mono-public/:_authToken=${{secrets.CUSTX_NPM_TOKEN}}
               npm config list
 
