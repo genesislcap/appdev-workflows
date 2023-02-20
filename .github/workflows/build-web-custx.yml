@@ -29,20 +29,62 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: false
+      ec2runner_genesisglobal_key:
+        required: true
+      ec2runner_genesisglobal_secret:
+        required: true
+      ec2runner_ghtoken:
+        required: true
     
 env:
   REPO_NAME: ${{ inputs.repo_name }}
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs: 
-    
+jobs:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          role-duration-seconds: 3600
+          role-session-name: GitHubRunnerSession
+          
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          ec2-image-id: ami-0e9c7c1c918cc2f01
+          ec2-instance-type: c6a.2xlarge
+          subnet-id: subnet-0974abeb1a6398553
+          security-group-id: sg-02e77ac5b0b3e635c
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+         
   build:
+    name: Steps to build the artifact and upload it to jfrog
+    needs: start-runner
     env:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.start-runner.outputs.label }}
     
     strategy:
       matrix:
@@ -71,19 +113,9 @@ jobs:
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
-              date
-              
+              date    
               echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
               echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
-              
-      - name: Artifactory Setup
-        run: |
-              echo "Artifactory:"
-              date
-              #chmod 664 /usr/local/etc/npmrc
-              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              cat ~/.npmrc
               
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
@@ -91,6 +123,17 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
           scope: '@genesislcap'
+          
+      - name: Artifactory Setup
+        run: |
+              echo "Artifactory:"
+              date
+              #chmod 664 /usr/local/etc/npmrc
+              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
+              npm config set @mono-public:registry=https://npm.pkg.github.com/mono-public/
+              npm config set //npm.pkg.github.com/mono-public/:_authToken=${{secrets.CUSTX_NPM_TOKEN}}
+              npm config list
 
       - name: Bootstrap
         run: |
@@ -131,3 +174,27 @@ jobs:
               echo ${{ env.OUTPUT }}
               ls | grep zip
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v   
+              
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - build # required to wait when the main job is done
+      
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
