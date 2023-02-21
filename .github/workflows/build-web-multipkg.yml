@@ -136,6 +136,6 @@ jobs:
               echo "Coming here 2 "
               echo ${{ env.OUTPUT }}
               echo "Coming here 3 "
-              ls | grep zip
+              ls -lart
               echo "Coming here 4 "
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
