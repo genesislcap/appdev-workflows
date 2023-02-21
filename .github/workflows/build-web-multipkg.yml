@@ -131,7 +131,11 @@ jobs:
                done
                
               cd ${{ env.PRODUCT_BASE }}/web/
+              echo "Coming here 1 "
               zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *				
+              echo "Coming here 2 "
               echo ${{ env.OUTPUT }}
+              echo "Coming here 3 "
               ls | grep zip
+              echo "Coming here 4 "
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
