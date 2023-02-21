@@ -169,7 +169,7 @@ jobs:
                do
                  if [ -d "${{ env.PRODUCT_BASE }}/packages/apps/$i/dist" ]
                    then
-                     mkdir -f ${{ env.PRODUCT_BASE }}/web/$i
+                     mkdir ${{ env.PRODUCT_BASE }}/web/$i
                      cp -rf ${{ env.PRODUCT_BASE }}/packages/apps/$i/dist/* ${{ env.PRODUCT_BASE }}/web/$i
                      ls -lart ${{ env.PRODUCT_BASE }}/web/$i
                  fi
