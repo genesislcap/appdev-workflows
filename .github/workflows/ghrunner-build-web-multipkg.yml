@@ -133,28 +133,26 @@ jobs:
               echo "sonar.sources="$combined >> sonar-project.properties     
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
-              
-      - name: Artifactory Setup
-        run: |
-              echo "Artifactory:"
-              date
-              npm config set email=support@genesis.global
-              npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
-              
+
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+          registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-
-      - name: Bootstrap
-        run: |
-           npm config ls -l
-           npm run bootstrap
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+      - name: NPMRC Setup
+        run: |
+          npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+          npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_authToken=${{secrets.JFROG_NPM_AUTH_TOKEN}}
+          npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true
+          
+      - name: Bootstrap
+        run: |
+          npm config list
+          npm run bootstrap
           
       - name: Build
         run: npm run build      
