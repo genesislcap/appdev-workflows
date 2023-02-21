@@ -176,7 +176,8 @@ jobs:
                done
                
               cd ${{ env.PRODUCT_BASE }}/web/
-              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *				
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *
+              cd ${{ env.PRODUCT_BASE }}
               echo ${{ env.OUTPUT }}
               ls -larth
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
