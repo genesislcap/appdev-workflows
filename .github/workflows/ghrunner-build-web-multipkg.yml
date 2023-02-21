@@ -138,10 +138,10 @@ jobs:
         run: |
               echo "Artifactory:"
               date
-              npm config set always-auth=true
               npm config set email=support@genesis.global
               npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
               npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true
               
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
