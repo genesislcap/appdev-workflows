@@ -132,7 +132,8 @@ jobs:
                
               cd ${{ env.PRODUCT_BASE }}/web/
               echo "Coming here 1 "
-              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *				
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *		
+              cd ${{ env.PRODUCT_BASE }}
               echo "Coming here 2 "
               echo ${{ env.OUTPUT }}
               echo "Coming here 3 "
