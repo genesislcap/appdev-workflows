@@ -161,7 +161,7 @@ jobs:
         run:  |
               echo "Package:"
               date
-              sudo apt-get install zip unzip
+              sudo yum install zip unzip
               echo $(pwd)
               mkdir -p ${{ env.PRODUCT_BASE }}/web
               cd ${{ env.PRODUCT_BASE }}/packages/apps/
