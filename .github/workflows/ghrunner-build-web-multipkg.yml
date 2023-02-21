@@ -1,0 +1,210 @@
+# This is a workflow to being called from appdev-devops repo in genesiscicd
+#  NPM web build workflow v0.0.1
+
+name: Web Deploy
+
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: false
+        type: string
+        
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JFROG_NPM_AUTH_TOKEN:
+        required: true
+      GPR_READ_TOKEN:
+        required: true
+      JENKINSGENESIS_SONAR:
+        required: false
+      ec2runner_genesisglobal_key:
+        required: true
+      ec2runner_genesisglobal_secret:
+        required: true
+      ec2runner_ghtoken:
+        required: true
+    
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+    
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          role-duration-seconds: 3600
+          role-session-name: GitHubRunnerSession
+          
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          ec2-image-id: ami-0e9c7c1c918cc2f01
+          ec2-instance-type: c6a.2xlarge
+          subnet-id: subnet-0974abeb1a6398553
+          security-group-id: sg-02e77ac5b0b3e635c
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+            
+  build:
+    name: Steps to build the artifact and upload it to jfrog
+    needs: start-runner
+    env:
+      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
+      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
+      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
+      JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    
+    strategy:
+      matrix:
+        node-version: [16.x]
+    
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+
+      - name: Env Setup
+        run:  |
+              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
+              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
+
+      - name: Env Setup for nightly build
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
+        run:  |
+              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+              
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+              
+      - name: Sonar Setup
+        run:  |
+              echo "Sonar Setup:"
+              date
+              combined=""
+              echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
+              cd "${{ env.PRODUCT_BASE }}"/packages/apps/
+              ls -lart
+              for i in ./*
+               do
+                 if [ -d "$i" ]
+                   then
+                     token=${{ env.PRODUCT_BASE }}/packages/apps/$i/dist
+                     combined="${combined}${combined:+,}$token"
+                     echo $combined
+                 fi
+               done
+              echo "sonar.sources="$combined >> sonar-project.properties     
+              cat sonar-project.properties
+              cd ${{ env.PRODUCT_BASE }}
+              
+      - name: Artifactory Setup
+        run: |
+              echo "Artifactory:"
+              date
+              npm config set always-auth=true
+              npm config set email=support@genesis.global
+              npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+              npm config set @genesislcap:registry=http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+              
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: http://genesisglobal.jfrog.io/artifactory/api/npm/npm/
+          scope: '@genesislcap'
+
+      - name: Bootstrap
+        run: |
+           npm config ls -l
+           npm run bootstrap
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          
+      - name: Build
+        run: npm run build      
+             
+      - name: Package and Publish
+        run:  |
+              echo "Package:"
+              date
+              sudo apt-get install zip unzip
+              echo $(pwd)
+              mkdir -p ${{ env.PRODUCT_BASE }}/web
+              cd ${{ env.PRODUCT_BASE }}/packages/apps/
+              for i in ./*
+               do
+                 if [ -d "${{ env.PRODUCT_BASE }}/packages/apps/$i/dist" ]
+                   then
+                     mkdir -f ${{ env.PRODUCT_BASE }}/web/$i
+                     cp -rf ${{ env.PRODUCT_BASE }}/packages/apps/$i/dist/* ${{ env.PRODUCT_BASE }}/web/$i
+                     ls -lart ${{ env.PRODUCT_BASE }}/web/$i
+                 fi
+               done
+               
+              cd ${{ env.PRODUCT_BASE }}/web/
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *				
+              echo ${{ env.OUTPUT }}
+              ls | grep zip
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+
+
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - build # required to wait when the main job is done
+      
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
