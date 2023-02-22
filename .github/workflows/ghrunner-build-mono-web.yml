@@ -59,7 +59,7 @@ jobs:
           
       - name: Start EC2 runner
         id: start-ec2-runner
-        uses: genesislcp/ec2-github-runner@main
+        uses: genesiscicd/ec2-github-runner@main
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
