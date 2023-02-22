@@ -78,7 +78,6 @@ jobs:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      SLACK_WEBHOOK: ${{secrets.SLACK_WEBHOOK}}
       GITTAG: ${{ github.ref_name }}
     runs-on: ${{ needs.start-runner.outputs.label }}
 
