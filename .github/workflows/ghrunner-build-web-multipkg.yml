@@ -176,7 +176,7 @@ jobs:
                done
                
               cd ${{ env.PRODUCT_BASE }}/web/
-              zip -r ${{ env.PRODUCT_BASE }}/${{ env.output }} *
+              zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
               cd ${{ env.PRODUCT_BASE }}
               echo ${{ env.OUTPUT }}
               ls -larth
