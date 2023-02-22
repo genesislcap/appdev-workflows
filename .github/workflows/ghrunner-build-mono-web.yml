@@ -26,7 +26,7 @@ on:
       GRADLE_PROPERTIES:
         required: true
       SLACK_WEBHOOK:
-        required: true
+        required: false
       ec2runner_genesisglobal_key:
         required: true
       ec2runner_genesisglobal_secret:
@@ -135,12 +135,7 @@ jobs:
               echo ${{ env.OUTPUT }}
               ls | grep zip
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
-     
-      
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+   
             
   stop-runner:
     name: Stop self-hosted EC2 runner
