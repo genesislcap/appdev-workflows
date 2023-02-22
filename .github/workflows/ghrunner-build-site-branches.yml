@@ -24,7 +24,7 @@ on:
       JFROG_PASSWORD:
         required: true
       SLACK_WEBHOOK:
-        required: true
+        required: false
       ec2runner_genesisglobal_key:
         required: true
       ec2runner_genesisglobal_secret:
@@ -80,7 +80,6 @@ jobs:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      SLACK_WEBHOOK: ${{secrets.SLACK_WEBHOOK}}
     runs-on: ${{ needs.start-runner.outputs.label }}
 
     steps:
