@@ -62,12 +62,12 @@ jobs:
           
       - name: Start EC2 runner
         id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2
+        uses: genesiscicd/ec2-github-runner@main
         with:
           mode: start
           github-token: ${{ secrets.ec2runner_ghtoken }}
           ec2-image-id: ami-0e9c7c1c918cc2f01
-          ec2-instance-type: c6a.2xlarge
+          ec2-instance-type: t3a.2xlarge
           subnet-id: subnet-0974abeb1a6398553
           security-group-id: sg-02e77ac5b0b3e635c
           aws-resource-tags: >
