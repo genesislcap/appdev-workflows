@@ -26,7 +26,7 @@ on:
       GRADLE_PROPERTIES:
         required: true
       SLACK_WEBHOOK:
-        required: true
+        required: false
       ec2runner_genesisglobal_key:
         required: true
       ec2runner_genesisglobal_secret:
