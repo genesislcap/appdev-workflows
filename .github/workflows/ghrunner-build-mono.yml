@@ -352,11 +352,7 @@ jobs:
           ls -lart
           echo "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/" -T *.rpm
-       
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}     
+  
             
   stop-runner:
     name: Stop self-hosted EC2 runner
