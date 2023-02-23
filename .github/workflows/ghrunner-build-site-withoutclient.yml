@@ -197,7 +197,7 @@ jobs:
           
       - name: Create RPM
         run: |
-            sudo rpm install rpm
+            sudo yum install rpm
             touch pom.xml
             rm pom.xml
             
