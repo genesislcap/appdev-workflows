@@ -171,7 +171,7 @@ jobs:
         run:  |
               echo "Package:"
               date
-              sudo apt-get install zip unzip
+              sudo yum install zip unzip
               echo $(pwd)
               ln -s ./src/ src
               cd ./www
