@@ -1,0 +1,186 @@
+# This is a workflow to being called from appdev-devops repo in genesiscicd
+#  NPM web build workflow v0.0.1
+
+name: Server Deploy
+
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      artifact_location:
+        required: true
+        type: string
+      product_name:
+        required: false
+        type: string
+      module_name:
+        required: false
+        type: string
+      mvn_options:
+        required: false
+        type: string
+
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      ec2runner_genesisglobal_key:
+        required: true
+      ec2runner_genesisglobal_secret:
+        required: true
+      ec2runner_ghtoken:
+        required: true
+
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+    
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          role-duration-seconds: 3600
+          role-session-name: GitHubRunnerSession
+          
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: genesiscicd/ec2-github-runner@main
+        with:
+          mode: start
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          ec2-image-id: ami-04c088afcc48366c2
+          ec2-instance-type: t3a.2xlarge
+          subnet-id: subnet-0974abeb1a6398553
+          security-group-id: sg-02e77ac5b0b3e635c
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+            
+  build:
+    name: Steps to build the artifact and upload it to jfrog
+    needs: start-runner
+    env:
+      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
+      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
+      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
+    runs-on: ${{ needs.start-runner.outputs.label }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          cache: 'maven'
+          
+      - name: Env Set-Up
+        run: |
+             echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV 
+             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
+             echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
+             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
+ 
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}]'
+          plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}]'
+          servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
+          active_profiles: '["github"]'
+
+      - name: Cache Maven Dependencies
+        id: cache-maven-dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+            ${{ runner.os }}-
+     
+      - name: set version
+        run: |
+           echo "Version: ${{ env.VERSION }}"
+           mvn versions:set -DnewVersion=${{ env.VERSION }}
+           cat ~/.m2/settings.xml
+           if [ -z "${{ inputs.mvn_options }}" ]; then
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn clean install
+           else
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn clean install ${{ inputs.mvn_options }}
+           fi
+           
+      - name: Build
+        run: |
+            if [ -z "${{ inputs.mvn_options }}" ]; then
+                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+            else
+                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }}
+            fi
+        
+      - name: Publish to Artifactory 
+        run: |
+            cd ${{ env.PRODUCT_BASE }}
+            ls -lart
+            for i in $( grep -F "<module>" pom.xml); do 
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/
+               \pwd
+               ls -larth
+               cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/target
+            done
+            cd ${{ env.PRODUCT_BASE }}            
+            JAVA_TOOL_OPTIONS="-Xmx4096m" mvn deploy
+            
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - build # required to wait when the main job is done
+      
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
