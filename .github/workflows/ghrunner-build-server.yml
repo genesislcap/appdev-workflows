@@ -51,38 +51,8 @@ env:
 jobs:
   start-runner:
     name: Start self-hosted EC2 runner
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
-          aws-region: eu-west-2
-          role-duration-seconds: 3600
-          role-session-name: GitHubRunnerSession
-          
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: genesiscicd/ec2-github-runner@main
-        with:
-          mode: start
-          github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-04c088afcc48366c2
-          ec2-instance-type: t3a.2xlarge
-          subnet-id: subnet-0974abeb1a6398553
-          security-group-id: sg-02e77ac5b0b3e635c
-          aws-resource-tags: >
-            [
-              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
-              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
-            ]
+    uses: ./.github/workflows/start-runner.yml
+    secrets: inherit
 
   build:
     name: Steps to build the artifact and upload it to jfrog
