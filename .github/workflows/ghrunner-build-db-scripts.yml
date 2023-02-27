@@ -141,8 +141,8 @@ jobs:
         run: |
             echo ${{ env.OUTPUT }}
             echo ${{ env.outfilename }}
-            sudo apt install zip
-            sudo apt install unzip
+            sudo yum install zip
+            sudo yum install unzip
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
             cd ${{ env.PRODUCT_BASE }}
