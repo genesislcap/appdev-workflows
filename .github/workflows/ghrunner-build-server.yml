@@ -18,9 +18,6 @@ on:
       product_name:
         required: false
         type: string
-      artifact_product_name:
-        required: false
-        type: string
       module_name:
         required: false
         type: string
@@ -28,6 +25,9 @@ on:
         required: false
         type: string
       build_path:
+        required: false
+        type: string
+      artifact_product_name:
         required: false
         type: string
 
@@ -54,8 +54,38 @@ env:
 jobs:
   start-runner:
     name: Start self-hosted EC2 runner
-    uses: ./.github/workflows/start-runner.yml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
+          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
+          aws-region: eu-west-2
+          role-duration-seconds: 3600
+          role-session-name: GitHubRunnerSession
+          
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: genesiscicd/ec2-github-runner@main
+        with:
+          mode: start
+          github-token: ${{ secrets.ec2runner_ghtoken }}
+          ec2-image-id: ami-04c088afcc48366c2
+          ec2-instance-type: t3a.2xlarge
+          subnet-id: subnet-0974abeb1a6398553
+          security-group-id: sg-02e77ac5b0b3e635c
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
 
   build:
     name: Steps to build the artifact and upload it to jfrog
@@ -164,24 +194,19 @@ jobs:
 
       - name: Publish to Artifactory 
         run: |
-           
-            if [ $({ inputs.artifact_product_name }} == "" ]; then
+           if [ $({ inputs.artifact_product_name }} == "" ]; then
               cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
             
               cd ${{ env.PRODUCT_BASE }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
-
             else
               cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/" -T *.zip
             
               cd ${{ env.PRODUCT_BASE }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
-
             fi
-            
-
   stop-runner:
     name: Stop self-hosted EC2 runner
     needs:
