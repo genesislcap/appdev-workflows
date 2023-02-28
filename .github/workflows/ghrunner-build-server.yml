@@ -180,7 +180,16 @@ jobs:
                mvn versions:set -DnewVersion=${{ env.VERSION }} ${{ inputs.mvn_options }}
            fi
            
-      
+      - name: Build
+        run: | 
+           if [ -z "${{ inputs.build_path }}" ]; then
+               cd "${{ inputs.build_path }}"
+           fi
+           if [ -z "${{ inputs.mvn_options }}" ]; then
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package
+           else
+               JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }}
+           fi
 
 
       - name: Publish to Artifactory 
