@@ -25,60 +25,14 @@ on:
         required: true        
       GRADLE_PROPERTIES:
         required: true
-      SLACK_WEBHOOK:
-        required: false
-      ec2runner_genesisglobal_key:
-        required: true
-      ec2runner_genesisglobal_secret:
-        required: true
-      ec2runner_ghtoken:
-        required: true
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  start-runner:
-    name: Start self-hosted EC2 runner
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
-          aws-region: eu-west-2
-          role-duration-seconds: 3600
-          role-session-name: GitHubRunnerSession
-          
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: genesiscicd/ec2-github-runner@main
-        with:
-          mode: start
-          github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-03fd4c551f7f8f424
-          ec2-instance-type: t3a.2xlarge
-          subnet-id: subnet-0974abeb1a6398553
-          security-group-id: sg-02e77ac5b0b3e635c
-          aws-resource-tags: >
-            [
-              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
-              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
-            ]
-            
-
   build:
-    needs: start-runner
-    runs-on: ${{ needs.start-runner.outputs.label }}
-
+    runs-on: appdev-selfhosted
     strategy:
       matrix:
         node-version: [16.x]
@@ -86,7 +40,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
+      
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
@@ -263,7 +217,6 @@ jobs:
              zip -r  ${{ env.SITE_OUTPUT }} site-specific/*
              echo $(pwd)
              ls  -a
-            
              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{ env.CLIENT_NAME }}/" -T *.zip
             
       - name: assign module versions
@@ -322,6 +275,7 @@ jobs:
           
       - name: Create RPM
         run: |
+            source ~/.bashrc
             sudo yum install rpm
             touch pom.xml
             rm pom.xml
@@ -352,29 +306,3 @@ jobs:
           ls -lart
           echo "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/" -T *.rpm
-  
-            
-  stop-runner:
-    name: Stop self-hosted EC2 runner
-    needs:
-      - start-runner # required to get output from the start-runner job
-      - build # required to wait when the main job is done
-      
-    runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
-          aws-region: eu-west-2
-          
-      - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: stop
-          github-token: ${{ secrets.ec2runner_ghtoken }}
-          label: ${{ needs.start-runner.outputs.label }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
-          
