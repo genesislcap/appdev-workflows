@@ -86,7 +86,8 @@ jobs:
 
       - name: Package + Deploy Site per client
         run: |
-             sudo yum install zip
+             sudo yum install zip -y
+             sudo yum install rpmdevtools -y
              cd ${{ env.PRODUCT_BASE }}
              for i in ./*
               do 
