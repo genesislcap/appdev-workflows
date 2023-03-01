@@ -103,7 +103,7 @@ jobs:
              
       - name: Package + Deploy Site per client
         run: |
-             sudo yum install zip
+             sudo yum install zip -y
              cd ${{ env.PRODUCT_BASE }}
              echo "This is the base directory->" && echo "$(pwd)"
              for i in ./*
