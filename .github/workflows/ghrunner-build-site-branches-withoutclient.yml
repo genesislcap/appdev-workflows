@@ -104,6 +104,7 @@ jobs:
       - name: Package + Deploy Site per client
         run: |
              sudo yum install zip -y
+             sudo yum install rpmdevtools -y
              cd ${{ env.PRODUCT_BASE }}
              echo "This is the base directory->" && echo "$(pwd)"
              for i in ./*
