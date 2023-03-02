@@ -111,6 +111,7 @@ jobs:
       - name: Publish to Artifactory 
         run: |
             cd ${{ env.PRODUCT_BASE }}
+           source ~/.bashrc
             ls -lart
             for i in $( grep -F "<module>" pom.xml); do 
                cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/
