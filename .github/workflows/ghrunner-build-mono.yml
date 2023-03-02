@@ -296,8 +296,8 @@ jobs:
             fi
             whoami
             ls -larth ${{env.PRODUCT_BASE}}
-            cat ~/.bashrc
-            source ~/.bashrc
+            cat ${{env.PRODUCT_BASE}}/.bashrc
+            source ${{env.PRODUCT_BASE}}/.bashrc
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
             ls -larth
