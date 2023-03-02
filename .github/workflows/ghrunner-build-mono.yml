@@ -275,6 +275,9 @@ jobs:
           
       - name: Create RPM
         run: |
+            whoami
+            ls -l ~
+            ls -l /usr/local
             sudo yum install rpm -y
             sudo yum install rpmdevtools -y
             touch pom.xml
