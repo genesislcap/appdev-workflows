@@ -29,60 +29,19 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
-      ec2runner_genesisglobal_key:
-        required: true
-      ec2runner_genesisglobal_secret:
-        required: true
-      ec2runner_ghtoken:
-        required: true
-    
+        
 env:
   REPO_NAME: ${{ inputs.repo_name }}
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  start-runner:
-    name: Start self-hosted EC2 runner
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
-          aws-region: eu-west-2
-          role-duration-seconds: 3600
-          role-session-name: GitHubRunnerSession
-          
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: genesiscicd/ec2-github-runner@main
-        with:
-          mode: start
-          github-token: ${{ secrets.ec2runner_ghtoken }}
-          ec2-image-id: ami-0e9c7c1c918cc2f01
-          ec2-instance-type: t3a.2xlarge
-          subnet-id: subnet-0974abeb1a6398553
-          security-group-id: sg-02e77ac5b0b3e635c
-          aws-resource-tags: >
-            [
-              {"Key": "Name", "Value": "ec2-github-runner-${{ github.ref_name }}"},
-              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
-            ]
-   
   build:
-    needs: start-runner
+    name: Steps to build the artifact and upload it to jfrog
     env:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-    runs-on: ${{ needs.start-runner.outputs.label }}
+    runs-on: appdev-selfhosted
 
     steps:
       - uses: actions/checkout@v2
@@ -141,8 +100,8 @@ jobs:
         run: |
             echo ${{ env.OUTPUT }}
             echo ${{ env.outfilename }}
-            sudo yum install zip
-            sudo yum install unzip
+            sudo yum install zip -y
+            sudo yum install unzip -y
             cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
             cd ${{ env.PRODUCT_BASE }}
@@ -169,7 +128,8 @@ jobs:
             
       - name: Create RPM
         run: |
-            sudo yum install rpm
+            sudo yum install rpm -y
+            sudo yum install rpmdevtools -y
             touch pom.xml
             rm pom.xml
             echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHByb2plY3QgeG1sbnM9Imh0dHA6Ly9tYXZlbi5hcGFjaGUub3JnL1BPTS80LjAuMCIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIKICAgICAgICAgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vbWF2ZW4uYXBhY2hlLm9yZy9QT00vNC4wLjAgaHR0cDovL21hdmVuLmFwYWNoZS5vcmcveHNkL21hdmVuLTQuMC4wLnhzZCI+CiAgICA8bW9kZWxWZXJzaW9uPjQuMC4wPC9tb2RlbFZlcnNpb24+CiAgICA8Z3JvdXBJZD5nbG9iYWwuZ2VuZXNpczwvZ3JvdXBJZD4KICAgIDxhcnRpZmFjdElkPmdlbmVzaXMtcnBtPC9hcnRpZmFjdElkPgogICAgPHZlcnNpb24+MS4wLjA8L3ZlcnNpb24+CiAgICA8cGFja2FnaW5nPnBvbTwvcGFja2FnaW5nPgogICAgPG5hbWU+Z2VuZXNpcy1ycG08L25hbWU+CiAgICA8cHJvcGVydGllcz4KCQk8cHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz5VVEYtODwvcHJvamVjdC5idWlsZC5zb3VyY2VFbmNvZGluZz4KCTwvcHJvcGVydGllcz4KICAgIDxtb2R1bGVzLz4KICAgIDxidWlsZD4KICAgICAgICA8cGx1Z2lucz4KICAgICAgICAgICAgPHBsdWdpbj4KICAgICAgICAgICAgICAgIDxncm91cElkPm9yZy5jb2RlaGF1cy5tb2pvPC9ncm91cElkPgogICAgICAgICAgICAgICAgPGFydGlmYWN0SWQ+cnBtLW1hdmVuLXBsdWdpbjwvYXJ0aWZhY3RJZD4KICAgICAgICAgICAgICAgIDx2ZXJzaW9uPjIuMi4wPC92ZXJzaW9uPgogICAgICAgICAgICAgICAgPGluaGVyaXRlZD5mYWxzZTwvaW5oZXJpdGVkPgogICAgICAgICAgICAgICAgPGNvbmZpZ3VyYXRpb24+CiAgICAgICAgICAgICAgICAgICAgPG5hbWU+Z2VuZXNpcy1QUk9EVUNUPC9uYW1lPgogICAgICAgICAgICAgICAgICAgIDxsaWNlbnNlPihjKSBnZW5lc2lzLmdsb2JhbDwvbGljZW5zZT4KICAgICAgICAgICAgICAgICAgICA8bmVlZGFyY2g+eDg2XzY0PC9uZWVkYXJjaD4KICAgICAgICAgICAgICAgICAgICA8Z3JvdXA+R2VuZXNpcyBQbGF0Zm9ybTwvZ3JvdXA+CiAgICAgICAgICAgICAgICAgICAgPHBvc3RpbnN0YWxsU2NyaXB0bGV0PgogICAgICAgICAgICAgICAgICAgICAgICA8c2NyaXB0RmlsZT4vdG1wL2RiaW5zdGFsbC5zaDwvc2NyaXB0RmlsZT4KICAgICAgICAgICAgICAgICAgICA8L3Bvc3RpbnN0YWxsU2NyaXB0bGV0PgogICAgICAgICAgICAgICAgICAgIDxtYXBwaW5ncz4KCQkJPG1hcHBpbmc+CgkJCSAgICA8ZGlyZWN0b3J5Pi90bXAvPC9kaXJlY3Rvcnk+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZmlsZW1vZGU+MTc3NzwvZmlsZW1vZGU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8dXNlcm5hbWU+cm9vdDwvdXNlcm5hbWU+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8Z3JvdXBuYW1lPnJvb3Q8L2dyb3VwbmFtZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2VzPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzb3VyY2U+CgkJCQkJPGxvY2F0aW9uPi90bXAvZ2VuZXNpcy1QUk9EVUNULXBhY2thZ2VWZXJzaW9uLnRhci5nejwvbG9jYXRpb24+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zb3VyY2U+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3NvdXJjZXM+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvbWFwcGluZz4KICAgICAgICAgICAgICAgICAgICA8L21hcHBpbmdzPgogICAgICAgICAgICAgICAgPC9jb25maWd1cmF0aW9uPgogICAgICAgICAgICA8L3BsdWdpbj4KICAgICAgICA8L3BsdWdpbnM+CiAgICA8L2J1aWxkPgo8L3Byb2plY3Q+Cg==" | base64 -d > pom.xml
@@ -183,6 +143,11 @@ jobs:
             sed -i "s/genesisUser/${{ env.PRODUCT_NAME }}/g" /tmp/dbinstall.sh
             sed -i "s/product_name/${{ env.PRODUCT_NAME }}/g" /tmp/dbinstall.sh
             sed -i "s/version/${{ env.VERSION }}/g" /tmp/dbinstall.sh
+            source ~/.bashrc
+            which mvn
+            which rpm
+            mvn --version
+            rpm --version
             mvn versions:set -DnewVersion=${{ env.VERSION }}
             mvn rpm:rpm
             find ~/ -name "*.rpm"
@@ -192,27 +157,3 @@ jobs:
         run: |
             cd ${{ env.PRODUCT_BASE }}/target/rpm/genesis-${{ env.PRODUCT_NAME }}-dbscripts/RPMS/x86_64/
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/rpm/${{ inputs.client }}/" -T *.rpm
-        
-  stop-runner:
-    name: Stop self-hosted EC2 runner
-    needs:
-      - start-runner # required to get output from the start-runner job
-      - build # required to wait when the main job is done
-      
-    runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ec2runner_genesisglobal_key }}
-          aws-secret-access-key: ${{ secrets.ec2runner_genesisglobal_secret }}
-          aws-region: eu-west-2
-          
-      - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: stop
-          github-token: ${{ secrets.ec2runner_ghtoken }}
-          label: ${{ needs.start-runner.outputs.label }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}    
