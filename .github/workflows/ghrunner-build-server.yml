@@ -31,6 +31,7 @@ on:
         required: false
         type: string
 
+
     secrets:
       JFROG_USERNAME:
         required: true
