@@ -294,12 +294,8 @@ jobs:
             else
               sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
             fi
-            whoami
-            ls -larth ${{env.PRODUCT_BASE}}
-            cat ${{env.PRODUCT_BASE}}/.bashrc
-            source ${{env.PRODUCT_BASE}}/.bashrc
-            mvn versions:set -DnewVersion=$VERSION
-            mvn rpm:rpm
+            /usr/local/apache-maven/bin/mvn versions:set -DnewVersion=$VERSION
+            /usr/local/apache-maven/bin/mvn rpm:rpm
             ls -larth
             
       - name: Upload RPM
