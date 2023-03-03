@@ -11,7 +11,7 @@ on:
 jobs:
   sonarcloud:
     name: SonarCloud
-    runs-on: ubuntu-latest
+    runs-on: appdev-selfhosted
     steps:
       - uses: actions/checkout@v3
         with:
