@@ -120,4 +120,4 @@ jobs:
                cd ${{ env.PRODUCT_BASE }}/$( echo $i| grep -oPm1 "(?<=<module>)[^<]+")/target
             done
             cd ${{ env.PRODUCT_BASE }}            
-            JAVA_TOOL_OPTIONS="-Xmx4096m" mvn deploy
+            JAVA_TOOL_OPTIONS="-Xmx4096m" mvn deploy -X
