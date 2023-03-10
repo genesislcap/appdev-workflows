@@ -107,8 +107,23 @@ jobs:
             else
                 JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }}
             fi
-        
-      - name: Publish to Artifactory 
+      - name: Package Publish to Artifactory  
+        if: ${{ inputs.packageanddeploy }}
+        run: |
+           if [ -z "${{ inputs.artifact_product_name }}" ]; then           
+              cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
+            
+              cd ${{ env.PRODUCT_BASE }}/
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
+            else
+              cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/" -T *.zip
+            
+              cd ${{ env.PRODUCT_BASE }}/
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
+            fi   
+      - name: Modules Publish to Artifactory 
         run: |
             cd ${{ env.PRODUCT_BASE }}
             source ~/.bashrc
