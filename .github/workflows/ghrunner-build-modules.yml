@@ -24,6 +24,9 @@ on:
       mvn_options:
         required: false
         type: string
+      packageanddeploy:
+        required: false
+        type: string
 
     secrets:
       JFROG_USERNAME:
