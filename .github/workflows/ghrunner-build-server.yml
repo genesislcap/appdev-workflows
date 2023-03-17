@@ -94,7 +94,7 @@ jobs:
         uses: whelk-io/maven-settings-xml-action@v20
         with:
           repositories: '[{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" },{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}]'
-          plugin_repositories: '[{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}}, { "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" } ]'
+          plugin_repositories: '[{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" },{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}} ]'
           servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
           active_profiles: '["github"]'
 
