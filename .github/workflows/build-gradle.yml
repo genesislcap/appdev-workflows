@@ -42,6 +42,6 @@ jobs:
       - name: Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
-          arguments: artifactoryPublish --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: test assemble --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./server/jvm
           cache-disabled: true
