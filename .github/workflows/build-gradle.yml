@@ -54,8 +54,8 @@ jobs:
       - name: Client Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
-          arguments: test assemble --no-build-cache -Pversion=${{ inputs.version }}
-          build-root-directory: ./client
+          arguments: test :client:assemble --no-build-cache -Pversion=${{ inputs.version }}
+          build-root-directory: ./
           cache-disabled: true
 
       - name: Server Artifactory Publish
