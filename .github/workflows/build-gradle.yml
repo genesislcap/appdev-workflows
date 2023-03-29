@@ -54,7 +54,7 @@ jobs:
       - name: Client Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
-          arguments: test :client:npmBootstrap --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: :client:test :client:npmBootstrap --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./
           cache-disabled: true
 
