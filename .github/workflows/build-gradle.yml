@@ -16,6 +16,14 @@ on:
     secrets:
       GRADLE_PROPERTIES:
         required: true
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JFROG_NPM_AUTH_TOKEN:
+        required: true
       
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -38,7 +46,8 @@ jobs:
         run: |
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "${GRADLE_PROPERTIES}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           chmod +x ./gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
 
