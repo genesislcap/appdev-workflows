@@ -29,10 +29,6 @@ on:
 jobs:
   build:
     runs-on: [ self-hosted, selfhosted-services ]
-    strategy:
-      matrix:
-        node-version: [16.x]
-    
     steps:
       - uses: actions/checkout@v2
       
@@ -45,7 +41,9 @@ jobs:
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 16.x
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
       
       - name: Restore gradle.properties
         env:
