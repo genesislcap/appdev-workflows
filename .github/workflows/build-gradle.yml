@@ -29,7 +29,10 @@ on:
 jobs:
   build:
     runs-on: [ self-hosted, selfhosted-services ]
-
+    strategy:
+      matrix:
+        node-version: [16.x]
+    
     steps:
       - uses: actions/checkout@v2
       
@@ -38,7 +41,12 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-
+      
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+      
       - name: Restore gradle.properties
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
