@@ -13,6 +13,9 @@ on:
       version:
         required: false
         type: string
+    secrets:
+      GRADLE_PROPERTIES:
+        required: true
       
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
