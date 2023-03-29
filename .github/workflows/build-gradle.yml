@@ -20,7 +20,7 @@ on:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
-    runs-on: selfhosted
+    runs-on: [ self-hosted, selfhosted-services ]
 
     steps:
       - uses: actions/checkout@v2
