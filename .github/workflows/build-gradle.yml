@@ -46,8 +46,8 @@ jobs:
         run: |
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-          echo "genesisArtifactoryPassword=${{ JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           chmod +x ./gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
 
