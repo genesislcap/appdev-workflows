@@ -59,17 +59,17 @@ jobs:
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           chmod +x ./gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          
-      - name: Client Artifactory Publish
-        uses: gradle/gradle-build-action@v2
-        with: 
-          arguments: :client:test :client:npmBootstrap --no-build-cache -Pversion=${{ inputs.version }}
-          build-root-directory: ./
-          cache-disabled: true
-
+         
       - name: Server Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
           arguments: test assemble --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./server/jvm
+          cache-disabled: true
+     
+      - name: Client Artifactory Publish
+        uses: gradle/gradle-build-action@v2
+        with: 
+          arguments: :client:test :client:npmBootstrap --no-build-cache -Pversion=${{ inputs.version }}
+          build-root-directory: ./
           cache-disabled: true
