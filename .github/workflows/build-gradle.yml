@@ -61,6 +61,7 @@ jobs:
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
           echo "VERSION=$(git tag)" >> $GITHUB_ENV
+          sed -i "s/1.0.0-SNAPSHOT/$(git tag)/g"
          
       - name: Server Artifactory Publish
         uses: gradle/gradle-build-action@v2
