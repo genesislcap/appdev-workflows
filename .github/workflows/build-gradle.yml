@@ -48,7 +48,7 @@ jobs:
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
       
-      - name: Restore gradle.properties
+      - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
         shell: bash
@@ -61,7 +61,7 @@ jobs:
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
           echo "VERSION=$(git tag)" >> $GITHUB_ENV
-          sed -i "s/1.0.0-SNAPSHOT/$(git tag)/g"
+          sed -i 's/1.0.0-SNAPSHOT/$(git tag)/g' server/jvm/build.gradle.kts
          
       - name: Server Artifactory Publish
         uses: gradle/gradle-build-action@v2
