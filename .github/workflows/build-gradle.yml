@@ -78,14 +78,14 @@ jobs:
       - name: Client Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
-          arguments: :client:npmBootstrap :client:build --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: :web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./
           cache-disabled: true
 
-      - name: Upload Server Package
+      - name: Upload Client Package
         working-directory: client/web/build/distributions
         run: |
           mv web-distribution.zip ${{ env.REPO_NAME }}-web-${{ env.VERSION }}.zip
           echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T *.zip
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
           
