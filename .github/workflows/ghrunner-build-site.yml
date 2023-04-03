@@ -202,6 +202,8 @@ jobs:
             else
                 sed -i "s/genesisUser/$(echo $PRODUCT_NAME | sed -E 's/[0-9]+//g')/g" /tmp/install.sh
             fi
+            whoami
+            pwd
             source ~/.bashrc
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
