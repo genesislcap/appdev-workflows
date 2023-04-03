@@ -61,7 +61,7 @@ jobs:
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
           echo "VERSION=$(git tag)" >> $GITHUB_ENV
-          sed -i 's/1.0.0-SNAPSHOT/$(git tag)/g' server/jvm/build.gradle.kts
+          sed -i  "s/1.0.0-SNAPSHOT/$(git describe --tags)/" server/jvm/build.gradle.kts
          
       - name: Server Artifactory Publish
         uses: gradle/gradle-build-action@v2
@@ -79,7 +79,7 @@ jobs:
       - name: Client Artifactory Publish
         uses: gradle/gradle-build-action@v2
         with: 
-          arguments: :web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./
           cache-disabled: true
 
