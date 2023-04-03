@@ -205,6 +205,8 @@ jobs:
             whoami
             pwd
             source ~/.bashrc
+            ls -lart ~
+            cat ~/.bashrc
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
 
