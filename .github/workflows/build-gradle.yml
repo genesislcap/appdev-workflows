@@ -86,6 +86,7 @@ jobs:
       - name: Upload Client Package
         working-directory: client/web/build/distributions
         run: |
+          ls -a
           mv web-distribution.zip ${{ env.REPO_NAME }}-web-${{ env.VERSION }}.zip
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
