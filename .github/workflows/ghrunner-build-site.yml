@@ -208,6 +208,7 @@ jobs:
             ls -lart ~
             cat ~/.bashrc
             ls -larth /usr/local
+            ls -larth /usr/local/bin
             ls -larth /usr/local/apache-maven/bin
             mvn versions:set -DnewVersion=$VERSION
             mvn rpm:rpm
