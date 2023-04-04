@@ -1,0 +1,92 @@
+# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+name: Mono Deploy
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: true
+        type: string
+      version:
+        required: false
+        type: string
+    secrets:
+      GRADLE_PROPERTIES:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      GPR_READ_TOKEN:
+        required: true 
+
+env:
+  NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+# A workflow run is called from the devops appdev-workflow repos
+jobs:
+  build:
+    runs-on: [ self-hosted, selfhosted-services ]
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      
+      - name: Restore gradle.properties and setup
+        env:
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          chmod +x ./gradlew
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+      
+      - name: Build Site
+        uses: gradle/gradle-build-action@v2
+        with: 
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-site-specific:assemble --no-build-cache -Pversion=${{ inputs.version }}
+          build-root-directory: ./server/jvm
+          cache-disabled: true
+     
+      - name: Grab spec file
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/appdev-workflows
+          fetch-depth: 2
+          
+      - name: Setup
+        run: |
+          sudo apt install rpmdevtools
+          sudo apt install wget
+          mkdir downloads
+          cp ${{ inputs.product_name }}/server/jvm/tam-site-specific/build/distributions/*.zip downloads
+      
+      #TODO download genesisServer modules into downloads folder before creating tar, build using spec file
+      - name: Downloads
+        run: |
+          cd downloads
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}} https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ inputs.version }}"-bin.zip
+          unzip *.zip
+          rm *.zip
+          tar -cf server-${{ inputs.version }}.tar.gz *
+          cd ..
+          mkdir web
+          cd web
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}} https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ inputs.version }}".zip
+          tar -cf web-${{ inputs.version }}.tar.gz *
+          rpmbuild -bs
+          
+        
+        
