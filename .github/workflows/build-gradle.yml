@@ -23,7 +23,7 @@ on:
       JFROG_PASSWORD:
         required: true
       GPR_READ_TOKEN:
-        required: true 
+        required: true
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -34,20 +34,20 @@ jobs:
     runs-on: [ self-hosted, selfhosted-services ]
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Set up JDK 11
         uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
-      
+
       - name: Configure Node
         uses: actions/setup-node@v2
         with:
           node-version: 16.x
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-      
+
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
@@ -57,35 +57,55 @@ jobs:
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
           chmod +x ./gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
-          echo "VERSION=$(git tag)" >> $GITHUB_ENV
-          sed -i  "s/1.0.0-SNAPSHOT/$(git describe --tags)/" server/jvm/build.gradle.kts
-         
-      - name: Server Artifactory Publish
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"$(git describe --tags)\"/g" server/jvm/build.gradle.kts
+
+      - name: Server Build
         uses: gradle/gradle-build-action@v2
-        with: 
+        with:
           arguments: build --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./server/jvm
           cache-disabled: true
-      
+
+      - name: Create Giant Server Zip
+        shell: bash
+        working-directory: server/jvm/
+        run: |
+          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs ./gradlew
+          cd .genesis-home
+          pwd
+          ls -la
+          tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ inputs.version }}.tar.gz *
+
       - name: Upload Server Package
         working-directory: server/jvm/${{ inputs.product_name }}-distribution/build/distributions/
         run: |
-          echo "${{ env.REPO_NAME }}" 
+          echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
-          
-      - name: Client Artifactory Publish
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ inputs.version }}.tar.gz
+
+      - name: Check file existence
+        id: web_exists
+        working-directory: .
+        run: |
+          ls client/web
+          echo "web_exists=$?" >> $GITHUB_OUTPUT
+
+      - name: Client Build
+        if: steps.web_exists.outputs.web_exists == '0'
         uses: gradle/gradle-build-action@v2
-        with: 
+        with:
           arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
           build-root-directory: ./
           cache-disabled: true
 
       - name: Upload Client Package
+        if: steps.web_exists.outputs.web_exists == '0'
         working-directory: client/web/build/distributions
         run: |
-          mv web-distribution-${{ env.VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.VERSION }}.zip
+          mv web-distribution-${{ inputs.version }}.zip ${{ env.REPO_NAME }}-web-${{ inputs.version }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
-          
+
