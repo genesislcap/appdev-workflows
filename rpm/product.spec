@@ -6,7 +6,7 @@ BuildArch:      noarch
 
 License:        (c) genesis.global
 Group:          Genesis Platform
-URL:		https://genesis.global/
+URL:            https://genesis.global/
 Source0:        server-%{version}.tar.gz
 Source1:        web-%{version}.tar.gz
 
