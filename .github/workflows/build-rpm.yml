@@ -69,15 +69,13 @@ jobs:
       - name: Server Package
         working-directory: rpm/downloads
         run: |
-          ls -la
           unzip -q genesisproduct-*.zip
           unzip -q *-site-specific-*.zip
-          ls -al
           echo "Removing zip files"
           rm *.zip
-          ls -al
           echo "Zipping package"
           tar -cf server-${{ inputs.version }}.tar.gz *
+          mv *.tar.gz ../
           ls -al
           
       - name: Web Download and Package
@@ -90,6 +88,7 @@ jobs:
           echo "Zipping package"
           tar -cf web-${{ inputs.version }}.tar.gz *
           ls -al
+          mv *.tar.gz ../
           
       # - name: build the RPM
       #   run: |
