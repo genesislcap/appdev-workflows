@@ -90,6 +90,11 @@ jobs:
           ls -al
           mv *.tar.gz ../
           
+      - name: Summarise RPM
+        working-directory: rpm
+        run: |
+          ls -al
+          
       # - name: build the RPM
       #   run: |
       #     rpmbuild -bs
