@@ -50,7 +50,7 @@ jobs:
       - name: Setup
         working-directory: rpm
         run: |
-          sudo apt install rpmdevtools
+          sudo apt install rpmbuild
           sudo apt install wget
           mkdir downloads
 
