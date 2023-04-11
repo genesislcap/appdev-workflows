@@ -98,6 +98,7 @@ jobs:
           if [ -z "${{ inputs.version }}" ]; 
           then
             sed -i "s/Version://g" product.spec
+            sed -i "s/1.0.0//g" product.spec
           else
             sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           fi
