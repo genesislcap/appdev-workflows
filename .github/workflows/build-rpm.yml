@@ -57,14 +57,14 @@ jobs:
       - name: Downloads
         working-directory: rpm/downloads
         run: |
-          wget --user=${{ secrets.JFROG_USERNAME }} --password=${{secrets.JFROG_PASSWORD}} https://genesisglobal.jfrog.io/artifactory/${{ inputs.server-distribution }}
-          wget --user=${{ secrets.JFROG_USERNAME }} --password=${{secrets.JFROG_PASSWORD}} https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.server-distribution }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
 
       - name: Optional site download
         if: inputs.site-distribution
         working-directory: rpm/downloads
         run: |
-          wget --user=${{ secrets.JFROG_USERNAME }} --password=${{secrets.JFROG_PASSWORD}} https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
 
       - name: Downloads
         working-directory: rpm/downloads
