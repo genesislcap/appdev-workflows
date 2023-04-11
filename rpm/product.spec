@@ -10,7 +10,6 @@ URL:            https://genesis.global/
 Source0:        server-%{version}.tar.gz
 Source1:        web-%{version}.tar.gz
 
-BuildRequires:
 Requires:       %{name} = %{version}
 Requires:       /bin/sh
 Requires:       rpmlib(CompressedFileNames) <= 3.0.4-1
