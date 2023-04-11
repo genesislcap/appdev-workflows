@@ -94,7 +94,7 @@ jobs:
         working-directory: rpm
         run: |
           ls -al
-          rm web-downloads downloads
+          rm -rf web-downloads downloads
           rpmbuild -bs product.spec
           
       # - name: build the RPM
