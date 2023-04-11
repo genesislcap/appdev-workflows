@@ -50,8 +50,8 @@ jobs:
       - name: Setup
         working-directory: rpm
         run: |
-          sudo apt install rpm
-          sudo apt install wget
+          sudo apt -y install rpm
+          sudo apt -y install wget
           mkdir downloads
 
       - name: Downloads
