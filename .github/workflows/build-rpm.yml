@@ -70,7 +70,8 @@ jobs:
         working-directory: rpm/downloads
         run: |
           ls -la
-          unzip genesisproduct-tam2-6.1.0-bin.zip
+          unzip genesisproduct-*.zip
+          unzip *-site-specific-*.zip
           ls -al
           echo "Removing zip files"
           rm *.zip
