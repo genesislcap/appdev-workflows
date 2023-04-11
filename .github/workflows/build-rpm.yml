@@ -70,8 +70,8 @@ jobs:
         working-directory: rpm/downloads
         run: |
           ls -la
-          unzip genesisproduct-*.zip
-          unzip *-site-specific-*.zip
+          unzip -q genesisproduct-*.zip
+          unzip -q *-site-specific-*.zip
           ls -al
           echo "Removing zip files"
           rm *.zip
@@ -80,11 +80,11 @@ jobs:
           tar -cf server-${{ inputs.version }}.tar.gz *
           ls -al
           
-      - name: Web Downloads
+      - name: Web Download and Package
         working-directory: rpm/web-downloads
         run: |
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
-          unzip *
+          unzip -q *web*.zip
           rm *.zip
           ls -al
           echo "Zipping package"
