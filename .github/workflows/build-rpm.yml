@@ -95,7 +95,7 @@ jobs:
         run: |
           ls -al
           rm -rf web-downloads downloads
-          sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
+          #sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           rpmbuild -bs product.spec
           
       # - name: build the RPM
