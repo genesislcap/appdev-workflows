@@ -53,12 +53,12 @@ jobs:
           sudo apt -y install rpm
           sudo apt -y install wget
           mkdir downloads
+          mkdir web-downloads
 
       - name: Downloads
         working-directory: rpm/downloads
         run: |
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.server-distribution }}
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
 
       - name: Optional site download
         if: inputs.site-distribution
@@ -66,13 +66,28 @@ jobs:
         run: |
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
 
-      - name: Downloads
+      - name: Server Package
         working-directory: rpm/downloads
         run: |
           ls -la
+          unzip *.zip
+          rm *.zip
+          ls -al
+          echo "Zipping package"
           tar -cf server-${{ inputs.version }}.tar.gz *
           ls -al
-
+          
+      - name: Web Downloads
+        working-directory: rpm/web-downloads
+        run: |
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
+          unzip *.zip
+          rm *.zip
+          ls -al
+          echo "Zipping package"
+          tar -cf web-${{ inputs.version }}.tar.gz *
+          ls -al
+          
       # - name: build the RPM
       #   run: |
       #     rpmbuild -bs
