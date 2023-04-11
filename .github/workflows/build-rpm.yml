@@ -81,7 +81,7 @@ jobs:
         working-directory: rpm/web-downloads
         run: |
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.client-distribution }}
-          unzip *.zip
+          unzip *
           rm *.zip
           ls -al
           echo "Zipping package"
