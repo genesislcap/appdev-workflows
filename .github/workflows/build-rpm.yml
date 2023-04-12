@@ -102,6 +102,10 @@ jobs:
           else
             sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           fi
+          mkdir -p ~/rpmbuild/SOURCES/
+          mv *.gz ~/rpmbuild/SOURCES/
+          mv product.spec ~/rpmbuild/SOURCES/
+          cd ~/rpmbuild/SOURCES/
           rpmbuild -bs product.spec
           
       # - name: build the RPM
