@@ -90,7 +90,7 @@ jobs:
           ls -al
           mv *.tar.gz ../
           
-      - name: Summarise RPM
+      - name: Build RPM
         working-directory: rpm
         run: |
           ls -al
@@ -107,6 +107,10 @@ jobs:
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bs product.spec
+          
+      - name: Upload RPM
+        run: |
+          ls -al
           
       # - name: build the RPM
       #   run: |
