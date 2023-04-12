@@ -105,6 +105,7 @@ jobs:
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
           mv product.spec ~/rpmbuild/SOURCES/
+          sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bs product.spec
           
