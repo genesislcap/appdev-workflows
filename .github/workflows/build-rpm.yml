@@ -109,8 +109,8 @@ jobs:
           rpmbuild -bs product.spec
           
       - name: Upload RPM
-        working-directory: ~/rpmbuild/SRPMS/
         run: |
+          cd ~/rpmbuild/SRPMS/
           ls -al
           
       # - name: build the RPM
