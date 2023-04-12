@@ -107,10 +107,9 @@ jobs:
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bs product.spec
-          ls -al
-          pwd
           
       - name: Upload RPM
+        working-directory: ~/rpmbuild/SRPMS/
         run: |
           ls -al
           
