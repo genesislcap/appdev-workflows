@@ -107,6 +107,8 @@ jobs:
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bs product.spec
+          ls -al
+          pwd
           
       - name: Upload RPM
         run: |
