@@ -112,6 +112,7 @@ jobs:
         run: |
           cd ~/rpmbuild/SRPMS/
           ls -al
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T *.rpm
           
       # - name: build the RPM
       #   run: |
