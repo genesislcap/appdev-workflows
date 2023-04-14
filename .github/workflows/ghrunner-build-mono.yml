@@ -245,7 +245,7 @@ jobs:
              if [ "$AUTH_VERSION" == "" ]; then
              echo "GENESIS_VERSION=$(grep "genesisVersion" $(find . -name gradle.properties) |  awk -F '=' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
              echo "AUTH_VERSION=$(grep "authVersion" $(find . -name gradle.properties) |  awk -F '=' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-             
+             echo "FIX_VERSION=$(grep "fixVersion" $(find . -name gradle.properties) |  awk -F '=' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
              fi
              
       - name: Download server, web and latest auth/genesis-distribution from JFROG
@@ -256,6 +256,8 @@ jobs:
              echo "files in pwd: $(ls -a)"
              #download auth distribution into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
+             #download fix distribution into server_downloads folder
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.FIX_VERSION}}"/fix-distribution-"${{env.FIX_VERSION}}"-bin.zip
              #download genesis
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/genesis-distribution/"${{ env.GENESIS_VERSION }}"/genesis-distribution-"${{ env.GENESIS_VERSION }}"-bin.zip
              #download server into server_downloads folder
