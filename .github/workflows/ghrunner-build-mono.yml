@@ -257,7 +257,7 @@ jobs:
              #download auth distribution into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
              #download fix distribution into server_downloads folder
-             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.FIX_VERSION}}"/fix-distribution-"${{env.FIX_VERSION}}"-bin.zip
+             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/fix-distribution/"${{env.FIX_VERSION}}"/fix-distribution-"${{env.FIX_VERSION}}"-bin.zip
              #download genesis
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/genesis-distribution/"${{ env.GENESIS_VERSION }}"/genesis-distribution-"${{ env.GENESIS_VERSION }}"-bin.zip
              #download server into server_downloads folder
