@@ -19,21 +19,24 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 %description
 %files
 %dir %attr(1777, root, root) "/tmp"
-%attr(1777, root, root) "/tmp/server-${version}.tar.gz"
-%attr(1777, root, root) "/tmp/web-${version}.tar.gz"
-
-%prep
-%setup -q
-
-
-
-%build
-%configure
-make %{?_smp_mflags}
-
+%attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
+%attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
 
 %install
-%make_install
+cd $HOME
+mkdir -p rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64
+ls -al rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64
+pwd
+mkdir rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64/tmp
+ls -al rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64
+cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64/tmp/
+cp rpmbuild/SOURCES/web-%{version}.tar.gz rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64/tmp/
+cd rpmbuild/BUILDROOT/genesis-tam-1.0.0-1.el7.x86_64/tmp/
+ls
+pwd
+
+%prep
+%setup -c
 
 %post -p /bin/sh
 #!/usr/bin/env bash
