@@ -280,11 +280,11 @@ jobs:
              cd web_downloads
              echo "this is the present directory: $(pwd)"
              echo "List of files in pwd:$(ls -a)"
-             unzip \*.zip
+             unzip -o \*.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_web.tar.gz *
              cd ../server_downloads
              echo "displaying files in server_downloads folder: $(ls -a)"
-             unzip \*.zip
+             unzip -o \*.zip
              ls
              rm *.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
