@@ -103,11 +103,12 @@ jobs:
             sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           fi
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
+          sed -i "s/genesisUser/$(echo ${{ inputs.product_name }} | sed -E 's/[0-9]+//g')/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
-          rpmbuild -bs product.spec
+          rpmbuild -bb product.spec
           
       - name: Upload RPM
         run: |
