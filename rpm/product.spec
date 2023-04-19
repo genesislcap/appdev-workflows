@@ -135,8 +135,8 @@ chown "$genesis_user"."$genesis_grp" "$LOG"
 echo "extract the servr directory structure"
 mkdir -p /"$root_dir"/"$genesis_user"/server/"$server_dir"/run
 cd /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ || exit 
-tar -xzf /tmp/genesis_product_name_package.tar.gz &> /dev/null
-rm -f /tmp/genesis_product_name_package.tar.gz
+tar -xzf /tmp/server-%{version}.tar.gz &> /dev/null
+rm -f /tmp/server-%{version}.tar.gz
 
 #copy runtime
 echo "Backup and copy the existing runtime from previous installations, if any...."
