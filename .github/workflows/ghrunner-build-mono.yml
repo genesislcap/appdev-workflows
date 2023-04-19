@@ -257,7 +257,7 @@ jobs:
              #download auth distribution into server_downloads folder
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
              #download fix distribution into server_downloads folder
-             if [[ -n $(grep "genesisServer" -A 5 -s server/jvm/*-deploy/build.gradle.kts | grep fix) ]]; 
+             if [[ -n "${{env.FIX_VERSION}}" ]]; 
              then
                 wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/fix-distribution/"${{env.FIX_VERSION}}"/fix-distribution-"${{env.FIX_VERSION}}"-bin.zip
              fi
