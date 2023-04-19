@@ -105,7 +105,7 @@ fi
 
 # kill server
 echo "Kill servers..."
-if [ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -gt 0 ]
+if [[ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -gt 0 && -f run/genesis ]]
 then
     echo "Stopping the genesis platform"
     runuser -l "$genesis_user" -c 'echo y | killServer --all'
