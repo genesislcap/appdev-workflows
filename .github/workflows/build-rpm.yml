@@ -39,7 +39,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
-    runs-on: [ self-hosted, selfhosted-services, appdev-selfhosted ]
+    runs-on: appdev-selfhosted
     steps:
       - name: Grab spec file
         uses: actions/checkout@v3
