@@ -71,7 +71,7 @@ jobs:
         working-directory: rpm/downloads
         run: |
           ls -al
-          unzip -q genesis_*.zip
+          tar xf genesis_*.tar.gz
           unzip -q *-site-specific-*.zip
           echo "Removing zip files"
           rm *.zip
