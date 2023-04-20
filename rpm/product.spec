@@ -135,7 +135,7 @@ chown "$genesis_user"."$genesis_grp" "$LOG"
 echo "extract the servr directory structure"
 mkdir -p /"$root_dir"/"$genesis_user"/server/"$server_dir"/run
 cd /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ || exit 
-tar -xzf /tmp/server-%{version}.tar.gz &> /dev/null
+tar xzf /tmp/server-%{version}.tar.gz &> /dev/null
 rm -f /tmp/server-%{version}.tar.gz
 
 #copy runtime
@@ -168,7 +168,7 @@ then
         echo "new web isntallation dir is : $web_path"
     fi
     echo "Unlink old web installation and point it to the new web folder"
-    tar -xzf  /tmp/genesis_product_name_web.tar.gz &> /dev/null
+    tar xzf  /tmp/genesis_product_name_web.tar.gz &> /dev/null
     unlink /"$root_dir"/"$genesis_user"/web
     ln -s /"$root_dir"/"$genesis_user"/web-"$server_dir"/ /"$root_dir"/"$genesis_user"/web
     rm -f /tmp/genesis_product_name_web.tar.gz
