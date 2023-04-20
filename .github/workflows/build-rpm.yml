@@ -76,7 +76,7 @@ jobs:
           echo "Zipping package"
           tar -cf server-${{ inputs.version }}.tar.gz *
           echo "Unzipping tar as a test"
-          tar -xzf /tmp/server-${{ inputs.version }}.tar.gz
+          tar -xzf server-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
           ls -al
           
@@ -91,7 +91,7 @@ jobs:
           tar -cf web-${{ inputs.version }}.tar.gz *
           ls -al
           echo "Unzipping tar as a test"
-          tar -xzf /tmp/web-${{ inputs.version }}.tar.gz
+          tar -xzf web-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
           
       - name: Build RPM
