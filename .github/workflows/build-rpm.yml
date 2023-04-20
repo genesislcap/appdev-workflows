@@ -75,6 +75,7 @@ jobs:
           rm *.zip
           echo "Zipping package"
           tar -cf server-${{ inputs.version }}.tar.gz *
+          ls -al
           echo "Unzipping tar as a test"
           tar -xzf server-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
