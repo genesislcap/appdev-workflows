@@ -70,7 +70,7 @@ jobs:
       - name: Server Package
         working-directory: rpm/downloads
         run: |
-          unzip -q genesisproduct-*.zip
+          unzip -q genesis_*.zip
           unzip -q *-site-specific-*.zip
           echo "Removing zip files"
           rm *.zip
