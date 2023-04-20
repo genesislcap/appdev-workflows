@@ -51,7 +51,7 @@ jobs:
         working-directory: rpm
         run: |
           sudo yum -y install rpm
-          sudo yum -y indstall rpm-build
+          sudo yum -y install rpm-build
           sudo yum -y install wget
           mkdir downloads
           mkdir web-downloads
