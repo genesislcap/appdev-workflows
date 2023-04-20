@@ -75,10 +75,10 @@ jobs:
           echo "Removing zip files"
           rm *.zip
           echo "Zipping package"
-          tar czf server-${{ inputs.version }}.tar.gz *
+          tar cf server-${{ inputs.version }}.tar.gz *
           ls -al
           echo "Unzipping tar as a test"
-          tar xzf server-${{ inputs.version }}.tar.gz
+          tar xf server-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
           ls -al
           
@@ -90,10 +90,10 @@ jobs:
           rm *.zip
           ls -al
           echo "Zipping package"
-          tar czf web-${{ inputs.version }}.tar.gz *
+          tar cf web-${{ inputs.version }}.tar.gz *
           ls -al
           echo "Unzipping tar as a test"
-          tar xzf web-${{ inputs.version }}.tar.gz
+          tar xf web-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
           
       - name: Build RPM
