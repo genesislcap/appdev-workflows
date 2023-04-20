@@ -72,7 +72,7 @@ jobs:
         run: |
           ls -al
           tar xf genesis_*.tar.gz
-          unzip -q *-site-specific-*.zip
+          echo A | unzip -q *-site-specific-*.zip
           echo "Removing zip files"
           rm *.zip
           echo "Zipping package"
