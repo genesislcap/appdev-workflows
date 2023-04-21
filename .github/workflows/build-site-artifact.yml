@@ -6,11 +6,14 @@ name: Site Deploy
 on:
   workflow_call:
     inputs:
-      repo_name:
+      client:
         required: true
         type: string
-      branch:
-        required: false
+      version:
+        required: true
+        type: string
+      repo_name:
+        required: true
         type: string
       product_name:
         required: false
