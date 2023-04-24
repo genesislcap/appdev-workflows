@@ -25,8 +25,6 @@ on:
     secrets:
       JFROG_USERNAME:
         required: true
-      JFROG_EMAIL:
-        required: true
       JFROG_PASSWORD:
         required: true
 
