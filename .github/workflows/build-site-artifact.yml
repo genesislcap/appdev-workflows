@@ -51,5 +51,5 @@ jobs:
              zip -r $(pwd)/${{ inputs.artifact_name }}.zip site-specific/*
              echo $(pwd)
              ls -a
-             echo "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.output }}"
-             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.output }}" -T ${{ inputs.output }}.zip
+             echo "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.artifact_name }}.zip"
+             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.artifact_name }}.zip" -T ${{ inputs.artifact_name }}.zip
