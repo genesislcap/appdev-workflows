@@ -40,7 +40,6 @@ jobs:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      GITTAG: ${{ github.ref_name }}
     runs-on: appdev-selfhosted
 
     steps:
@@ -48,11 +47,6 @@ jobs:
         with:
           fetch-depth: '0'
           
-      - name: GitHub Tag Name example
-        run: |
-          echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
-              
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
@@ -60,4 +54,4 @@ jobs:
              zip -r $(pwd)/${{ inputs.artifact_name }}.zip site-specific/*
              echo $(pwd)
              ls -a
-             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/${{env.CLIENT_NAME}}/${{env.OUTPUT}}" -T $(pwd)/${{env.OUTPUT}}
+             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo_name }}/site/${{ inputs.client }}/${{ inputs.output }}" -T ${{ inputs.output }}.zip
