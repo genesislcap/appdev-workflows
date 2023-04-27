@@ -58,7 +58,7 @@ jobs:
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          chmod +x ./gradlew
+          sudo chmod +x ./gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"$(git describe --tags)\"/g" server/jvm/build.gradle.kts
