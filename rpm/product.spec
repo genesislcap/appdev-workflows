@@ -203,7 +203,10 @@ then
   # Run genesisInstall
   echo "Running Genesis Install script"
   runuser -l "$genesis_user" -c 'genesisInstall'
-
+  install_error_code=$(echo $?)
+  if [[ install_error_code != 0 ]]; then
+	  exit install_error_code
+  fi
   # Run Remap
   echo "Running Remap"
   runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
