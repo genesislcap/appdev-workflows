@@ -26,6 +26,10 @@ on:
         required: false
         type: string
         description: Optional site-specific override
+      genesis-user:
+        required: true
+        type: string
+        description: User to login as when installed
     secrets:
       JFROG_USERNAME:
         required: true
@@ -72,7 +76,10 @@ jobs:
         run: |
           ls -al
           tar xf genesis_*.tar.gz
-          echo A | unzip -q *-site-specific-*.zip
+          if [[ -f "*site-specific*.zip" ]]; then
+            rm -rf site-specific
+            echo A | unzip -q *-site-specific-*.zip
+          fi
           echo "Removing zip files"
           rm *.zip
           echo "Zipping package"
@@ -110,7 +117,7 @@ jobs:
             sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           fi
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
-          sed -i "s/genesisUser/$(echo ${{ inputs.product_name }} | sed -E 's/[0-9]+//g')/g" product.spec
+          sed -i "s/genesisUser/$(echo ${{ inputs.genesis_user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
           mv product.spec ~/rpmbuild/SOURCES/

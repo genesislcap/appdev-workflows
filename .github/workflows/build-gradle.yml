@@ -62,8 +62,7 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"$(git describe --tags)\"/g" server/jvm/build.gradle.kts
-
+          
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
