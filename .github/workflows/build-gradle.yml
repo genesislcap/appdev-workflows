@@ -58,14 +58,15 @@ jobs:
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          chmod +x ./gradlew
+          sudo chmod +x ./gradlew
+          sudo chmod +x ./server/jvm/gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
           
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: build --no-build-cache -Pversion=${{ inputs.version }} --stacktrace
           build-root-directory: ./server/jvm
           cache-disabled: true
 

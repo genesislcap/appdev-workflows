@@ -207,6 +207,10 @@ then
   # Run Remap
   echo "Running Remap"
   runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
+  remap_error_code=$(echo $?)
+  if [[ remap_error_code != 0 ]]; then
+	  exit remap_error_code
+  fi
 else
   echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
   echo "genesisInstall and remap will not be run"
