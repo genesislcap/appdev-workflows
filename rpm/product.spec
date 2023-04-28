@@ -187,6 +187,7 @@ then
     echo "bashrc setup complete..."
 fi
 
+  # Create install log
 LOG=/home/$genesis_user/genesisInstall_$(date +%Y-%m-%d-%H-%M).log
 echo "Genesis $genesis_user Install started at $(date)" >> "$LOG"
 echo "Genesis $genesis_user Install started at $(date)" 
@@ -196,7 +197,6 @@ echo "Create install log.."
 
 if [[ ($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -gt 0) && ($(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf) != "false"))) ]]
 then
-  # Create install log
   echo "run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
   
   # Run command to clear cache
