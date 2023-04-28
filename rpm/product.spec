@@ -189,8 +189,7 @@ fi
 
   # Create install log
 LOG=/home/$genesis_user/genesisInstall_$(date +%Y-%m-%d-%H-%M).log
-echo "Genesis $genesis_user Install started at $(date)" >> "$LOG"
-echo "Genesis $genesis_user Install started at $(date)" 
+echo "Genesis $genesis_user Install started at $(date)" 2>&1 | tee -a "$LOG"
 chown "$genesis_user"."$genesis_grp" "$LOG"
 echo "Create install log.."
 
@@ -210,22 +209,21 @@ then
   runuser -l "$genesis_user" -c 'genesisInstall'
   install_error_code=$(echo $?)
   if [[ $install_error_code != 0 ]]; then
-  	  echo "Genesis $genesis_user genesisInstall has failed at $(date)" >> "$LOG"
+  	  echo "Genesis $genesis_user genesisInstall has failed at $(date)" 2>&1 | tee -a "$LOG"
 	  exit $install_error_code
   fi
-  echo "Genesis $genesis_user genesisInstall finished at $(date)" >> "$LOG"
+  echo "Genesis $genesis_user genesisInstall finished at $(date)" 2>&1 | tee -a "$LOG"
   # Run Remap
   echo "Running Remap"
   runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
   remap_error_code=$(echo $?)
   if [[ $remap_error_code != 0 ]]; then
-  	  echo "Genesis $genesis_user remap has failed at $(date)" >> "$LOG"
+  	  echo "Genesis $genesis_user remap has failed at $(date)" 2>&1 | tee -a "$LOG"
 	  exit $remap_error_code
   fi
-  echo "Genesis $genesis_user RPM install finished at $(date)" >> "$LOG"
+  echo "Genesis $genesis_user RPM install finished at $(date)" 2>&1 | tee -a "$LOG"
 else
-  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
-  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)" >> "$LOG"
+  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)" 2>&1 | tee -a "$LOG"
   echo "genesisInstall and remap will not be run"
   echo "Genesis $genesis_user remap and genesisInstall have not been run" >> "$LOG"
 fi
