@@ -21,6 +21,9 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 %dir %attr(1777, root, root) "/tmp"
 %attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
 %attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
+%_source_payload       w0.gzdio
+%_binary_payload       w0.gzdio
+%define __jar_repack 0
 
 %install
 cd $HOME
@@ -206,18 +209,18 @@ then
   echo "Running Genesis Install script"
   runuser -l "$genesis_user" -c 'genesisInstall'
   install_error_code=$(echo $?)
-  if [[ install_error_code != 0 ]]; then
+  if [[ $install_error_code != 0 ]]; then
   	  echo "Genesis $genesis_user genesisInstall has failed at $(date)" >> "$LOG"
-	  exit install_error_code
+	  exit $install_error_code
   fi
   echo "Genesis $genesis_user genesisInstall finished at $(date)" >> "$LOG"
   # Run Remap
   echo "Running Remap"
   runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
   remap_error_code=$(echo $?)
-  if [[ remap_error_code != 0 ]]; then
+  if [[ $remap_error_code != 0 ]]; then
   	  echo "Genesis $genesis_user remap has failed at $(date)" >> "$LOG"
-	  exit remap_error_code
+	  exit $remap_error_code
   fi
   echo "Genesis $genesis_user RPM install finished at $(date)" >> "$LOG"
 else
