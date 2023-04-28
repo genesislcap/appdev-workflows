@@ -18,8 +18,8 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 
 %description
 %files
-%_source_payload       w9.gzdio
-%_binary_payload       w9.gzdio
+%_source_payload       w9.gzdio %source0
+%_binary_payload       w9.gzdio %source0
 %define __jar_repack 0
 %dir %attr(1777, root, root) "/tmp"
 %attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
