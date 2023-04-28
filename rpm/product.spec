@@ -18,9 +18,6 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 
 %description
 %files
-%_source_payload       w0.gzdio 
-%_binary_payload       w0.gzdio 
-%define __jar_repack 0
 %dir %attr(1777, root, root) "/tmp"
 %attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
 %attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
@@ -40,6 +37,10 @@ pwd
 
 %prep
 %setup -c
+
+%_source_payload       w0.gzdio 
+%_binary_payload       w0.gzdio 
+%define __jar_repack 0
 
 %post -p /bin/sh
 #!/usr/bin/env bash
