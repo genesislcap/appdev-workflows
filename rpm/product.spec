@@ -21,6 +21,9 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 %dir %attr(1777, root, root) "/tmp"
 %attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
 %attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
+%_source_payload       w0.gzdio
+%_binary_payload       w0.gzdio
+%define __jar_repack 0
 
 %install
 cd $HOME
@@ -124,12 +127,7 @@ else
     runuser -l "$genesis_user" -c "cd /$root_dir/$genesis_user/dbbackup/$server_dir;JvmRun global.genesis.environment.scripts.DumpTable --all;gzip *"
 fi
 
-# Create install log
-echo "Create install log.."
-LOG=/home/$genesis_user/genesisInstall_$(date +%Y-%m-%d-%H-%M).log
-echo "Genesis $genesis_user Install started at $(date)" >> "$LOG"
-echo "Genesis $genesis_user Install started at $(date)" 
-chown "$genesis_user"."$genesis_grp" "$LOG"
+
 
 # Extract directory structure
 echo "extract the servr directory structure"
@@ -189,6 +187,12 @@ then
     echo "bashrc setup complete..."
 fi
 
+  # Create install log
+LOG=/home/$genesis_user/genesisInstall_$(date +%Y-%m-%d-%H-%M).log
+echo "Genesis $genesis_user Install started at $(date)" 2>&1 | tee -a "$LOG"
+chown "$genesis_user"."$genesis_grp" "$LOG"
+echo "Create install log.."
+
 
 if [[ ($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -gt 0) && ($(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf) != "false"))) ]]
 then
@@ -203,17 +207,25 @@ then
   # Run genesisInstall
   echo "Running Genesis Install script"
   runuser -l "$genesis_user" -c 'genesisInstall'
-
+  install_error_code=$(echo $?)
+  if [[ $install_error_code != 0 ]]; then
+  	  echo "Genesis $genesis_user genesisInstall has failed at $(date)" 2>&1 | tee -a "$LOG"
+	  exit $install_error_code
+  fi
+  echo "Genesis $genesis_user genesisInstall finished at $(date)" 2>&1 | tee -a "$LOG"
   # Run Remap
   echo "Running Remap"
   runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
   remap_error_code=$(echo $?)
-  if [[ remap_error_code != 0 ]]; then
-	  exit remap_error_code
+  if [[ $remap_error_code != 0 ]]; then
+  	  echo "Genesis $genesis_user remap has failed at $(date)" 2>&1 | tee -a "$LOG"
+	  exit $remap_error_code
   fi
+  echo "Genesis $genesis_user RPM install finished at $(date)" 2>&1 | tee -a "$LOG"
 else
-  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
+  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)" 2>&1 | tee -a "$LOG"
   echo "genesisInstall and remap will not be run"
+  echo "Genesis $genesis_user remap and genesisInstall have not been run" >> "$LOG"
 fi
 
 # Restore backups
@@ -232,7 +244,7 @@ then
 	echo "/tmp/genesis_install.conf file absent or run_exec not defined .... Starting servers ...."
     runuser -l "$genesis_user" -c 'startServer'
 fi
-echo "Genesis $genesis_user Install finished at $(date)" >> "$LOG"
+
 echo "Install.sh has completed ..."
 
 
