@@ -117,7 +117,7 @@ jobs:
             sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
           fi
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
-          sed -i "s/genesisUser/$(echo ${{ inputs.genesis_user }})/g" product.spec
+          sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
           mv product.spec ~/rpmbuild/SOURCES/
