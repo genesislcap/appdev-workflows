@@ -38,8 +38,8 @@ pwd
 %prep
 %setup -c
 
-%_source_payload       w0.gzdio 
-%_binary_payload       w0.gzdio 
+%define _source_payload       w0.gzdio 
+%define _binary_payload       w0.gzdio 
 %define __jar_repack 0
 
 %post -p /bin/sh
