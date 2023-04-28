@@ -91,8 +91,8 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          ls client/web
-          echo "web_exists=$?" >> $GITHUB_OUTPUT
+          test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
+          
 
       - name: Client Build
         if: steps.web_exists.outputs.web_exists == '0'
