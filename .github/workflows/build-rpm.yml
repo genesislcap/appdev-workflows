@@ -79,9 +79,9 @@ jobs:
           if [[ -f "*site-specific*.zip" ]]; then
             rm -rf site-specific
             echo A | unzip -q *-site-specific-*.zip
+            echo "Removing zip files"
+            rm *.zip
           fi
-          echo "Removing zip files"
-          rm *.zip
           echo "Zipping package"
           tar cf server-${{ inputs.version }}.tar.gz *
           ls -al
