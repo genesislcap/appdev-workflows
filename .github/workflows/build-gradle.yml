@@ -31,7 +31,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
-    runs-on: [ self-hosted, selfhosted-services ]
+    runs-on: [ appdev-selfhosted ]
     steps:
       - uses: actions/checkout@v2
 
