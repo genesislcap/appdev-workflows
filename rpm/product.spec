@@ -156,14 +156,14 @@ then
     echo "Web is being deployed too ... "
     cd /"$root_dir"/"$genesis_user"/ || exit
     mkdir web-"$server_dir"
-    cd web-"$server_dir || exit" || exit
+    cd web-"$server_dir" || exit
     #check if the web app is not to be served from root
     echo "Check if new web isntallation dir has been provided"
     if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep web_path -ic /tmp/genesis_install.conf)" -gt 0 ]
     then
         web_path=$(grep web_path /tmp/genesis_install.conf | cut -d '=' -f 2)
         mkdir "$web_path"
-        cd "$web_path || exit" || exit
+        cd "$web_path" || exit
         echo "new web isntallation dir is : $web_path"
     fi
     echo "Unlink old web installation and point it to the new web folder"
