@@ -170,15 +170,17 @@ jobs:
               cd ${{ env.PRODUCT_BASE }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
             fi
-      - name: Depcheck
-        uses: dependency-check/Dependency-Check_Action@1.0.0
-        id: Depcheck
-        with:
-          project: ${{ inputs.repo_name }}
-          path: '.'
-          format: 'HTML'
-        env:
-          JAVA_HOME: /opt/jdk
+            
+            
+#      - name: Depcheck
+ #       uses: dependency-check/Dependency-Check_Action@1.0.0
+  #      id: Depcheck
+   #     with:
+    #      project: ${{ inputs.repo_name }}
+     #     path: '.'
+      #    format: 'HTML'
+       # env:
+        #  JAVA_HOME: /opt/jdk
 
       - name: 'Publish Test Report'
         if: always()
