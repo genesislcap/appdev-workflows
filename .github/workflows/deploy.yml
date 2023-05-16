@@ -4,44 +4,34 @@
 name:  Deploy Self serve envs
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      repo_name:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+      print_tags:
+        description: 'True to print to STDOUT'
+        required: true
+        type: boolean
+      tags:
+        description: 'Test scenario tags'
         required: true
         type: string
-      branch:
-        required: false
-        type: string
-      product_name:
-        required: false
-        type: string
-
-    secrets:
-      JFROG_USERNAME:
-        required: true
-      JFROG_EMAIL:
-        required: true
-      JFROG_PASSWORD:
+      environment:
+        description: 'Environment to run tests against'
+        type: environment
         required: true
 
-env:
-  REPO_NAME: ${{ inputs.repo_name }}
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:
-    env:
-      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
-      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
-      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      GITTAG: ${{ github.ref_name }}
+  print-tag:
     runs-on: appdev-selfhosted
-
+    if:  ${{ inputs.print_tags }} 
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Copy cofig files
-        run: |
-            pwd
-            ls -larth
-        
+      - name: Print the input tag to STDOUT
+        run: echo  The tags are ${{ inputs.tags }}
