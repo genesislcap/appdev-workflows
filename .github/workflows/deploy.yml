@@ -1,0 +1,47 @@
+# This is a workflow to being called from appdev-devops repo in genesiscicd
+#  NPM web build workflow v0.0.1
+
+name:  Deploy Self serve envs
+
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: false
+        type: string
+
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    env:
+      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
+      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
+      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
+      GITTAG: ${{ github.ref_name }}
+    runs-on: appdev-selfhosted
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Copy cofig files
+        run: |
+            pwd
+            ls -larth
+        
