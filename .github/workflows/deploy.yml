@@ -1,37 +1,28 @@
-# This is a workflow to being called from appdev-devops repo in genesiscicd
-#  NPM web build workflow v0.0.1
-
 name:  Deploy Self serve envs
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
-      print_tags:
-        description: 'True to print to STDOUT'
-        required: true
-        type: boolean
-      tags:
-        description: 'Test scenario tags'
+      action:
+        description: 'To deploy infra or destroy infra'
         required: true
         type: string
-      environment:
-        description: 'Environment to run tests against'
-        type: environment
-        required: true
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  print-tag:
+  build:
+    name: Steps to create resources in cddev account
+    env:
+      GITTAG: ${{ github.ref_name }}
+      REPO_NAME: ${{ inputs.repo_name }}
     runs-on: appdev-selfhosted
-    if:  ${{ inputs.print_tags }} 
+    
     steps:
-      - name: Print the input tag to STDOUT
-        run: echo  The tags are ${{ inputs.tags }}
+      - uses: actions/checkout@v2
+          
+      - name: Env Set-Up
+        run: |
+           mv config/* ~/selfserve/scripts/
+           ls -larth ~/selfserve/scripts/
+           export PYTHONUNBUFFERED=TRUE
+           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }}
