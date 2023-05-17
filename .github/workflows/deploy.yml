@@ -7,13 +7,19 @@ on:
         description: 'To deploy infra or destroy infra'
         required: true
         type: string
+      repo_name:
+        required: true
+        type: string
+      ref_name:
+        required: true
+        type: string
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to create resources in cddev account
     env:
-      GITTAG: ${{ github.ref_name }}
+      GITTAG: ${{ inputs.ref_name }}
       REPO_NAME: ${{ inputs.repo_name }}
     runs-on: appdev-selfhosted
     
