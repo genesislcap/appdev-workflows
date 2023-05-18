@@ -9,7 +9,7 @@ on:
         type: string
       file_name:
         description: 'Comma separated list of file yaml name'
-        required: true
+        required: false
         type: string
 
 
