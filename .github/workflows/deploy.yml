@@ -17,7 +17,6 @@ on:
 jobs:
   build:
     name: Steps to create resources in cddev account
-    env:
     runs-on: appdev-selfhosted
     
     steps:
