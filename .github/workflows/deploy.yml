@@ -7,20 +7,17 @@ on:
         description: 'To deploy infra or destroy infra'
         required: true
         type: string
-      repo_name:
+      file_name:
+        description: 'Comma separated list of file yaml name'
         required: true
         type: string
-      ref_name:
-        required: true
-        type: string
+
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to create resources in cddev account
     env:
-      GITTAG: ${{ inputs.ref_name }}
-      REPO_NAME: ${{ inputs.repo_name }}
     runs-on: appdev-selfhosted
     
     steps:
@@ -31,4 +28,4 @@ jobs:
            mv config/* ~/selfserve/scripts/
            ls -larth ~/selfserve/scripts/
            export PYTHONUNBUFFERED=TRUE
-           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }}
+           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
