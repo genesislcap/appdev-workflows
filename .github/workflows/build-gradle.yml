@@ -90,11 +90,14 @@ jobs:
       - name: Check file existence
         id: web_exists
         working-directory: .
+        
         run: |
+          pwd
           test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
-          
+          echo ""
 
       - name: Client Build
+     
         if: steps.web_exists.outputs.web_exists == '0'
         uses: gradle/gradle-build-action@v2
         with:
