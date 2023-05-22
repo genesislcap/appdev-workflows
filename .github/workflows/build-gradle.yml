@@ -91,7 +91,7 @@ jobs:
         run: |
               echo "${{ env.REPO_NAME }}"
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/site/" -T ${{ inputs.product_name }}*.zip
-              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/site/" -T ${{ inputs.product_name }}*.tar.gz
+              # curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/site/" -T ${{ inputs.product_name }}*.tar.gz
           
       
       # - name: Check file existence
