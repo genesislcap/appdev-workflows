@@ -62,11 +62,12 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
-     
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/jvm/build.gradle.kts
+
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache -Pversion=${{ inputs.version }} --stacktrace
+          arguments: build --no-build-cache --stacktrace
           build-root-directory: ./server/jvm
           cache-disabled: true
 
@@ -93,10 +94,10 @@ jobs:
           pwd
           test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
           echo ""
-     
+
 
       - name: Client Build
-        
+
         if: steps.web_exists.outputs.web_exists == '0'
         uses: gradle/gradle-build-action@v2
         with:
