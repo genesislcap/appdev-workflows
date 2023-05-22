@@ -13,6 +13,10 @@ on:
       version:
         required: false
         type: string
+      upload:
+        required: false
+        type: boolean
+        default: true
     secrets:
       GRADLE_PROPERTIES:
         required: true
@@ -61,8 +65,10 @@ jobs:
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/jvm/gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >>  $GITHUB_ENV
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/jvm/build.gradle.kts
+          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
 
       - name: Server Build
         uses: gradle/gradle-build-action@v2
@@ -72,6 +78,7 @@ jobs:
           cache-disabled: true
 
       - name: Create Giant Server Zip
+        if: inputs.upload
         shell: bash
         working-directory: server/jvm/
         run: |
@@ -79,35 +86,35 @@ jobs:
           cd .genesis-home
           pwd
           ls -la
-          tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ inputs.version }}.tar.gz *
+          tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+
       - name: Upload Server Package
+        if: inputs.upload
         working-directory: server/jvm/${{ inputs.product_name }}-distribution/build/distributions/
         run: |
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ inputs.version }}.tar.gz
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+
       - name: Check file existence
         id: web_exists
         working-directory: .
-
         run: |
           pwd
           test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
           echo ""
 
-
       - name: Client Build
-
         if: steps.web_exists.outputs.web_exists == '0'
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
+          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
           build-root-directory: ./
           cache-disabled: true
 
       - name: Upload Client Package
-        if: steps.web_exists.outputs.web_exists == '0'
+        if: inputs.upload && steps.web_exists.outputs.web_exists == '0'
         working-directory: client/web/build/distributions
         run: |
-          mv web-distribution-${{ inputs.version }}.zip ${{ env.REPO_NAME }}-web-${{ inputs.version }}.zip
+          mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip

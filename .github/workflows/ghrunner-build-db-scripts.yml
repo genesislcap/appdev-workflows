@@ -17,7 +17,7 @@ on:
         type: string
       module_name:
         required: false
-        type: string   
+        type: string
       client:
         required: true
         type: string
@@ -29,10 +29,10 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
-        
+
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-    
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -51,21 +51,20 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-          cache: 'maven'
-          
+
       - name: Env Set-Up
         run: |
-             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
-             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
-             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
-             echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
- 
+             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "PRODUCT_BASE=$(readlink -f $(find . -name build.gradle.kts) | rev | cut -c18- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
+
       - name: Env Setup
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
         run: |
              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
              echo "OUTPUT=genesis-${{ env.PRODUCT_NAME }}-dbscripts-${{ env.VERSION }}.zip" >> $GITHUB_ENV
-             
+
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
@@ -95,17 +94,17 @@ jobs:
         with:
           name: 'test-reports'
           path: ${{github.workspace}}/reports
-          
+
       - name: Package
         run: |
             echo ${{ env.OUTPUT }}
             echo ${{ env.outfilename }}
             sudo yum install zip -y
             sudo yum install unzip -y
-            cd ${{ env.PRODUCT_BASE }}/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
+            cd ${{ env.PRODUCT_BASE }}/server/jvm/${{ env.PRODUCT_NAME }}-script-config/src/main/resources/scripts/sql
             zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} release-sql
             cd ${{ env.PRODUCT_BASE }}
-            
+
       - name: Convert to tar
         run: |
            mkdir ${{ env.PRODUCT_NAME }}-1
@@ -116,16 +115,16 @@ jobs:
            mv "${{ env.PRODUCT_NAME }}-1/${{ env.outfilename }}.gz" .
            rm -rf ${{ env.PRODUCT_NAME }}-1
            echo "Converted ${{ env.OUTPUT }} to ${{ env.outfilename }} as a tar zip file"
-           pwd 
+           pwd
            echo "make a copy in the /tmp folder for the rpm to work"
            cp ${{ env.outfilename }}.gz /tmp
            ls -larth
-           
-      - name: Publish to Artifactory 
+
+      - name: Publish to Artifactory
         run: |
             cd ${{ env.PRODUCT_BASE }}
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/dbscript/site/${{ inputs.client }}/" -T *.zip
-            
+
       - name: Create RPM
         run: |
             sudo yum install rpm -y
@@ -152,7 +151,7 @@ jobs:
             mvn rpm:rpm
             find ~/ -name "*.rpm"
             ls
-          
+
       - name: Publish RPM to Artifactory
         run: |
             cd ${{ env.PRODUCT_BASE }}/target/rpm/genesis-${{ env.PRODUCT_NAME }}-dbscripts/RPMS/x86_64/
