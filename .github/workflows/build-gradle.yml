@@ -85,19 +85,19 @@ jobs:
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ inputs.version }}.tar.gz
-      # - name: Check file existence
-      #   id: web_exists
-      #   working-directory: .
+      - name: Check file existence
+        id: web_exists
+        working-directory: .
 
-      #   run: |
-      #     pwd
-      #     test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
-      #     echo ""
+        run: |
+          pwd
+          test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
+          echo ""
      
 
       - name: Client Build
         
-        # if: steps.web_exists.outputs.web_exists == '0'
+        if: steps.web_exists.outputs.web_exists == '0'
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ inputs.version }}
@@ -105,7 +105,7 @@ jobs:
           cache-disabled: true
 
       - name: Upload Client Package
-        # if: steps.web_exists.outputs.web_exists == '0'
+        if: steps.web_exists.outputs.web_exists == '0'
         working-directory: client/web/build/distributions
         run: |
           mv web-distribution-${{ inputs.version }}.zip ${{ env.REPO_NAME }}-web-${{ inputs.version }}.zip
