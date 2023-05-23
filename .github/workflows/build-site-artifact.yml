@@ -21,7 +21,10 @@ on:
       artifact_name:
         required: true
         type: string
-  
+      branch:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
@@ -30,7 +33,7 @@ on:
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-    
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -40,10 +43,11 @@ jobs:
     runs-on: appdev-selfhosted
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          
+          ref: ${{ inputs.branch }}
+
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
