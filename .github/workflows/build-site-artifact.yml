@@ -12,9 +12,6 @@ on:
       version:
         required: true
         type: string
-      repo_name:
-        required: true
-        type: string
       product_name:
         required: true
         type: string
@@ -24,15 +21,14 @@ on:
       branch:
         required: false
         type: string
-
+      source_location:
+        required: true
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
       JFROG_PASSWORD:
         required: true
-
-env:
-  REPO_NAME: ${{ inputs.repo_name }}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -51,7 +47,7 @@ jobs:
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
-             cd $(pwd)/${{ inputs.repo_name }}-${{ inputs.client }}/src
+             cd $(pwd)/${{ inputs.source_location }}
              zip -r $(pwd)/${{ inputs.artifact_name }}.zip site-specific/*
              echo $(pwd)
              ls -a
