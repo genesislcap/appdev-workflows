@@ -76,7 +76,8 @@ jobs:
         run: |
           ls -al
           tar xf genesis_*.tar.gz
-          if [[ -f "*site-specific*.zip" ]]; then
+          if ls *site-specific*.zip 1> /dev/null 2>&1; then
+            echo "Detected site-specific override, using that one"
             rm -rf site-specific
             echo A | unzip -q *-site-specific-*.zip
             echo "Removing zip files"
@@ -89,7 +90,7 @@ jobs:
           tar xf server-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
           ls -al
-          
+
       - name: Web Download and Package
         working-directory: rpm/web-downloads
         run: |
@@ -103,13 +104,13 @@ jobs:
           echo "Unzipping tar as a test"
           tar xf web-${{ inputs.version }}.tar.gz
           mv *.tar.gz ../
-          
+
       - name: Build RPM
         working-directory: rpm
         run: |
           ls -al
           rm -rf web-downloads downloads
-          if [ -z "${{ inputs.version }}" ]; 
+          if [ -z "${{ inputs.version }}" ];
           then
             sed -i "s/Version://g" product.spec
             sed -i "s/1.0.0//g" product.spec
@@ -123,13 +124,13 @@ jobs:
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bb product.spec
-          
+
       - name: Upload RPM
         run: |
           cd ~/rpmbuild/SRPMS/
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
-          
+
       # - name: build the RPM
       #   run: |
       #     rpmbuild -bs
