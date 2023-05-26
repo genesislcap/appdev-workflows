@@ -1,7 +1,7 @@
 Name:           genesis-PRODUCT
 Version:        1.0.0
 Release:        1%{?dist}
-Summary:        genesis-rpm 
+Summary:        genesis-rpm
 BuildArch:      noarch
 
 License:        (c) genesis.global
@@ -38,8 +38,8 @@ pwd
 %prep
 %setup -c
 
-%define _source_payload       w0.gzdio 
-%define _binary_payload       w0.gzdio 
+%define _source_payload       w0.gzdio
+%define _binary_payload       w0.gzdio
 %define __jar_repack 0
 
 %post -p /bin/sh
@@ -58,7 +58,7 @@ server_dir=$(date +%Y%m%d-%H%M)
 if [ ! "$(test -d /var/log/genesis_service  && echo 1 || echo 0)" -eq 1  ]
 then
     sudo install -d /var/log/genesis_service -o $genesis_user -m 750
-else 
+else
     echo "/var/log/genesis_service is already present"
 fi
 
@@ -102,7 +102,7 @@ fi
 # Backup keys to /tmp/keys/
 if [[ -d /home/$genesis_user/run/runtime/keys ]]
 then
-    echo "Directory keys exists in runtime." 
+    echo "Directory keys exists in runtime."
     echo "Moving keys to /tmp/"
     cp -r /home/"$genesis_user"/run/runtime/keys /tmp/
 fi
@@ -113,12 +113,12 @@ if [[ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -gt 0 && -f run/g
 then
     echo "Stopping the genesis platform"
     runuser -l "$genesis_user" -c 'echo y | killServer --all'
-    runuser -l "$genesis_user" -c 'killProcess GENESIS_CLUSTER'   
+    runuser -l "$genesis_user" -c 'killProcess GENESIS_CLUSTER'
 fi
 
 #Backup the database according to the config
-echo "Only backup db is db_backup is mentioned in /tmp/genesis_install.conf"
-if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep db_backup -ic /tmp/genesis_install.conf)" -gt 0 ] && [ "$(grep db_backup /tmp/genesis_install.conf | cut -d '=' -f 2)" = 'false' ]
+echo "Run the backup unless it's set to false in /tmp/genesis_install.conf or Genesis isn't installed"
+if grep -q "^db_backup\s*=\s*false" /tmp/genesis_install.conf || [[ ! -d "/home/$genesis_user/run/generated" ]]
 then
     echo "db_backup is false in /tmp/genesis_install.conf or /tmp/genesis_install.conf is not defined"
 else
@@ -133,7 +133,7 @@ fi
 # Extract directory structure
 echo "extract the servr directory structure"
 mkdir -p /"$root_dir"/"$genesis_user"/server/"$server_dir"/run
-cd /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ || exit 
+cd /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ || exit
 tar xf /tmp/server-%{version}.tar.gz &> /dev/null
 rm -f /tmp/server-%{version}.tar.gz
 
@@ -180,9 +180,9 @@ echo "Setting up bashrc for the $genesis_user if its not present"
 if [ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -eq 0 ]
 then
     {
-        echo "export GENESIS_HOME=\$HOME/run/" 
-        echo "[ -f \$GENESIS_HOME/genesis/util/setup.sh ] && source \$GENESIS_HOME/genesis/util/setup.sh" 
-        echo "export GROOVY_HOME=/opt/groovy" 
+        echo "export GENESIS_HOME=\$HOME/run/"
+        echo "[ -f \$GENESIS_HOME/genesis/util/setup.sh ] && source \$GENESIS_HOME/genesis/util/setup.sh"
+        echo "export GROOVY_HOME=/opt/groovy"
         echo "PATH=\$GROOVY_HOME/bin:\$PATH"
     } >> /home/"$genesis_user"/.bashrc
     echo "bashrc setup complete..."
@@ -198,13 +198,13 @@ echo "Create install log.."
 if [[ ($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -gt 0) && ($(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf) != "false"))) ]]
 then
   echo "run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
-  
+
   # Run command to clear cache
   echo "Check if site-specific scripts folder exits.."
   runuser -l "$genesis_user" -c "ls -l /home/$genesis_user/run//site-specific/scripts/"
   echo "Running Genesis cache clear command"
   runuser -l "$genesis_user" -c "JvmRun -modules=genesis-environment global.genesis.environment.scripts.ClearCodegenCache"
-  
+
   # Run genesisInstall
   echo "Running Genesis Install script"
   runuser -l "$genesis_user" -c 'genesisInstall'
@@ -230,7 +230,7 @@ else
 fi
 
 # Restore backups
-if [[ -d /tmp/keys ]] 
+if [[ -d /tmp/keys ]]
 then
     echo "keys do not exist in runtime. Restoring backup"
     cp -r /tmp/keys /home/"$genesis_user"/run/runtime/
