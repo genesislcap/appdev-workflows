@@ -65,6 +65,7 @@ jobs:
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/jvm/gradlew
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
