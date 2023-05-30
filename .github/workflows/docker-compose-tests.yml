@@ -1,0 +1,53 @@
+name: Docker Compose Tests
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Branch'
+        required: true
+        type: string
+      compose_file:
+        description: 'Name of the compose file'
+        required: true
+        type: string
+      healthcheck_command:
+        description: 'Name of the healthcheck file'
+        required: true
+        type: string
+      working_dir:
+        type: string
+        description: Run workflow against branch
+        required: true
+    secrets:
+        JFROG_USERNAME:
+            required: true
+        JFROG_PASSWORD:
+            required: true
+
+jobs:
+  build:
+    runs-on: [ appdev-selfhosted ]
+    env:
+      genesisArtifactoryUser: ${{ secrets.JFROG_USERNAME }}
+      genesisArtifactoryPassword: ${{ secrets.JFROG_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.branch }}
+      - name: Login to Genesis Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: genesisglobal-docker-internal.jfrog.io
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
+      - uses: KengoTODA/actions-setup-docker-compose@main
+        with:
+          version: '1.29.2'
+      - name: Run Docker Compose
+        uses: isbang/compose-action@v1.4.0
+        with:
+          compose-file: ${{ inputs.working_dir }}/${{ inputs.compose_file }}
+      - name: Run healthcheck
+        working-directory: ${{ inputs.working_dir }}
+        run: ${{ inputs.healthcheck_command }}

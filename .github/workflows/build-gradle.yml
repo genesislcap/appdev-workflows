@@ -1,5 +1,5 @@
 # This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
-name: Mono Deploy
+name: Gradle Build
 
 on:
   workflow_call:
@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: true
+      build_docker:
+        required: false
+        default: false
+        type: boolean
+
     secrets:
       GRADLE_PROPERTIES:
         required: true
@@ -64,6 +69,12 @@ jobs:
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/jvm/gradlew
@@ -78,6 +89,22 @@ jobs:
         with:
           arguments: build --no-build-cache --stacktrace
           build-root-directory: ./server/jvm
+          cache-disabled: true
+
+      - name: Docker Build Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
+          build-root-directory: ./
+          cache-disabled: true
+
+      - name: Docker Push Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
+          build-root-directory: ./
           cache-disabled: true
 
       - name: Create Giant Server Zip
