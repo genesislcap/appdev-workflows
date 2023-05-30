@@ -104,12 +104,10 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          pwd
-          test -f client/web && echo "web_exists=0" >> $GITHUB_OUTPUT  ||  echo "web_exists=1" >> $GITHUB_OUTPUT
-          echo ""
+          test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT
 
       - name: Client Build
-        if: steps.web_exists.outputs.web_exists == '0'
+        if: steps.web_exists.outputs.web_exists
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
@@ -117,7 +115,7 @@ jobs:
           cache-disabled: true
 
       - name: Upload Client Package
-        if: inputs.upload && steps.web_exists.outputs.web_exists == '0'
+        if: inputs.upload && steps.web_exists.outputs.web_exists
         working-directory: client/web/build/distributions
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
