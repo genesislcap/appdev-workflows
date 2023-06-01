@@ -131,7 +131,7 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT || return 0
+          test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
 
       - name: Client Build
         if: steps.web_exists.outputs.web_exists
