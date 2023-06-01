@@ -30,6 +30,10 @@ on:
         required: true
         type: string
         description: User to login as when installed
+      spec-file-branch:
+        required: false
+        type: string
+        description: Branch to get the spec file from
     secrets:
       JFROG_USERNAME:
         required: true
@@ -50,6 +54,7 @@ jobs:
         with:
           repository: genesislcap/appdev-workflows
           fetch-depth: 2
+          ref: ${{ inputs.spec-file-branch }}
 
       - name: Setup
         working-directory: rpm
@@ -132,9 +137,6 @@ jobs:
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
 
-      # - name: build the RPM
-      #   run: |
-      #     rpmbuild -bs
-
-
-
+      - name: Cleanup
+        run: |
+          rm -rf $HOME/rpmbuild/
