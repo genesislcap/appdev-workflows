@@ -76,6 +76,7 @@ jobs:
         run: |
           ls -al
           tar xf genesis_*.tar.gz
+          rm genesis_*.tar.gz
           if ls *site-specific*.zip 1> /dev/null 2>&1; then
             echo "Detected site-specific override, using that one"
             rm -rf site-specific
