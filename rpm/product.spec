@@ -1,7 +1,7 @@
 Name:           genesis-PRODUCT
 Version:        1.0.0
 Release:        1%{?dist}
-Summary:        genesis-rpm 
+Summary:        genesis-rpm
 BuildArch:      noarch
 
 License:        (c) genesis.global
@@ -38,8 +38,8 @@ pwd
 %prep
 %setup -c
 
-%define _source_payload       w0.gzdio 
-%define _binary_payload       w0.gzdio 
+%define _source_payload       w0.gzdio
+%define _binary_payload       w0.gzdio
 %define __jar_repack 0
 
 %post -p /bin/sh
@@ -48,205 +48,229 @@ pwd
 exec 1>/proc/$PPID/fd/1
 exec 2>/proc/$PPID/fd/2
 
+##############################################
+####### Functions ############################
+##############################################
+genesis_is_running() {
+    # Get the keyword to search for
+    local keyword="global.genesis"
+
+    # Use ps and grep to search for processes
+    local count=$(ps aux | grep -c "$keyword")
+
+    # Check the count of matching processes
+    if [[ $count -gt 1 ]]; then
+        return 0  # true
+    else
+        return 1  # false
+    fi
+}
+
+genesis_is_installed() {
+    if [ -d /home/"$genesis_user"/run/generated ]; then
+        return 0 # true
+    else
+        return 1 # false
+    fi
+}
+
+get_override_value() {
+    local override_key=$1
+    local default_value=$2
+
+    if [ -f /tmp/genesis_install.conf ] && grep --quiet -i "$override_key=.*" /tmp/genesis_install.conf; then
+        grep -i "^$override_key=" "/tmp/genesis_install.conf" | sed "s/^$override_key=//"
+    else
+        echo $default_value
+    fi
+}
+
+##############################################
+
 ## Set the product user and group if specified
 
-genesis_user="genesisUser"
-genesis_grp="genesisUser"
-root_dir="data"
+genesis_user=$(get_override_value "genesis_user" "genesisUser")
+genesis_grp=$(get_override_value "genesis_grp" "genesisUser")
+root_dir=$(get_override_value "root_dir" "data")
+db_backup=$(get_override_value "db_backup" "true")
+run_genesis_install=$(get_override_value "run_genesis_install" "true")
+run_genesis_clear_codegen_cache=$(get_override_value "run_genesis_clear_codegen_cache" "true")
+run_genesis_remap=$(get_override_value "run_genesis_remap" "true")
+start_processes=$(get_override_value "start_processes" "true")
+web_path=$(get_override_value "web_path" "/$root_dir/$genesis_user/web")
+
 server_dir=$(date +%Y%m%d-%H%M)
 
-if [ ! "$(test -d /var/log/genesis_service  && echo 1 || echo 0)" -eq 1  ]
-then
+# Create install log
+LOG=/home/$genesis_user/genesisInstall_$server_dir.log
+echo "Genesis $genesis_user Install started at $(date)" 2>&1 | tee -a "$LOG"
+chown "$genesis_user"."$genesis_grp" "$LOG"
+echo "Create install log.."
+
+if [ ! -d /var/log/genesis_service ]; then
     sudo install -d /var/log/genesis_service -o $genesis_user -m 750
-else 
+else
     echo "/var/log/genesis_service is already present"
 fi
 
-echo "Default genesis_user is: $genesis_user"
-echo "Default user group is $genesis_grp"
-echo "Default installation directory is: $genesis_user"
+echo "genesis_user is: $genesis_user" 2>&1 | tee -a "$LOG"
+echo "user group is $genesis_grp" 2>&1 | tee -a "$LOG"
+echo "installation directory is: $genesis_user" 2>&1 | tee -a "$LOG"
 
-
-if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep genesis_user -ic /tmp/genesis_install.conf)" -gt 0 ]
-then
-    echo "New genesis_user provided in the /tmp/genesis_install.conf is: $genesis_user"
-    genesis_user=$(grep genesis_user /tmp/genesis_install.conf | cut -d '=' -f 2)
-fi
-
-if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep genesis_grp -ic /tmp/genesis_install.conf)" -gt 0 ]
-then
-    echo "New genesis user group provided in the /tmp/genesis_install.conf is: $genesis_grp"
-    genesis_grp=$(grep genesis_grp /tmp/genesis_install.conf | cut -d '=' -f 2)
-fi
-
-if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep root_dir -ic /tmp/genesis_install.conf)" -gt 0 ]
-then
-    echo "New installation directory provided in the /tmp/genesis_install.conf is: $root_dir"
-    root_dir=$(grep root_dir /tmp/genesis_install.conf | cut -d '=' -f 2)
-fi
 
 #Create genesis user if doesn't exist
 echo "Create $genesis_user if doesn't exist"
-if [ "$(test -d /home/"$genesis_user" && echo 1 || echo 0)" -eq 0 ]
-then
-    echo "Creating $genesis_user .... "
+if [ ! -d /home/$genesis_user ]; then
+    echo "Creating $genesis_user .... " 2>&1 | tee -a "$LOG"
     sudo adduser -m "$genesis_user"
     echo "$genesis_user""          soft     nproc          16384" | sudo tee -a /etc/security/limits.conf
     echo "$genesis_user""          hard     nproc          16384" | sudo tee -a /etc/security/limits.conf
     echo "$genesis_user""          soft     nofile         65536" | sudo tee -a /etc/security/limits.conf
     echo "$genesis_user""          hard     nofile         65536" | sudo tee -a /etc/security/limits.conf
 else
-    echo "User present. Carrying on ..  "
+    echo "User present. Carrying on ..  " 2>&1 | tee -a "$LOG"
 fi
 
 # Backup keys to /tmp/keys/
-if [[ -d /home/$genesis_user/run/runtime/keys ]]
-then
-    echo "Directory keys exists in runtime." 
-    echo "Moving keys to /tmp/"
+if [ -d /home/$genesis_user/run/runtime/keys ]; then
+    echo "Directory keys exists in runtime." 2>&1 | tee -a "$LOG"
+    echo "Moving keys to /tmp/" 2>&1 | tee -a "$LOG"
     cp -r /home/"$genesis_user"/run/runtime/keys /tmp/
 fi
 
 # kill server
-echo "Kill servers..."
-if [[ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -gt 0 && -f run/genesis ]]
-then
-    echo "Stopping the genesis platform"
-    runuser -l "$genesis_user" -c 'echo y | killServer --all'
-    runuser -l "$genesis_user" -c 'killProcess GENESIS_CLUSTER'   
+if genesis_is_running; then
+    echo "Detected Genesis processes running, attempting to kill them..." 2>&1 | tee -a "$LOG"
+    if genesis_is_installed; then
+        runuser -l "$genesis_user" -c 'echo y | killServer --all'
+    else
+        echo "Genesis doesn't seem to be installed, we will try and stop the processes after the new installation" 2>&1 | tee -a "$LOG"
+    fi
 fi
 
 #Backup the database according to the config
-echo "Only backup db is db_backup is mentioned in /tmp/genesis_install.conf"
-if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep db_backup -ic /tmp/genesis_install.conf)" -gt 0 ] && [ "$(grep db_backup /tmp/genesis_install.conf | cut -d '=' -f 2)" = 'false' ]
-then
-    echo "db_backup is false in /tmp/genesis_install.conf or /tmp/genesis_install.conf is not defined"
+echo "Backup if Genesis is installed unless told otherwise." 2>&1 | tee -a "$LOG"
+if [ "$db_backup" = "true" ] && genesis_is_installed; then
+    echo "db_backup is true" 2>&1 | tee -a "$LOG"
+    mkdir -p "/$root_dir/$genesis_user/dbbackup/$server_dir" || exit 1
+    chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user/dbbackup/" || exit 1
+    runuser -l "$genesis_user" -c "cd /$root_dir/$genesis_user/dbbackup/$server_dir;JvmRun global.genesis.environment.scripts.DumpTable --all;gzip *" || exit 1
 else
-    echo "db_backup is true in /tmp/genesis_install.conf"
-    mkdir -p /"$root_dir"/"$genesis_user"/dbbackup/"$server_dir"
-    chown -R "$genesis_user"."$genesis_grp" /"$root_dir"/"$genesis_user"/dbbackup/
-    runuser -l "$genesis_user" -c "cd /$root_dir/$genesis_user/dbbackup/$server_dir;JvmRun global.genesis.environment.scripts.DumpTable --all;gzip *"
+    echo "db_backup is false in /tmp/genesis_install.conf or /tmp/genesis_install.conf is not defined" 2>&1 | tee -a "$LOG"
 fi
-
-
 
 # Extract directory structure
-echo "extract the servr directory structure"
-mkdir -p /"$root_dir"/"$genesis_user"/server/"$server_dir"/run
-cd /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ || exit 
-tar xf /tmp/server-%{version}.tar.gz &> /dev/null
-rm -f /tmp/server-%{version}.tar.gz
+echo "extract the servr directory structure" 2>&1 | tee -a "$LOG"
+mkdir -p "/$root_dir/$genesis_user/server/$server_dir/run" || exit 1
+cd "/$root_dir/$genesis_user/server/$server_dir/run/" || exit 1
+tar -xf /tmp/server-%{version}.tar.gz &> /dev/null || exit 1
+rm -f /tmp/server-%{version}.tar.gz || exit 1
 
 #copy runtime
-echo "Backup and copy the existing runtime from previous installations, if any...."
-if [ "$(test -d /home/"$genesis_user"/run/runtime && echo 1 || echo 0)" -eq 1 ]
-then
-    cp -R /home/"$genesis_user"/run/runtime /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/
+echo "Backup and copy the existing runtime from previous installations, if any...." 2>&1 | tee -a "$LOG"
+if [ -d "/home/$genesis_user/run/runtime" ]; then
+    cp -R "/home/$genesis_user/run/runtime" "/$root_dir/$genesis_user/server/$server_dir/run/" || exit 1
 fi
 
-echo "Unlink previous run and link it to the run dir of the current installation"
-unlink /home/"$genesis_user"/run
-ln -s /"$root_dir"/"$genesis_user"/server/"$server_dir"/run/ /home/"$genesis_user"/run
-chown "$genesis_user"."$genesis_grp" /home/"$genesis_user"/run
+echo "Unlink previous run and link it to the run dir of the current installation" 2>&1 | tee -a "$LOG"
+if [ -L "/home/$genesis_user/run" ]; then
+    unlink "/home/$genesis_user/run" || exit 1
+fi
+ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
+chown -R "$genesis_user:$genesis_grp" "/home/$genesis_user/run" || exit 1
 
 #Copy web if exists
-echo "Check if web is being deployed ..."
-if [ -f /tmp/genesis_product_name_web.tar.gz ]
-then
-    echo "Web is being deployed too ... "
-    cd /"$root_dir"/"$genesis_user"/ || exit
-    mkdir web-"$server_dir"
-    cd web-"$server_dir" || exit
-    #check if the web app is not to be served from root
-    echo "Check if new web isntallation dir has been provided"
-    if [ "$(test -f /tmp/genesis_install.conf && echo 1 || echo 0)" -eq 1 ] && [ "$(grep web_path -ic /tmp/genesis_install.conf)" -gt 0 ]
-    then
-        web_path=$(grep web_path /tmp/genesis_install.conf | cut -d '=' -f 2)
-        mkdir "$web_path"
-        cd "$web_path" || exit
-        echo "new web isntallation dir is : $web_path"
+echo "Check if web is being deployed ..." 2>&1 | tee -a "$LOG"
+if [ -f "/tmp/web-%{version}.tar.gz" ]; then
+    echo "Web is being deployed too ... " 2>&1 | tee -a "$LOG"
+    mkdir -p "/$root_dir/$genesis_user/web-$server_dir" || exit 1
+    cd "/$root_dir/$genesis_user/web-$server_dir" || exit 1
+    tar -xf /tmp/web-%{version}.tar.gz &> /dev/null || exit 1
+    echo "Unlink old web installation and point it to the new web folder" 2>&1 | tee -a "$LOG"
+    if [ -L $web_path ]; then
+        unlink $web_path || exit 1
     fi
-    echo "Unlink old web installation and point it to the new web folder"
-    tar xf  /tmp/genesis_product_name_web.tar.gz &> /dev/null
-    unlink /"$root_dir"/"$genesis_user"/web
-    ln -s /"$root_dir"/"$genesis_user"/web-"$server_dir"/ /"$root_dir"/"$genesis_user"/web
-    rm -f /tmp/genesis_product_name_web.tar.gz
+    ln -s "/$root_dir/$genesis_user/web-$server_dir/" $web_path || exit 1
+    rm -f /tmp/web-%{version}.tar.gz || exit 1
 fi
-
-chown -R "$genesis_user"."$genesis_grp" /"$root_dir"/"$genesis_user"
+chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user" || exit 1
 
 # Set up bashrc
-echo "Setting up bashrc for the $genesis_user if its not present"
-if [ "$(grep GENESIS_HOME -ic /home/"$genesis_user"/.bashrc)" -eq 0 ]
-then
+echo "Setting up bashrc for the $genesis_user if its not present" 2>&1 | tee -a "$LOG"
+if grep --quiet GENESIS_HOME -ic "/home/$genesis_user/.bashrc"; then
     {
-        echo "export GENESIS_HOME=\$HOME/run/" 
-        echo "[ -f \$GENESIS_HOME/genesis/util/setup.sh ] && source \$GENESIS_HOME/genesis/util/setup.sh" 
-        echo "export GROOVY_HOME=/opt/groovy" 
+        echo "export GENESIS_HOME=\$HOME/run/"
+        echo "[ -f \$GENESIS_HOME/genesis/util/setup.sh ] && source \$GENESIS_HOME/genesis/util/setup.sh"
+        echo "export GROOVY_HOME=/opt/groovy"
         echo "PATH=\$GROOVY_HOME/bin:\$PATH"
-    } >> /home/"$genesis_user"/.bashrc
-    echo "bashrc setup complete..."
+    } >> /home/"$genesis_user"/.bashrc || exit 1
+    echo "bashrc setup complete..." 2>&1 | tee -a "$LOG"
 fi
 
-  # Create install log
-LOG=/home/$genesis_user/genesisInstall_$(date +%Y-%m-%d-%H-%M).log
-echo "Genesis $genesis_user Install started at $(date)" 2>&1 | tee -a "$LOG"
-chown "$genesis_user"."$genesis_grp" "$LOG"
-echo "Create install log.."
-
-
-if [[ ($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -gt 0) && ($(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf) != "false"))) ]]
-then
-  echo "run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)"
-  
-  # Run command to clear cache
-  echo "Check if site-specific scripts folder exits.."
-  runuser -l "$genesis_user" -c "ls -l /home/$genesis_user/run//site-specific/scripts/"
-  echo "Running Genesis cache clear command"
-  runuser -l "$genesis_user" -c "JvmRun -modules=genesis-environment global.genesis.environment.scripts.ClearCodegenCache"
-  
-  # Run genesisInstall
-  echo "Running Genesis Install script"
-  runuser -l "$genesis_user" -c 'genesisInstall'
-  install_error_code=$(echo $?)
-  if [[ $install_error_code != 0 ]]; then
-  	  echo "Genesis $genesis_user genesisInstall has failed at $(date)" 2>&1 | tee -a "$LOG"
-	  exit $install_error_code
-  fi
-  echo "Genesis $genesis_user genesisInstall finished at $(date)" 2>&1 | tee -a "$LOG"
-  # Run Remap
-  echo "Running Remap"
-  runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
-  remap_error_code=$(echo $?)
-  if [[ $remap_error_code != 0 ]]; then
-  	  echo "Genesis $genesis_user remap has failed at $(date)" 2>&1 | tee -a "$LOG"
-	  exit $remap_error_code
-  fi
-  echo "Genesis $genesis_user RPM install finished at $(date)" 2>&1 | tee -a "$LOG"
-else
-  echo "/tmp/genesis_install is absent or run_exec has been defined in /tmp/genesis_install.conf as: $(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf)" 2>&1 | tee -a "$LOG"
-  echo "genesisInstall and remap will not be run"
-  echo "Genesis $genesis_user remap and genesisInstall have not been run" >> "$LOG"
+if [ $run_genesis_clear_codegen_cache = "true" ]; then
+    # Run command to clear cache
+    if genesis_is_installed; then
+        echo "Running Genesis cache clear command" 2>&1 | tee -a "$LOG"
+        if which ClearCodegenCache &> /dev/null; then
+            runuser -l "$genesis_user" -c "ClearCodegenCache"
+        else
+            runuser -l "$genesis_user" -c "JvmRun -modules=genesis-environment global.genesis.environment.scripts.ClearCodegenCache"
+        fi
+    fi
 fi
 
-# Restore backups
-if [[ -d /tmp/keys ]] 
-then
-    echo "keys do not exist in runtime. Restoring backup"
-    cp -r /tmp/keys /home/"$genesis_user"/run/runtime/
-    echo "Backup keys restored, cleaning up"
-    rm -rf /tmp/keys/
-    chown -R "$genesis_user":"$genesis_grp" /home/axes/run/runtime/keys
+if [ $run_genesis_install = "true" ]; then
+    # Run genesisInstall
+    echo "Running Genesis Install script" 2>&1 | tee -a "$LOG"
+    runuser -l "$genesis_user" -c 'genesisInstall'
+    install_error_code=$?
+    if [ $install_error_code -ne 0 ]; then
+        echo "Genesis $genesis_user genesisInstall has failed at $(date)" 2>&1 | tee -a "$LOG"
+        exit 1
+    fi
+    echo "Genesis $genesis_user genesisInstall finished at $(date)" 2>&1 | tee -a "$LOG"
+
+    # kill server
+    if genesis_is_running; then
+        echo "Detected Genesis processes running, attempting to kill them..." 2>&1 | tee -a "$LOG"
+        if genesis_is_installed; then
+            runuser -l "$genesis_user" -c 'echo y | killServer --all'
+        else
+            echo "Unable to stopt the processes" 2>&1 | tee -a "$LOG"
+            exit 1
+        fi
+    fi
+
+    # Restore backups
+    if [ -d /tmp/keys ]; then
+        echo "keys do not exist in runtime. Restoring backup" 2>&1 | tee -a "$LOG"
+        cp -r /tmp/keys /home/"$genesis_user"/run/runtime/ || exit 1
+        echo "Backup keys restored, cleaning up" 2>&1 | tee -a "$LOG"
+        rm -rf /tmp/keys/ || exit 1
+        chown -R "$genesis_user:$genesis_grp" /home/axes/run/runtime/keys || exit 1
+    fi
 fi
 
-if [[ ($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -eq 0) || (($(test -f /tmp/genesis_install.conf && echo 1 || echo 0) -eq 1) && ($(grep run_exec -ic /tmp/genesis_install.conf) -gt 0) && ($(sed -n 's/^run_exec=\(.*\)/\1/p' < /tmp/genesis_install.conf) != "false"))) ]]
-then
+if [ $run_genesis_remap = "true" ]; then
+    # Run Remap
+    echo "Running Remap" 2>&1 | tee -a "$LOG"
+    runuser -l "$genesis_user" -c 'echo y | remap --commit --force'
+    remap_error_code=$?
+    if [ $remap_error_code -ne 0 ]; then
+        echo "Genesis $genesis_user remap has failed at $(date)" 2>&1 | tee -a "$LOG"
+        exit 1
+    fi
+    echo "Genesis $genesis_user RPM install finished at $(date)" 2>&1 | tee -a "$LOG"
+fi
+
+
+if [ $start_processes = "true" ]; then
     #Start the server
-	echo "/tmp/genesis_install.conf file absent or run_exec not defined .... Starting servers ...."
+	echo "/tmp/genesis_install.conf file absent or run_exec not defined .... Starting servers ...." 2>&1 | tee -a "$LOG"
     runuser -l "$genesis_user" -c 'startServer'
 fi
 
-echo "Install.sh has completed ..."
+echo "Install.sh has completed ..." 2>&1 | tee -a "$LOG"
 
 
 %changelog
