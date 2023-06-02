@@ -151,7 +151,7 @@ chown "$genesis_user"."$genesis_grp" /home/"$genesis_user"/run
 
 #Copy web if exists
 echo "Check if web is being deployed ..."
-if [ -f /tmp/genesis_product_name_web.tar.gz ]
+if [ -f /tmp/web-%{version}.tar.gz ]
 then
     echo "Web is being deployed too ... "
     cd /"$root_dir"/"$genesis_user"/ || exit
@@ -167,10 +167,10 @@ then
         echo "new web isntallation dir is : $web_path"
     fi
     echo "Unlink old web installation and point it to the new web folder"
-    tar xf  /tmp/genesis_product_name_web.tar.gz &> /dev/null
+    tar xf  /tmp/web-%{version}.tar.gz &> /dev/null
     unlink /"$root_dir"/"$genesis_user"/web
     ln -s /"$root_dir"/"$genesis_user"/web-"$server_dir"/ /"$root_dir"/"$genesis_user"/web
-    rm -f /tmp/genesis_product_name_web.tar.gz
+    rm -f /tmp/web-%{version}.tar.gz
 fi
 
 chown -R "$genesis_user"."$genesis_grp" /"$root_dir"/"$genesis_user"
