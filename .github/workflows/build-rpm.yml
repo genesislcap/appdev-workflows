@@ -54,6 +54,7 @@ jobs:
       - name: Setup
         working-directory: rpm
         run: |
+          rm -rf ~/rpmbuild/*
           sudo yum -y install rpm
           sudo yum -y install rpm-build
           sudo yum -y install wget
