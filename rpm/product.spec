@@ -210,6 +210,8 @@ chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user" || exit 1
 # Set up bashrc
 echo "Setting up bashrc for the $genesis_user if its not present" 2>&1 | tee -a "$LOG"
 if grep --quiet GENESIS_HOME -ic "/home/$genesis_user/.bashrc"; then
+    echo "bashrc already set"
+else
     {
         echo "export GENESIS_HOME=\$HOME/run/"
         echo "[ -f \$GENESIS_HOME/genesis/util/setup.sh ] && source \$GENESIS_HOME/genesis/util/setup.sh"
