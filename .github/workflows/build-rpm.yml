@@ -137,7 +137,3 @@ jobs:
           cd ~/rpmbuild/SRPMS/
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
-
-      - name: Cleanup
-        run: |
-          rm -rf $HOME/rpmbuild/
