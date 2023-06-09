@@ -17,7 +17,7 @@ on:
 jobs:
   build:
     name: Steps to create resources in cddev account
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
     
     steps:
       - uses: actions/checkout@v2
