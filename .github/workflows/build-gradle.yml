@@ -88,7 +88,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --stacktrace
+          arguments: assemble --no-build-cache --stacktrace
           build-root-directory: ./server/jvm
           cache-disabled: true
 
