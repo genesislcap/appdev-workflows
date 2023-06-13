@@ -100,9 +100,7 @@ jobs:
                     cat $i/snt/product.yml
                     mkdir "$CLIENT_NAME"_server_downloads && mkdir "$CLIENT_NAME"_web_downloads
                     echo "Change location to the client specific src directory-->" && cd ${{ env.PRODUCT_BASE }}/$i/src
-                    echo "Create artifact contaiing files from src/site-specific/ usually cfg and assembly folders"
                     zip -r ${{ env.PRODUCT_BASE }}/$i/${{ env.OUTPUT }} site-specific/*
-                    echo "upload the site-specific artifac contaiing src/site-specific/* to jfrog and copy to the $CLIENT_NAME_server_downloads folder"
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/$CLIENT_NAME/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}}
                     cp ${{ env.PRODUCT_BASE }}/$i/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads
                     cd ${{ env.PRODUCT_BASE }}
@@ -121,8 +119,6 @@ jobs:
                     if [ "$WEB_VERSION" == "" ]; then
                       echo "Product Name: ${{ env.PRODUCT_NAME }} does not have a requirement for web, creating an empty zipped up folder for deployment requirements"
                       cd "$CLIENT_NAME"_web_downloads
-                      echo "this is the present directory: $(pwd)"
-                      echo "List of files in pwd:$(ls -a)"
                       touch temp
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                       cd ../"$CLIENT_NAME"_server_downloads
@@ -131,7 +127,6 @@ jobs:
                       cd "$CLIENT_NAME"_web_downloads
                       echo "Product Name: ${{ env.PRODUCT_NAME }} required web to be installed ..."
                       wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P ${{ env.PRODUCT_BASE }}/"$CLIENT_NAME"_web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"$WEB_VERSION".zip
-                      echo "PWD after web module download-->" && echo "$(pwd)"  && echo "$(ls -a)"
                       unzip \*.zip
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                       cd ../"$CLIENT_NAME"_server_downloads
