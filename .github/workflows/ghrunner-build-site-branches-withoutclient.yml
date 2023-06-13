@@ -121,7 +121,6 @@ jobs:
                     echo "Create and upload artifact contaiing files from src/site-specific/ usually cfg and assembly folders to jfrog"
                     zip -r ${{ env.PRODUCT_BASE }}/snt/${{ env.OUTPUT }} site-specific/*
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/site/$CLIENT_NAME/${{env.OUTPUT}}" -T ${{ env.PRODUCT_BASE }}/snt/${{env.OUTPUT}}
-                    echo "Copy this site-specific artifact to the $CLIENT_NAME_server_downloads folder"
                     cp ${{ env.PRODUCT_BASE }}/snt/${{env.OUTPUT}} ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads
                     cd ${{ env.PRODUCT_BASE }}
                     if [[ $(grep -c "genesis_modules" ./snt/product.yml) -ge 1 ]]; then
@@ -135,8 +134,6 @@ jobs:
                         echo "Modules required for $CLIENT_NAME required are-->" && cat /tmp/"$CLIENT_NAME"_edited_product.yml
                         rm /tmp/"$CLIENT_NAME"_edited_product.yml
                     fi
-                    echo "The present directory is -->" && echo "$(pwd)"
-                    echo "The downloaded files in the client downloads directory are -->" && echo $(ls -l ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads)
                     cd ${{ env.PRODUCT_BASE }}
                     if [ "${{ env.WEB_VERSION }}" == "" ]; then
                       echo "Product Name: ${{ env.PRODUCT_NAME }} does not have a requirement for web, creating an empty zipped up folder for deployment requirements"
@@ -171,7 +168,6 @@ jobs:
                     fi
                     source ~/.bashrc
                     mvn versions:set -DnewVersion=$VERSION
-                    echo "Triggering RPM creation"
                     mvn rpm:rpm
                     cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64/${RPM_NAME}
                     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/$CLIENT_NAME/" -T *.rpm
