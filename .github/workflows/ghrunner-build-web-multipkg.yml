@@ -114,4 +114,4 @@ jobs:
       
 
       - name: Run ESLint
-        run: npm run lint || echo "Linting completed with errors"
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
