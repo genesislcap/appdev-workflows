@@ -110,32 +110,11 @@ jobs:
       - name: Bootstrap
         run: |
           npm config list
-          npm run bootstrap
-          
-      - name: Build
-        run: npm run build      
+          npm run bootstrap         
+         
              
-      - name: Package and Publish
-        run:  |
-              echo "Package:"
-              date
-              sudo yum install zip unzip
-              echo $(pwd)
-              mkdir -p ${{ env.PRODUCT_BASE }}/web
-              cd ${{ env.PRODUCT_BASE }}/packages/apps/
-              for i in ./*
-               do
-                 if [ -d "${{ env.PRODUCT_BASE }}/packages/apps/$i/dist" ]
-                   then
-                     mkdir ${{ env.PRODUCT_BASE }}/web/$i
-                     cp -rf ${{ env.PRODUCT_BASE }}/packages/apps/$i/dist/* ${{ env.PRODUCT_BASE }}/web/$i
-                     ls -lart ${{ env.PRODUCT_BASE }}/web/$i
-                 fi
-               done
-               
-              cd ${{ env.PRODUCT_BASE }}/web/
-              zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
-              cd ${{ env.PRODUCT_BASE }}
-              echo ${{ env.OUTPUT }}
-              ls -larth
-              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
