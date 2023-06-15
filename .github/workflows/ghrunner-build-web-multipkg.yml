@@ -115,3 +115,9 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lint errors
+          path: lint-output.txt
