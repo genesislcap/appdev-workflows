@@ -117,9 +117,10 @@ jobs:
     
       - name: Lint Check
         run: |
-          echo "LINT_CHECK=$(grep -Fxq "lint" $(cat package.json))" >> $GITHUB_ENV
-          
+          echo "LINT_CHECK=$(grep -Fxq "lint" package.json; echo $?)" >> $GITHUB_ENV
+    
       - name: Run ESLint
+        if: ${{env.LINT_CHECK==1 }} 
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
         
       - name: Upload lint artifact
