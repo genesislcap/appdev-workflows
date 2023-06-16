@@ -110,11 +110,24 @@ jobs:
       - name: Bootstrap
         run: |
           npm config list
-          npm run bootstrap
-          
+          npm run bootstrap         
+      
       - name: Build
         run: npm run build      
-             
+      
+      - name: Lint Check
+        run: |
+          echo "LINT_CHECK=$(grep -Fxq "lint" package.json; echo $?)" >> $GITHUB_ENV
+    
+      - name: Run ESLint
+        if: ${{env.LINT_CHECK==1 }} 
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+        
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lint errors
+          path: lint-output.txt
       - name: Package and Publish
         run:  |
               echo "Package:"
@@ -139,3 +152,5 @@ jobs:
               echo ${{ env.OUTPUT }}
               ls -larth
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+
+      

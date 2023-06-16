@@ -62,7 +62,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-
+    
+      - name: Run ESLint
+        working-directory: ./client
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+        
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lint errors
+          path: lint-output.txt
+          
       - name: Env Set-Up
         run:  |
              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
