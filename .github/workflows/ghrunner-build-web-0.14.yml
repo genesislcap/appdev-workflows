@@ -125,6 +125,15 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
             
+      - name: Run ESLint
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+        
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lint errors
+          path: lint-output.txt
+          
       - name: Package and Publish
         run:  |
               echo "Package:"
