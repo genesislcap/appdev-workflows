@@ -115,6 +115,14 @@ jobs:
       - name: Build
         run: npm run build      
       
+      - name: Run ESLint
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+        
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lint errors
+          path: lint-output.txt
       - name: Package and Publish
         run:  |
               echo "Package:"
@@ -140,11 +148,4 @@ jobs:
               ls -larth
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
 
-      - name: Run ESLint
-        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
-        
-      - name: Upload lint artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Lint errors
-          path: lint-output.txt
+      
