@@ -68,6 +68,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Lint errors
+          working-directory: ./client
           path: lint-output.txt
           
       - name: Env Set-Up
