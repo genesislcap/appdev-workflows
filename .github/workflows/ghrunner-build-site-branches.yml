@@ -97,7 +97,9 @@ jobs:
              cd ${{ env.PRODUCT_BASE }}
              pwd 
              ls -larth
-             ls -larth rpm/rpm/legay
+             ls -larth rpm/
+             ls -larth rpm/legacy
+             ls -larth rpm/rpm/legacy
              for i in ./*
               do
                 if [ -d "$i/snt" ]
