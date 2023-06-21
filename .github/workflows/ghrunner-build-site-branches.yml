@@ -142,6 +142,8 @@ jobs:
                     unzip \*.zip
                     rm *.zip
                     tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
+                    pwd
+                    ls -larth
                     cp rpm/rpm/legacy/pom.xml pom.xml
                     sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
                     if [ $(test -f /tmp/install.sh && echo 1 || echo 0) -eq 1  ]
