@@ -95,6 +95,9 @@ jobs:
         run: |
              sudo yum install zip rpmdevtools -y
              cd ${{ env.PRODUCT_BASE }}
+             pwd 
+             ls -larth
+             ls -larth rpm/rpm/legay
              for i in ./*
               do
                 if [ -d "$i/snt" ]
@@ -144,13 +147,13 @@ jobs:
                     tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
                     pwd
                     ls -larth
-                    cp rpm/rpm/legacy/pom.xml pom.xml
+                    cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/pom.xml pom.xml
                     sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
                     if [ $(test -f /tmp/install.sh && echo 1 || echo 0) -eq 1  ]
                     then
                       rm /tmp/install.sh
                     fi
-                    cp rpm/rpm/legacy/install.sh /tmp/install.sh
+                    cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/install.sh /tmp/install.sh
                     sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
                     if [ "$PRODUCT_NAME" == "wm_aqs" ]
                     then
