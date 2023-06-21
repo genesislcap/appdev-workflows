@@ -193,13 +193,13 @@ jobs:
             sudo yum install rpmdevtools -y
             touch pom.xml
             rm pom.xml
-            cp rpm/rpm/legacy/pom.xml pom.xml
+            cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/pom.xml pom.xml
             sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
             if [ $(test -f /tmp/install.sh && echo 1 || echo 0) -eq 1  ]
             then
               rm /tmp/install.sh
             fi
-            cp rpm/rpm/legacy/install.sh /tmp/install.sh
+            cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/install.sh /tmp/install.sh
             sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
             echo "Replace the generic users in the install script with the client user used for installation ...."
             if [[ "$PRODUCT_NAME" == "wm_aqs" ]]

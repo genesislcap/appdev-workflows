@@ -161,7 +161,7 @@ jobs:
             sudo yum install rpmdevtools -y
             touch pom.xml
             rm pom.xml
-            cp rpm/rpm/legacy/pom.xml pom.xml
+            cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/pom.xml pom.xml
             sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
             echo "pom completed"
             if [ $(test -f /tmp/install.sh && echo 1 || echo 0) -eq 1  ]
@@ -169,7 +169,7 @@ jobs:
               rm /tmp/install.sh
             fi
             echo "install.sh start"
-            cp rpm/rpm/legacy/install.sh /tmp/install.sh
+            cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/install.sh /tmp/install.sh
             sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
             if [[ "$PRODUCT_NAME" == "wm_aqs" ]]
             then

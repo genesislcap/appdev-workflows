@@ -183,7 +183,7 @@ jobs:
                     ls -lart /tmp/*.tar*
 
                     echo "Start the RPM creation process now for $CLIENT_NAME"
-                    cp rpm/rpm/legacy/pom.xml pom.xml
+                    cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/pom.xml pom.xml
 
                     sed -i "s/PRODUCT/$PRODUCT_NAME/g" pom.xml
                     echo "pom completed"
@@ -192,7 +192,7 @@ jobs:
                     then
                       rm /tmp/install.sh
                     fi
-                    cp rpm/rpm/legacy/install.sh /tmp/install.sh
+                    cp ${{ env.PRODUCT_BASE }}/rpm/rpm/legacy/install.sh /tmp/install.sh
 
                     sed -i "s/product_name/$PRODUCT_NAME/g" /tmp/install.sh
                     echo "Replace the generic users in the install script with the client user used for installation ...."
