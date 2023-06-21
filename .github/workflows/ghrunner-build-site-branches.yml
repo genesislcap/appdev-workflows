@@ -98,7 +98,6 @@ jobs:
              pwd 
              ls -larth
              ls -larth rpm/
-             ls -larth rpm/legacy
              ls -larth rpm/rpm/legacy
              for i in ./*
               do
