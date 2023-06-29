@@ -132,6 +132,7 @@ mkdir -p "/$root_dir/$genesis_user/server/$server_dir/run" || exit 1
 cd "/$root_dir/$genesis_user/server/$server_dir/run/" || exit 1
 tar -xf /tmp/genesis_product_name_package.tar.gz &> /dev/null || exit 1
 rm -f /tmp/genesis_product_name_package.tar.gz || exit 1
+ls -tp "/$root_dir/$genesis_user/server/" | grep  '/$' | tail -n +5 | xargs -I {} rm -rf -- "/$root_dir/$genesis_user/server/{}"
 
 #copy runtime
 echo "Backup and copy the existing runtime from previous installations, if any...." 2>&1 | tee -a "$LOG"
@@ -159,6 +160,7 @@ if [ -f "/tmp/genesis_product_name_web.tar.gz" ]; then
     fi
     ln -s "/$root_dir/$genesis_user/web-$server_dir/" $web_path || exit 1
     rm -f /tmp/genesis_product_name_web.tar.gz || exit 1
+    ls -tp "/$root_dir/$genesis_user/" | grep "web-*" | grep  '/$' | tail -n +5 | xargs -I {} rm -rf -- "/$root_dir/$genesis_user/{}"
 fi
 chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user" || exit 1
 
