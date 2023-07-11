@@ -24,6 +24,9 @@ jobs:
           
       - name: Env Set-Up
         run: |
+          pwd
+          ls -larth
+          ls -larth ~/selfserve
            mv config/* ~/selfserve/scripts/
            ls -larth ~/selfserve/scripts/
            export PYTHONUNBUFFERED=TRUE
