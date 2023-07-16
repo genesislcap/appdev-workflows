@@ -20,7 +20,7 @@ jobs:
     runs-on: appdev-selfhosted-al2023
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
           
       - name: Env Set-Up
         run: |
