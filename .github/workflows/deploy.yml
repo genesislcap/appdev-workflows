@@ -28,6 +28,9 @@ jobs:
           ls -larth
           ls -larth ~/selfserve
           rm -rf ~/selfserve/scripts/*.yaml
+          if [ -z "${{ inputs.file_name }}" ]; then
+          rm -rf ~/selfserve/scripts/${{ inputs.file_name }}
+          fi
           mv config/* ~/selfserve/scripts/
           ls -larth ~/selfserve/scripts/
           export PYTHONUNBUFFERED=TRUE
