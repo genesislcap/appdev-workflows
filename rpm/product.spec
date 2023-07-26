@@ -189,9 +189,9 @@ echo "Unlink previous run and link it to the run dir of the current installation
 if [ -L "/home/$genesis_user/run" ]; then
     unlink "/home/$genesis_user/run" || exit 1
 fi
-if [ -D "/home/$genesis_user/run" ]; then
+if [ -d "/home/$genesis_user/run" ]; then
 
-    sudo rm -rf /home/$genesisUser/run 
+     rm -rf /home/$genesisUser/run 
 fi
 
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
