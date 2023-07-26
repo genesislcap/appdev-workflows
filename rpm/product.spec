@@ -189,6 +189,11 @@ echo "Unlink previous run and link it to the run dir of the current installation
 if [ -L "/home/$genesis_user/run" ]; then
     unlink "/home/$genesis_user/run" || exit 1
 fi
+if [ -d "/home/$genesis_user/run" ]; then
+
+     rm -rf /home/$genesisUser/run 
+fi
+
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
 chown -R "$genesis_user:$genesis_grp" "/home/$genesis_user/run" || exit 1
 
