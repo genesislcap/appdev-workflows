@@ -32,3 +32,4 @@ jobs:
            export PYTHONUNBUFFERED=TRUE
            export ANSIBLE_STDOUT_CALLBACK=debug
            python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+           rm -rf ~/selfserve/scripts/*.yaml
