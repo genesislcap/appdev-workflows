@@ -190,8 +190,7 @@ if [ -L "/home/$genesis_user/run" ]; then
     unlink "/home/$genesis_user/run" || exit 1
 fi
 if [ -d "/home/$genesis_user/run" ]; then
-
-     rm -rf /home/$genesisUser/run 
+    rm -rf "/home/$genesisUser/run"
 fi
 
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
