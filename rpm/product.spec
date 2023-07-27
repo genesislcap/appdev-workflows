@@ -190,7 +190,6 @@ if [ -L "/home/$genesis_user/run" ]; then
     unlink "/home/$genesis_user/run" || exit 1
 fi
 if [ -d "/home/$genesis_user/run" ]; then
-    echo "data removed run folder" 2>&1 | tee -a "$LOG"
     rm -rf "/home/$genesis_user/run"
     echo "data removed run folder" 2>&1 | tee -a "$LOG"
 fi
