@@ -190,7 +190,8 @@ if [ -L "/home/$genesis_user/run" ]; then
     unlink "/home/$genesis_user/run" || exit 1
 fi
 if [ -d "/home/$genesis_user/run" ]; then
-    rm -rf "/home/$genesisUser/run"
+    rm -rf "/home/$genesis_user/run"
+    echo "detected run folder as a directory instead of a symlink, this folder has been deleted" 2>&1 | tee -a "$LOG"
 fi
 
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
