@@ -191,7 +191,7 @@ if [ -L "/home/$genesis_user/run" ]; then
 fi
 if [ -d "/home/$genesis_user/run" ]; then
     echo "data removed run folder" 2>&1 | tee -a "$LOG"
-    rm -rf "/home/$genesisUser/run" || exit 1
+    rm -rf "/home/$genesis_user/run"
     echo "data removed run folder" 2>&1 | tee -a "$LOG"
 fi
 
