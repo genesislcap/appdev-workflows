@@ -1,0 +1,72 @@
+# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+name: Run Maven test suite
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: false
+        type: string
+      profile:
+        required: false
+        type: string
+      test-root-path:
+        required: true
+        type: string
+    secrets:
+      PAGES_TOKEN:
+        required: true
+jobs:
+  build:
+    runs-on: [ appdev-selfhosted ]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+        ref: ${{ inputs.branch }}
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    - name: Configure Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 10.x
+        registry-url: https://npm.pkg.github.com/
+        scope: '@genesislcap'
+    - name: Install packages
+      shell: bash
+      run: |
+        sudo yum -y install libappindicator-gtk3
+        sudo yum -y install liberation-fonts
+        npm i playwright
+    - name: Install chromium
+      shell: bash
+      run: |
+        which mvn
+        mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+    - name: Run mvn
+      shell: bash
+      run: |
+        MVN_OPTIONS=""
+        if [ -z "${{ inputs.profile }}" ]; then
+          MVN_OPTIONS="$MVN_OPTIONS -P ${{ inputs.profile }}"
+        fi
+        cd ${{ inputs.test-root-path }}
+        mvn clean test $MVN_OPTIONS -Dbrowser=chrome-headless
+    - name: Generate Allure report
+      uses: simple-elf/allure-report-action@master
+      if: always()
+      id: allure-report
+      with:
+        allure_results: ${{ inputs.test-root-path }}/build/allure-results
+        gh_pages: gh-pages
+        allure_report: allure-report
+        allure_history: allure-history
+    - name: Deploy report to Github Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.PAGES_TOKEN }}
+        publish_dir:  allure-history
