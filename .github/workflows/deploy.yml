@@ -29,6 +29,7 @@ jobs:
           ls -larth ~/selfserve
           rm -rf ~/selfserve/scripts/*.yaml
           rm -rf ~/selfserve/scripts/**/*.yaml
+          rm -rf ~/selfserve/scripts/**/**/*.yaml
           mv config/* ~/selfserve/scripts/
           ls -larth ~/selfserve/scripts/
           export PYTHONUNBUFFERED=TRUE
