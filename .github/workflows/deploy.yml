@@ -27,11 +27,9 @@ jobs:
           pwd
           ls -larth
           ls -larth ~/selfserve
-          rm -rf ~/selfserve/scripts/*.yaml
-          rm -rf ~/selfserve/scripts/**/*.yaml
-          rm -rf ~/selfserve/scripts/**/**/*.yaml
-          mv config/* ~/selfserve/scripts/
-          ls -larth ~/selfserve/scripts/
+          rm -rf ~/selfserve/scripts/config
+          mv config ~/selfserve/scripts/
+          ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
-          python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+          python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} config/${{ inputs.file_name }}
