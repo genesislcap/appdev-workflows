@@ -18,12 +18,16 @@ jobs:
   build:
     name: Steps to create resources in cddev account
     runs-on: appdev-selfhosted-al2023
-    
+
     steps:
-      - uses: actions/checkout@v2
-          
+      - uses: actions/checkout@v3
+        with:
+          ref: develop
+
       - name: Env Set-Up
         run: |
+          git checkout develop
+          git pull
           pwd
           ls -larth
           ls -larth ~/selfserve
