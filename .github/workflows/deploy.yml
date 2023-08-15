@@ -11,7 +11,16 @@ on:
         description: 'Comma separated list of file yaml name'
         required: false
         type: string
-
+      tf_branch:
+        description: 'Location of the terraform scripts'
+        required: false
+        default: main
+        type: string
+      ansible_branch:
+        description: 'Loction of ansible scripts'
+        default: devops
+        required: false
+        type: string
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -29,7 +38,7 @@ jobs:
           git checkout develop
           git pull
           echo "Checking out the required TF and ansible scripts- per run"
-          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh main devops
+          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
           ls -larth
           ls -larth ~/selfserve
           rm -rf ~/selfserve/scripts/config
