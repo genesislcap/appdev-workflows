@@ -28,8 +28,8 @@ jobs:
         run: |
           git checkout develop
           git pull
-          sh /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh
-          pwd
+          echo "Checking out the required TF and ansible scripts- per run"
+          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh
           ls -larth
           ls -larth ~/selfserve
           rm -rf ~/selfserve/scripts/config
