@@ -28,6 +28,7 @@ jobs:
         run: |
           git checkout develop
           git pull
+          sh /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh
           pwd
           ls -larth
           ls -larth ~/selfserve
