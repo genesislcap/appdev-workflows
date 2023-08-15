@@ -12,12 +12,12 @@ on:
         required: false
         type: string
       tf_branch:
-        description: 'Location of the terraform scripts'
+        description: 'Branch name for services_tf repo'
         required: false
         default: main
         type: string
       ansible_branch:
-        description: 'Loction of ansible scripts'
+        description: 'Branch name for services_ansible repo'
         default: devops
         required: false
         type: string
