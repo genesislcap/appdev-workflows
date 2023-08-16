@@ -20,30 +20,49 @@ on:
         type: string
         description: Comma separated list of folders in Artifactory to deploy the RPM
       db_backup:
-        required: true
+        required: false
         type: boolean
-        description: Server tar file
+       
       run_clear_codegen_cache:
-        required: true
+        required: false
         type: boolean
-        description: Client tar file
+       
       run_genesis_install:
         required: false
         type: boolean
-        description: Optional site-specific override
+       
       run_install_hooks:
-        required: true
+        required: false
         type: boolean
-        description: User to login as when installed
+       
       run_remap:
         required: false
         type: boolean
-        description: Branch to get the spec file from
+        
       start_server:
         required: false
         type: boolean
-        description: Branch to get the spec file from
 
+      genesis_user:
+        required: false
+        type: string
+
+      environment_level:
+        required: false
+        type: string
+
+      product:
+        required: false
+        type: string
+
+      JENKINS_SECURITYTOKEN:
+        required: true
+        type: string
+
+      JOB_NAME:
+        required: true
+        type: string
+        
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -58,7 +77,7 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=SECURITYTOKEN&job=AppDev-CI_CD/devops/productWEB_deployment" \
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ inputs.JENKINS_SECURITYTOKEN }}&job=${{ inputs.JOB_NAME }}" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
@@ -68,4 +87,7 @@ jobs:
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
             --data-urlencode "run_install_hooks=${{ inputs.RUN_INSTALL_HOOKS }}" \
             --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
-            --data-urlencode "start_server=${{ inputs.START_SERVER }}"
+            --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
+            --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
+            --data-urlencode "environment_level=${{ inputs.environment_level }}" \
+            --data-urlencode "product=${{ inputs.product }}" 
