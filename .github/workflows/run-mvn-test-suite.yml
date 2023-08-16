@@ -57,6 +57,11 @@ jobs:
         fi
         cd ${{ inputs.test-root-path }}
         mvn clean test $MVN_OPTIONS -Dbrowser=chrome-headless
+    - name: Install git
+      shell: bash
+      run: |
+        apt update
+        apt install -y git
     - name: Generate Allure report
       uses: simple-elf/allure-report-action@master
       if: always()
