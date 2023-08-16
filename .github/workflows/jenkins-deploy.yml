@@ -55,14 +55,13 @@ on:
         required: false
         type: string
 
-      JENKINS_SECURITYTOKEN:
-        required: true
-        type: string
-
       JOB_NAME:
         required: true
         type: string
-        
+
+    secrets:
+      JENKINS_SECURITYTOKEN:
+        required: true 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
