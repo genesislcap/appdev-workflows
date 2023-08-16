@@ -59,13 +59,13 @@ jobs:
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=SECURITYTOKEN&job=AppDev-CI_CD/devops/productWEB_deployment" \
-            --data-urlencode "client=${{ env.CLIENT }}" \
-            --data-urlencode "environment=${{ env.ENVIRONMENT }}" \
-            --data-urlencode "hosts=${{ env.HOSTS }}" \
-            --data-urlencode "package_version=${{ env.PACKAGE_VERSION }}" \
-            --data-urlencode "db_backup=${{ env.DB_BACKUP }}" \
-            --data-urlencode "run_clear_codegen_cache=${{ env.RUN_CLEAR_CODEGEN_CACHE }}" \
-            --data-urlencode "run_genesis_install=${{ env.RUN_GENESIS_INSTALL }}" \
-            --data-urlencode "run_install_hooks=${{ env.RUN_INSTALL_HOOKS }}" \
-            --data-urlencode "run_remap=${{ env.RUN_REMAP }}" \
-            --data-urlencode "start_server=${{ env.START_SERVER }}"
+            --data-urlencode "client=${{ inputs.CLIENT }}" \
+            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
+            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
+            --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
+            --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
+            --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
+            --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
+            --data-urlencode "run_install_hooks=${{ inputs.RUN_INSTALL_HOOKS }}" \
+            --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
+            --data-urlencode "start_server=${{ inputs.START_SERVER }}"
