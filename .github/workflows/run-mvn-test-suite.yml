@@ -31,23 +31,6 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
-    # - name: Configure Node
-    #   uses: actions/setup-node@v3
-    #   with:
-    #     node-version: 10.x
-    #     registry-url: https://npm.pkg.github.com/
-    #     scope: '@genesislcap'
-    # - name: Install packages
-    #   shell: bash
-    #   run: |
-    #     # sudo yum -y install libappindicator-gtk3
-    #     sudo yum -y install liberation-fonts
-    #     npm i playwright
-    # - name: Install chromium
-    #   shell: bash
-    #   run: |
-    #     source ~/.bashrc
-    #     mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
     - name: Run mvn
       shell: bash
       run: |
