@@ -1,0 +1,71 @@
+name:  Trigger Jenkins job to deploy RPM
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: false
+        type: string
+      client:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      hosts:
+        required: true
+        type: string
+      package_version:
+        required: true
+        type: boolean
+        description: Comma separated list of folders in Artifactory to deploy the RPM
+      db_backup:
+        required: true
+        type: boolean
+        description: Server tar file
+      run_clear_codegen_cache:
+        required: true
+        type: boolean
+        description: Client tar file
+      run_genesis_install:
+        required: false
+        type: boolean
+        description: Optional site-specific override
+      run_install_hooks:
+        required: true
+        type: boolean
+        description: User to login as when installed
+      run_remap:
+        required: false
+        type: boolean
+        description: Branch to get the spec file from
+      start_server:
+        required: false
+        type: boolean
+        description: Branch to get the spec file from
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    name: Steps to trigger jenkins job
+    runs-on: appdev-selfhosted
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}
+
+      - name: Trigger Jenkins Job
+        run: |
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=SECURITYTOKEN&job=AppDev-CI_CD/devops/productWEB_deployment" \
+            --data-urlencode "client=${{ env.CLIENT }}" \
+            --data-urlencode "environment=${{ env.ENVIRONMENT }}" \
+            --data-urlencode "hosts=${{ env.HOSTS }}" \
+            --data-urlencode "package_version=${{ env.PACKAGE_VERSION }}" \
+            --data-urlencode "db_backup=${{ env.DB_BACKUP }}" \
+            --data-urlencode "run_clear_codegen_cache=${{ env.RUN_CLEAR_CODEGEN_CACHE }}" \
+            --data-urlencode "run_genesis_install=${{ env.RUN_GENESIS_INSTALL }}" \
+            --data-urlencode "run_install_hooks=${{ env.RUN_INSTALL_HOOKS }}" \
+            --data-urlencode "run_remap=${{ env.RUN_REMAP }}" \
+            --data-urlencode "start_server=${{ env.START_SERVER }}"
