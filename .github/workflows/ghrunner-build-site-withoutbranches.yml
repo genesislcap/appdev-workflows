@@ -15,6 +15,10 @@ on:
       product_name:
         required: false
         type: string
+      nginx-conf:
+        required: false
+        type: string
+        description: Optional nginx override
 
     secrets:
       JFROG_USERNAME:
@@ -160,6 +164,9 @@ jobs:
                       echo "this is the present directory: $(pwd)"
                       echo "List of files in pwd:$(ls -a)"
                       touch temp
+                      if [ -n "${{ inputs.nginx-conf }}" ]; then
+                        cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" ./nginx.conf
+                      fi
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                       cd ../"$CLIENT_NAME"_server_downloads
                     else
@@ -170,6 +177,9 @@ jobs:
                       echo "PWD after web module download-->" && echo "$(pwd)"
                       echo "List of files in present location are --> $(ls -a)"
                       unzip \*.zip
+                      if [ -n "${{ inputs.nginx-conf }}" ]; then
+                        cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" ./nginx.conf
+                      fi
                       tar czvf /tmp/genesis_${{ env.PRODUCT_NAME }}_web.tar.gz *
                       cd ../"$CLIENT_NAME"_server_downloads
                     fi
