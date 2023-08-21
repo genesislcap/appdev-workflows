@@ -34,6 +34,10 @@ on:
         required: false
         type: string
         description: Branch to get the spec file from
+      nginx-conf:
+        required: false
+        type: string
+        description: Optional nginx override
     secrets:
       JFROG_USERNAME:
         required: true
@@ -55,6 +59,11 @@ jobs:
           repository: genesislcap/appdev-workflows
           fetch-depth: 2
           ref: ${{ inputs.spec-file-branch }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          path: base-repo
 
       - name: Setup
         working-directory: rpm
@@ -105,6 +114,9 @@ jobs:
           unzip -q *web*.zip
           rm *.zip
           ls -al
+          if [ -n "${{ inputs.nginx-conf }}" ]; then
+            cp "${GITHUB_WORKSPACE}/base-repo/${{ inputs.nginx-conf }}" ./nginx.conf
+          fi
           echo "Zipping package"
           tar cf web-${{ inputs.version }}.tar.gz *
           ls -al

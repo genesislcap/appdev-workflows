@@ -100,6 +100,7 @@ run_genesis_clear_codegen_cache=$(get_override_value "run_genesis_clear_codegen_
 run_genesis_remap=$(get_override_value "run_genesis_remap" "true")
 start_processes=$(get_override_value "start_processes" "true")
 skip_install_hooks=$(get_override_value "skip_install_hooks" "false")
+install_nginx_conf=$(get_override_value "install_nginx_conf" "false")
 web_path=$(get_override_value "web_path" "/$root_dir/$genesis_user/web")
 
 run_exec=$(get_override_value "run_exec" "true")
@@ -211,6 +212,15 @@ if [ -f "/tmp/web-%{version}.tar.gz" ]; then
     ln -s "/$root_dir/$genesis_user/web-$server_dir/" $web_path || exit 1
     rm -f /tmp/web-%{version}.tar.gz || exit 1
     ls -tp "/$root_dir/$genesis_user/" | grep "web-*" | grep  '/$' | tail -n +5 | xargs -I {} rm -rf -- "/$root_dir/$genesis_user/{}"
+
+    if [ -f "/$root_dir/$genesis_user/web-$server_dir/nginx.conf" ]; then
+        if [ $install_nginx_conf = "true" ]; then
+            echo "Installing nginx config" 2>&1 | tee -a "$LOG"
+            cp "/$root_dir/$genesis_user/web-$server_dir/nginx.conf" "/etc/nginx/nginx.conf"
+            chmod 644 "/etc/nginx/nginx.conf"
+        fi
+        rm -rf "/$root_dir/$genesis_user/web-$server_dir/nginx.conf"
+    fi
 fi
 chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user" || exit 1
 
