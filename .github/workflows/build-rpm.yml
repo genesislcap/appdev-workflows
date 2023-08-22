@@ -144,7 +144,7 @@ jobs:
           cd ~/rpmbuild/SRPMS/
           ls -al
           uploaded_rpm=$(ls $HOME/rpmbuild/RPMS/noarch/*.rpm)          
-          uploaded_rpm_name ="genesis-devops-test-0.11-1.amzn2.noarch.rpm"
+          uploaded_rpm_name=$(basename "$uploaded_rpm")
           echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
           
 
