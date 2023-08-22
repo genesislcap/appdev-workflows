@@ -146,7 +146,6 @@ jobs:
           uploaded_rpm=$(ls $HOME/rpmbuild/RPMS/noarch/*.rpm)          
           uploaded_rpm_name=$(basename "$uploaded_rpm")
           echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
-          
-
+     
 outputs:
   uploaded_rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
