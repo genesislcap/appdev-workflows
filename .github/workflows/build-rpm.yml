@@ -143,5 +143,5 @@ jobs:
         run: |         
           uploaded_rpm=$(ls /home/ec2-user/rpmbuild/RPMS/noarch/*.rpm)          
           uploaded_rpm_name=$(basename "$uploaded_rpm")
-          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+          echo "uploaded_rpm_name=samename" >> $GITHUB_OUTPUT
      
