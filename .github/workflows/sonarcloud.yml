@@ -8,12 +8,6 @@ on:
         required: true
         type: string
 
-    secrets:
-      JENKINSGENESIS_SONAR:
-        required: true
-      GPR_READ_TOKEN:
-        required: true
-
 jobs:
   sonarcloud:
     name: SonarCloud
