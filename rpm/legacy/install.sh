@@ -171,8 +171,8 @@ if [ -f "/tmp/genesis_product_name_web.tar.gz" ]; then
     if [ -f "/$root_dir/$genesis_user/web-$server_dir/nginx.conf" ]; then
         if [ $install_nginx_conf = "true" ]; then
             echo "Installing nginx config" 2>&1 | tee -a "$LOG"
-            cp "/$root_dir/$genesis_user/web-$server_dir/nginx.conf" "/etc/nginx/nginx.conf"
-            chmod 644 "/etc/nginx/nginx.conf"
+            cp "/$root_dir/$genesis_user/web-$server_dir/nginx.conf" "/etc/nginx/conf.d/genesis.conf"
+            chmod 644 "/etc/nginx/conf.d/genesis.conf"
         fi
         rm -rf "/$root_dir/$genesis_user/web-$server_dir/nginx.conf"
     fi
