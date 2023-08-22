@@ -137,3 +137,12 @@ jobs:
           cd ~/rpmbuild/SRPMS/
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+      
+      - name: Upload RPM NAME
+        id: upload-rpm
+        run: |
+          cd ~/rpmbuild/SRPMS/
+          ls -al
+          uploaded_rpm=$(ls $HOME/rpmbuild/RPMS/noarch/*.rpm)
+          uploaded_rpm_name=$(basename "$uploaded_rpm")
+          echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
