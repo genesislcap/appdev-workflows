@@ -84,7 +84,7 @@ jobs:
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=${{ needs.rpm-build.outputs.uploaded_rpm_name }}" \
+            --data-urlencode "package_version=${{ needs.build.outputs.uploaded_rpm_name }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
