@@ -66,9 +66,13 @@ on:
 jobs:
   build:
     name: Steps to trigger jenkins job
+    needs: [rpm-build]
     runs-on: appdev-selfhosted
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        
       - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
@@ -80,7 +84,7 @@ jobs:
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
+            --data-urlencode "package_version=${{ needs.rpm-build.outputs.uploaded_rpm_name }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \

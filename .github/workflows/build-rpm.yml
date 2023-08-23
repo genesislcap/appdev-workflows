@@ -144,6 +144,6 @@ jobs:
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "Uploaded RPM name: $uploaded_rpm_name"
-          echo "Uploaded RPM name: $uploaded_rpm_name" >> $GITHUB_OUTPUT
+          echo "uploaded_rpm_name: $uploaded_rpm_name" >> $GITHUB_OUTPUT
         id: upload-rpm
         
