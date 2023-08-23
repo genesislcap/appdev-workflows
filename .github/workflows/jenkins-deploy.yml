@@ -52,6 +52,10 @@ on:
         required: false
         type: string
 
+      package_version:
+        required: false
+        type: string
+
       JOB_NAME:
         required: true
         type: string
