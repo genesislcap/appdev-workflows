@@ -79,12 +79,8 @@ jobs:
         id: read_output
         run: |
          
-          uploaded_rpm_name=$(cat artifacts/output.txt)
-          echo "::set-output name=my_output::$uploaded_rpm_name"
-
-        # uploaded_rpm_name=$(ls -1 *.rpm)
-        # run: echo "::set-output name=my_output::$uploaded_rpm_name"
-        # run: echo "The output value is $(cat artifacts/output.txt)"
+          rpm_name=$(cat artifacts/uploaded_rpm_name.txt)
+          echo "::set-output name=rpm_name::$rpm_name"
 
       - uses: actions/checkout@v3
         with:
@@ -97,7 +93,7 @@ jobs:
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=${{ steps.read_output.outputs.my_output }}" \
+            --data-urlencode "package_version=${{ steps.read_output.outputs.rpm_name }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \

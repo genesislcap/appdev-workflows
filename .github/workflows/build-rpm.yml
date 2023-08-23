@@ -143,12 +143,13 @@ jobs:
           cd ~/rpmbuild/RPMS/noarch/
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
-          echo "::set-output name=my_output::$uploaded_rpm_name"
-          #echo "Uploaded RPM name: $uploaded_rpm_name" > uploaded_rpm.txt
+          echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
+         
       - name: Create Output File
-        run: echo "${{ steps.upload-rpm.outputs.my_output }}" > output.txt
+        run: echo "${{ steps.upload-rpm.outputs.uploaded_rpm_name }}" > uploaded_rpm_name.txt
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
           name: my-artifact
-          path: output.txt
+          path: uploaded_rpm_name.txt
