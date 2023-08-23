@@ -132,11 +132,12 @@ jobs:
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bb product.spec
 
-      # - name: Upload RPM
-      #   run: |
-      #     cd ~/rpmbuild/SRPMS/
-      #     ls -al
-      #     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+      - name: Upload RPM
+        run: |
+          cd ~/rpmbuild/SRPMS/
+          ls -al
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+     
       - name: Upload RPM
         id: upload-rpm
         run: |
