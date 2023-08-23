@@ -138,14 +138,17 @@ jobs:
       #     ls -al
       #     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
       - name: Upload RPM
+        id: upload-rpm
         run: |
           cd ~/rpmbuild/RPMS/noarch/
+          ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
-          echo "$uploaded_rpm_name" > uploaded_rpm.txt
-        id: upload-rpm
-
+          echo "::set-output name=my_output::123"
+          #echo "Uploaded RPM name: $uploaded_rpm_name" > uploaded_rpm.txt
+      - name: Create Output File
+        run: echo "${{ steps.upload-rpm.outputs.my_output }}" > output.txt
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: uploaded-rpm-artifact
-          path: uploaded_rpm.txt
+          name: my-artifact
+          path: output.txt
