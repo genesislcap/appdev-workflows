@@ -141,7 +141,8 @@ jobs:
       - name: Upload RPM NAME
         id: upload-rpm
         run: |         
-          uploaded_rpm=$(ls /home/ec2-user/rpmbuild/RPMS/noarch/*.rpm)          
+          uploaded_rpm=$(ls /home/ec2-user/rpmbuild/RPMS/noarch/*.rpm)  
+          echo "$uploaded_rpm"        
           uploaded_rpm_name=$(basename "$uploaded_rpm")
           echo "uploaded_rpm_name=samename" >> $GITHUB_OUTPUT
      
