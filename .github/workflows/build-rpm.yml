@@ -3,6 +3,10 @@ name: Build RPM
 
 on:
   workflow_call:
+     outputs:
+      firstword:
+        description: "The first output string"
+        value: ${{ jobs.build.outputs.output1 }}
     inputs:
       product_name:
         required: true
@@ -48,6 +52,8 @@ env:
 jobs:
   build:
     runs-on: appdev-selfhosted
+    outputs:
+      output1: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
     steps:
       - name: Grab spec file
         uses: actions/checkout@v3
@@ -145,6 +151,7 @@ jobs:
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
          
       - name: Create Output File
         run: echo "${{ steps.upload-rpm.outputs.uploaded_rpm_name }}" > uploaded_rpm_name.txt
