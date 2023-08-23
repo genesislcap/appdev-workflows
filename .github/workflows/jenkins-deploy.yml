@@ -76,6 +76,7 @@ jobs:
           path: artifacts
 
       - name: Read Output File
+        id: read_output
         run: echo "The output value is $(cat artifacts/output.txt)"
 
       - uses: actions/checkout@v3
@@ -89,7 +90,7 @@ jobs:
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=$(cat artifacts/output.txt)" \
+            --data-urlencode "package_version=${{ steps.read_output.outputs.value }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
