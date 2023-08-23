@@ -3,7 +3,7 @@ name: Build RPM
 
 on:
   workflow_call:
-     outputs:
+    outputs:
       firstword:
         description: "The first output string"
         value: ${{ jobs.build.outputs.output1 }}
