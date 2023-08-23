@@ -66,13 +66,13 @@ on:
 jobs:
   build:
     name: Steps to trigger jenkins job
-    needs: [rpm-build]
+    
     runs-on: appdev-selfhosted
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-        
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
