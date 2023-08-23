@@ -69,8 +69,18 @@ jobs:
     runs-on: appdev-selfhosted
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: uploaded-rpm-artifact
+          
+      - name: Read Uploaded RPM Name
+        run: |
+          uploaded_rpm_name=$(cat uploaded_rpm.txt)
+          echo "Uploaded RPM name from artifact: $uploaded_rpm_name"
 
       - uses: actions/checkout@v3
         with:
