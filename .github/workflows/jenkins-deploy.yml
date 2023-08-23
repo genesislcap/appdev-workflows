@@ -15,10 +15,7 @@ on:
       hosts:
         required: true
         type: string
-      package_version:
-        required: true
-        type: string
-        description: Comma separated list of folders in Artifactory to deploy the RPM
+     
       db_backup:
         required: false
         type: boolean
