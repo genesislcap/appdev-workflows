@@ -51,7 +51,7 @@ on:
       product:
         required: false
         type: string
-        
+
       package_version:
         required: false
         type: string
@@ -88,9 +88,7 @@ jobs:
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/productWEB_deployment" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
-            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
-            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=${{ steps.read_output.outputs.rpm_name }}" \
+            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \            
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
             --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
