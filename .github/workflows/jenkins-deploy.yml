@@ -15,27 +15,27 @@ on:
       hosts:
         required: false
         type: string
-     
+
       db_backup:
         required: false
         type: boolean
-       
+
       run_clear_codegen_cache:
         required: false
         type: boolean
-       
+
       run_genesis_install:
         required: false
         type: boolean
-       
+
       run_install_hooks:
         required: false
         type: boolean
-       
+
       run_remap:
         required: false
         type: boolean
-        
+
       start_server:
         required: false
         type: boolean
@@ -51,22 +51,22 @@ on:
       product:
         required: false
         type: string
-        
+
       package_version:
         required: false
         type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
-        required: true 
+        required: true
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:    
-    name: Steps to trigger jenkins job    
+  build:
+    name: Steps to trigger jenkins job
     runs-on: appdev-selfhosted
 
     steps:
-      
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
@@ -77,7 +77,7 @@ jobs:
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade_v2" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
-            --data-urlencode "hosts=${{ inputs.HOSTS }}" \            
+            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
             --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
@@ -87,4 +87,4 @@ jobs:
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.PRODUCT }}" 
+            --data-urlencode "product=${{ inputs.PRODUCT }}"
