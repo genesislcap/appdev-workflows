@@ -86,5 +86,5 @@ jobs:
             --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
-            --data-urlencode "environment_level=${{ inputs.ENVIRONEMNT_LEVEL }}" \
+            --data-urlencode "environment_level=${{ inputs.environment_level }}" \
             --data-urlencode "product=${{ inputs.PRODUCT }}" 

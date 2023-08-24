@@ -156,7 +156,7 @@ jobs:
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
 
-      - name: Upload RPM
+      - name: GET  RPM NAME
         id: upload-rpm
         run: |
           cd ~/rpmbuild/RPMS/noarch/
