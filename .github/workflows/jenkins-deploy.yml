@@ -76,7 +76,8 @@ jobs:
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/productWEB_deployment" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
-            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \            
+            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
+            --data-urlencode "hosts=${{ inputs.HOSTS }}" \            
             --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
@@ -84,6 +85,6 @@ jobs:
             --data-urlencode "run_install_hooks=${{ inputs.RUN_INSTALL_HOOKS }}" \
             --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
-            --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
-            --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.product }}" 
+            --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
+            --data-urlencode "environment_level=${{ inputs.ENVIRONEMNT_LEVEL }}" \
+            --data-urlencode "product=${{ inputs.PRODUCT }}" 
