@@ -66,19 +66,7 @@ jobs:
     runs-on: appdev-selfhosted
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: rpm_name
-          path: artifacts
-
-      - name: Read Output File
-        id: read_output
-        run: |
-         
-          rpm_name=$(cat artifacts/uploaded_rpm_name.txt)
-          echo "::set-output name=rpm_name::$rpm_name"
-
+      
       - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
