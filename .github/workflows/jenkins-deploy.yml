@@ -51,7 +51,10 @@ on:
       product:
         required: false
         type: string
-
+        
+      package_version:
+        required: false
+        type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
