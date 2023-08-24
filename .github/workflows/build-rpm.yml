@@ -3,6 +3,10 @@ name: Build RPM
 
 on:
   workflow_call:
+    outputs:
+      rpm_name:
+        description: "The first output string"
+        value: ${{ jobs.build.outputs.rpm_name }}
     inputs:
       product_name:
         required: true
@@ -52,6 +56,8 @@ env:
 jobs:
   build:
     runs-on: appdev-selfhosted
+    outputs:
+      rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
     steps:
       - name: Grab spec file
         uses: actions/checkout@v3
@@ -149,3 +155,11 @@ jobs:
           cd ~/rpmbuild/SRPMS/
           ls -al
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+
+      - name: Upload RPM
+        id: upload-rpm
+        run: |
+          cd ~/rpmbuild/RPMS/noarch/
+          ls -al
+          uploaded_rpm_name=$(ls -1 *.rpm)          
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
