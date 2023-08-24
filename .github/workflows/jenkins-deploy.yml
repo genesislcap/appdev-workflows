@@ -103,5 +103,4 @@ jobs:
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.product }}" \
-            --output response.txt
+            --data-urlencode "product=${{ inputs.product }}" 
