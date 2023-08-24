@@ -51,8 +51,8 @@ on:
       product:
         required: false
         type: string
-
-      product:
+        
+      JOB_NAME:
         required: false
         type: string
 
