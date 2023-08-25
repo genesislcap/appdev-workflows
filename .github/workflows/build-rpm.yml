@@ -66,12 +66,13 @@ jobs:
           fetch-depth: 2
           ref: ${{ inputs.spec-file-branch }}
 
-      - name: Checkoutinfra  Repository
+      - name: Checkout infra  Repository
         uses: actions/checkout@v3
         with:
           repository: genesislcap/infra-cluster-library
           ref: develop
-          GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+          token: ${{ secrets.GPR_READ_TOKEN }}
+
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
