@@ -67,7 +67,7 @@ jobs:
           ref: ${{ inputs.spec-file-branch }}
 
       - name: Checkout infra  Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
           repository: genesislcap/infra-cluster-library
           ref: develop
