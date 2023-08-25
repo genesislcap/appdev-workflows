@@ -71,7 +71,9 @@ jobs:
         with:
           repository: genesislcap/infra-cluster-library
           ref: develop
-
+        env:
+          # Needed to get some information about the pull request, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repo
         uses: actions/checkout@v3
