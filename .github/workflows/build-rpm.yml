@@ -170,4 +170,5 @@ jobs:
         with:
           repository: genesislcap/infra-cluster-library
           ref: develop
-          token: ${{ secrets.GPR_READ_TOKEN }}
+          env:
+            GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
