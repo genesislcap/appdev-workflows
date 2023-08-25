@@ -66,6 +66,12 @@ jobs:
           fetch-depth: 2
           ref: ${{ inputs.spec-file-branch }}
 
+      - name: Checkoutinfra  Repository
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/infra-cluster-library
+          ref: develop
+          GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
@@ -165,10 +171,4 @@ jobs:
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
 
 
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-        with:
-          repository: genesislcap/infra-cluster-library
-          ref: develop
-        env:
-          GITHUB_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+
