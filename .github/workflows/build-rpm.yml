@@ -71,7 +71,7 @@ jobs:
         with:
           repository: genesislcap/infra-cluster-library
           ref: develop
-          token: ${{ secrets.GPR_READ_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repo
         uses: actions/checkout@v3
