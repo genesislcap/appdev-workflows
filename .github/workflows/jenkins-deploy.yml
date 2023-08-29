@@ -74,10 +74,15 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
+          if [[ "${{ inputs.HOSTS }}" == "" ]]; then
+            hosts_param="ALL"
+          else
+            hosts_param="${{ inputs.HOSTS }}"
+          fi
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade_v2" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
-            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
+            --data-urlencode "hosts=${{ hosts_param }}" \
             --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
             --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
             --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
