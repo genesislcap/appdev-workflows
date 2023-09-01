@@ -54,7 +54,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
-          java-version: {{ inputs.java_version }}
+          java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
       - name: Configure Node
