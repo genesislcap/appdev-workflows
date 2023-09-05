@@ -29,7 +29,7 @@ jobs:
     runs-on: appdev-selfhosted-al2023
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.1.0
         with:
           ref: develop
 
