@@ -74,7 +74,7 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade_v2" \
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
