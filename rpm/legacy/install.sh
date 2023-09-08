@@ -138,7 +138,7 @@ ls -tp "/$root_dir/$genesis_user/server/" | grep  '/$' | tail -n +5 | xargs -I {
 #copy runtime
 echo "Backup and copy the existing runtime from previous installations, if any...." 2>&1 | tee -a "$LOG"
 if [ -d "/home/$genesis_user/run/runtime" ]; then
-    cp -R "/home/$genesis_user/run/runtime" "/$root_dir/$genesis_user/server/$server_dir/run/" || exit 1
+    cp --preserve=timestamps -R "/home/$genesis_user/run/runtime" "/$root_dir/$genesis_user/server/$server_dir/run/" || exit 1
 fi
 
 echo "Unlink previous run and link it to the run dir of the current installation" 2>&1 | tee -a "$LOG"
