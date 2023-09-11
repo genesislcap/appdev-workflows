@@ -15,47 +15,42 @@ on:
       hosts:
         required: false
         type: string
-
       db_backup:
         required: false
+        default: true
         type: boolean
-
       run_clear_codegen_cache:
         required: false
         type: boolean
-
+        default: true
       run_genesis_install:
         required: false
         type: boolean
-
+        default: true
       run_install_hooks:
         required: false
         type: boolean
-
+        default: true
       run_remap:
         required: false
         type: boolean
-
+        default: true
       start_server:
         required: false
         type: boolean
-
+        default: true
       genesis_user:
         required: false
         type: string
-
       environment_level:
         required: false
         type: string
-
       product:
         required: false
         type: string
-
       package_version:
         required: false
         type: string
-
     secrets:
       JENKINS_SECURITYTOKEN:
         required: true
@@ -66,7 +61,6 @@ jobs:
     runs-on: appdev-selfhosted
 
     steps:
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
