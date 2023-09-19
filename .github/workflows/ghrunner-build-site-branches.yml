@@ -5,6 +5,10 @@ name: Site Deploy
 
 on:
   workflow_call:
+    outputs:
+        rpm_name:
+          description: "The first output string"
+          value: ${{ jobs.build.outputs.rpm_name }}
     inputs:
       repo_name:
         required: true
