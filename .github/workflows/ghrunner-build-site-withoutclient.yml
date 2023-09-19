@@ -200,3 +200,11 @@ jobs:
           ls -lart
           echo "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/rpm/${{ env.CLIENT_NAME }}/" -T *.rpm
+
+      - name: GET  RPM NAME
+        id: upload-rpm
+        run: |
+          cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
+          ls -al
+          uploaded_rpm_name=$(ls -1 *.rpm)
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
