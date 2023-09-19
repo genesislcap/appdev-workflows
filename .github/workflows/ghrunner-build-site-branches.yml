@@ -184,3 +184,11 @@ jobs:
               echo "reset the web version for the next loop"
               WEB_VERSION=""
               done
+
+      - name: GET  RPM NAME
+        id: upload-rpm
+        run: |
+          cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
+          ls -al
+          uploaded_rpm_name=$(ls -1 *.rpm)
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
