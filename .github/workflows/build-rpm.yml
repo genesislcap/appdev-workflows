@@ -162,4 +162,4 @@ jobs:
           cd ~/rpmbuild/RPMS/noarch/
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
-          echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
