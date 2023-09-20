@@ -96,6 +96,19 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
+      - name: Upload Test Results to Git Repository
+        run: |
+          # Replace with the actual path to your test results files
+          test_results_path=server/jvm/build/test-results/test/*.xml
+
+          # Create a new branch for storing test results
+          git checkout -b test-results
+
+          # Add and commit the test results
+          git add $test_results_path
+          git commit -m "Add test results"
+          git push origin test-results
+
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
