@@ -64,7 +64,7 @@ jobs:
       - name: Configure Node
         uses: actions/setup-node@v2
         with:
-          node-version: "{{ inputs.node_version }}"
+          node-version: ${{ inputs.node_version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
 
@@ -93,12 +93,12 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
 
-      - name: Server Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build --no-build-cache --stacktrace
-          build-root-directory: ./server/jvm
-          cache-disabled: true
+      # - name: Server Build
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: build --no-build-cache --stacktrace
+      #     build-root-directory: ./server/jvm
+      #     cache-disabled: true
 
       - name: Docker Build Image
         if: inputs.build_docker
@@ -116,24 +116,24 @@ jobs:
           build-root-directory: ./
           cache-disabled: true
 
-      - name: Create Giant Server Zip
-        if: inputs.upload
-        shell: bash
-        working-directory: server/jvm/
-        run: |
-          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs ./gradlew
-          cd .genesis-home
-          pwd
-          ls -la
-          tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+      # - name: Create Giant Server Zip
+      #   if: inputs.upload
+      #   shell: bash
+      #   working-directory: server/jvm/
+      #   run: |
+      #     ./gradlew tasks | grep install- | cut -d " " -f1 | xargs ./gradlew
+      #     cd .genesis-home
+      #     pwd
+      #     ls -la
+      #     tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
 
-      - name: Upload Server Package
-        if: inputs.upload
-        working-directory: server/jvm/${{ inputs.product_name }}-distribution/build/distributions/
-        run: |
-          echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+      # - name: Upload Server Package
+      #   if: inputs.upload
+      #   working-directory: server/jvm/${{ inputs.product_name }}-distribution/build/distributions/
+      #   run: |
+      #     echo "${{ env.REPO_NAME }}"
+      #     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
+      #     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
       - name: Check file existence
         id: web_exists
