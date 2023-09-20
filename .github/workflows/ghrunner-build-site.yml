@@ -19,6 +19,9 @@ on:
       product_name:
         required: false
         type: string
+      client:
+        required: false
+        type: string
       nginx-conf:
         required: false
         type: string
@@ -78,8 +81,15 @@ jobs:
 
               echo "VERSION=$(echo ${{ github.ref_name }} | cut -d"_" -f2)" >> $GITHUB_ENV
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              echo "CLIENT_DIR=$([[ $(echo ${{ github.ref_name }}) = [A-Z]* ]] && echo $(ls | grep -- $(echo -${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev))" >> $GITHUB_ENV
-              echo "CLIENT_NAME=$([[ $(echo ${{ github.ref_name }}) = [A-Z]* ]] && echo $(ls | grep -- $(echo -${{ github.ref_name }} | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV
+
+              if [ -z "${{ inputs.client }}" ]; then
+                REF="${{ github.ref_name }}"
+              else
+                REF="${{ inputs.client }}"
+              fi
+
+              echo "CLIENT_DIR=$([[ $(echo $REF) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$REF | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev))" >> $GITHUB_ENV
+              echo "CLIENT_NAME=$([[ $(echo $REF) = [A-Z]* ]] && echo $(ls | grep -- $(echo -$REF | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") | rev | cut -c 1- | rev | cut -c 1- | rev | cut -d"-" -f 1 | rev ))" >> $GITHUB_ENV
 
       - name: Environment Variables for web and server
         run: |
