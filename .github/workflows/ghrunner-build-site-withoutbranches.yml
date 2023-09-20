@@ -234,7 +234,8 @@ jobs:
       - name: GET  RPM NAME
         id: upload-rpm
         run: |
-          cd target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
+          CLIENT_NAME="genesis"
+          cd ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads/target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
