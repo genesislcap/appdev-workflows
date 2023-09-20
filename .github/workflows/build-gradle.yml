@@ -96,17 +96,18 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
-      - name: Copy Test Results
+      - name: Copy Test Report
         run: |
           mkdir -p test-results
-          cp -r ./server/jvm/build/reports/tests/* test-results/
-        if: always()  # This step should always run, even if the previous one fails
+          cp -r /opt/actions-runner/_work/qboms/qboms/server/jvm/qboms-amps/build/reports/tests/test/ test-results/
+        if: always()
 
-      - name: Upload Test Results
+      - name: Upload Test Report
         uses: actions/upload-artifact@v2
         with:
-          name: test-results
+          name: test-report
           path: test-results
+
 
       - name: Docker Build Image
         if: inputs.build_docker
