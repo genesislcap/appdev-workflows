@@ -195,8 +195,22 @@ jobs:
       - name: GET  RPM NAME
         id: upload-rpm
         run: |
-          CLIENT_NAME="genesis"
-          cd ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads/target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
-          ls -al
-          uploaded_rpm_name=$(ls -1 *.rpm)
-          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+           cd ${{ env.PRODUCT_BASE }}
+             pwd
+             ls -larth
+             ls -larth rpm/
+             ls -larth rpm/rpm/legacy
+             for i in ./*
+              do
+                if [ -d "$i/snt" ]
+                then
+                    CLIENT_DIR=$i
+                    CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
+                    cd ${{env.PRODUCT_BASE}}/"$CLIENT_NAME"_server_downloads/target/rpm/genesis-${PRODUCT_NAME}/RPMS/x86_64
+                    ls -al
+                    uploaded_rpm_name=$(ls -1 *.rpm)
+                    echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+                else
+                    echo "$i is not a directory or does not have a snt folder in it"
+                fi
+              done
