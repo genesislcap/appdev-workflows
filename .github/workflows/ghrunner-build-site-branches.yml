@@ -195,7 +195,7 @@ jobs:
       - name: GET  RPM NAME
         id: upload-rpm
         run: |
-           cd ${{ env.PRODUCT_BASE }}
+             cd ${{ env.PRODUCT_BASE }}
              pwd
              ls -larth
              ls -larth rpm/
