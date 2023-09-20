@@ -25,6 +25,10 @@ on:
         required: false
         default: '11'
         type: string
+      node_version:
+        required: false
+        default: '16.x'
+        type: string
 
     secrets:
       GRADLE_PROPERTIES:
@@ -60,7 +64,7 @@ jobs:
       - name: Configure Node
         uses: actions/setup-node@v2
         with:
-          node-version: 16.x
+          node-version: "{{ inputs.node_version }}"
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
 
@@ -138,10 +142,18 @@ jobs:
           test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
 
       - name: Client Build
-        if: steps.web_exists.outputs.web_exists
+        if: steps.web_exists.outputs.web_exists && inputs.node_version == "16.x"
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
+          build-root-directory: ./
+          cache-disabled: true
+      
+      - name: Client Build
+        if: steps.web_exists.outputs.web_exists && inputs.node_version == "18.x"
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :client:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
           build-root-directory: ./
           cache-disabled: true
 
