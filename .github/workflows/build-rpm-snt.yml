@@ -1,0 +1,229 @@
+# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+name: Build RPM
+
+on:
+  workflow_call:
+    outputs:
+      rpm_name:
+        description: "The first output string"
+        value: ${{ jobs.build.outputs.rpm_name }}
+    inputs:
+      product_name:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      artifactory_deploy_locations:
+        required: true
+        type: string
+        description: Comma separated list of folders in Artifactory to deploy the RPM
+      client:
+        required: true
+        type: string
+      site-version:
+        required: true
+        type: string
+        description: site-specific version
+      server-version:
+        required: false
+        type: string
+        description: Server version
+      web-version:
+        required: false
+        type: string
+        description: Client version
+      project-root:
+        required: true
+        type: string
+        description: Path to the root of the site-specific
+      genesis-user:
+        required: true
+        type: string
+        description: User to login as when installed
+      spec-file-branch:
+        required: false
+        type: string
+        description: Branch to get the spec file from
+      nginx-conf:
+        required: false
+        type: string
+        description: Optional nginx override
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+
+env:
+  JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+  JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+
+# A workflow run is called from the devops appdev-workflow repos
+jobs:
+  build:
+    runs-on: appdev-selfhosted
+    outputs:
+      rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
+    steps:
+      - name: Grab spec file
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/appdev-workflows
+          fetch-depth: 2
+          ref: ${{ inputs.spec-file-branch }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          path: base-repo
+
+      - name: Setup
+        working-directory: rpm
+        run: |
+          rm -rf ~/rpmbuild/*
+          sudo yum -y install rpm
+          sudo yum -y install rpm-build
+          sudo yum -y install wget
+          mkdir downloads
+          mkdir web-downloads
+
+      - name: Get Server version from SNT file or input
+        run: |
+          if [ -z "${{ inputs.server-version }}" ]; then
+            SERVER_VERSION=$(grep server_version base-repo/${{ inputs.project-root }}/snt/product.yml |  awk -F ':' '{print $2}'| sed 's/ //g')
+            echo "Server version is $SERVER_VERSION from the SNT"
+            echo "SERVER_VERSION=$SERVER_VERSION" >> $GITHUB_ENV
+          else
+            echo "Server version is ${{ inputs.server-version }} from input"
+            echo "SERVER_VERSION=${{ inputs.server-version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Get Web version from SNT file
+        run: |
+          if [ -z "${{ inputs.web-version }}" ]; then
+            WEB_VERSION=$(grep web_version base-repo/${{ inputs.project-root }}/snt/product.yml |  awk -F ':' '{print $2}'| sed 's/ //g')
+            echo "Web version is $WEB_VERSION from the SNT"
+            echo "WEB_VERSION=$WEB_VERSION" >> $GITHUB_ENV
+          else
+            echo "Web version is ${{ inputs.web-version }} from input"
+            echo "WEB_VERSION=${{ inputs.web-version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Get Framework and Auth versions
+        run: |
+          set +x -e
+          curl -sSf -u ${{ secrets.JFROG_USERNAME }}:"${{ secrets.JFROG_PASSWORD }}" -LO 'https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/server/pom-${{ env.SERVER_VERSION }}.xml'
+          echo pom-${{ env.SERVER_VERSION }}.xml
+          AUTH_VERSION=$(echo "$(echo "$(grep -m 1 "<auth.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<auth.version>\(.*\)</auth.version>.*:\1:p')")")
+          GENESIS_VERSION=$(echo "$(echo "$(grep -m 1 "<genesis.version>" $(find . -maxdepth 1 -name pom-${{env.SERVER_VERSION}}.xml) | sed -n 's:.*<genesis.version>\(.*\)</genesis.version>.*:\1:p')")")
+
+          echo "AUTH_VERSION=$AUTH_VERSION" >> $GITHUB_ENV
+          echo "GENESIS_VERSION=$GENESIS_VERSION" >> $GITHUB_ENV
+
+          echo "Genesis version is $GENESIS_VERSION"
+          echo "Auth version is $AUTH_VERSION"
+
+      - name: Download Server, Framework and Auth
+        working-directory: rpm/downloads
+        run: |
+          set +x -e
+          #download auth distribution into server_downloads folder
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/auth-distribution/"${{env.AUTH_VERSION}}"/auth-distribution-"${{env.AUTH_VERSION}}"-bin.zip
+          #download genesis framework
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/libs-release-local/global/genesis/genesis-distribution/"${{ env.GENESIS_VERSION }}"/genesis-distribution-"${{ env.GENESIS_VERSION }}"-bin.zip
+          #download server into server_downloads folder
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/"${{ inputs.product_name }}"/server/genesisproduct-"${{ inputs.product_name }}"-"${{ env.SERVER_VERSION }}"-bin.zip
+
+      - name: Download additional packages listed in SNT
+        run: |
+          if [[ $(grep -c "genesis_modules" base-repo/${{ inputs.project-root }}/snt/product.yml) -ge 1 ]]; then
+            set +x -e
+            echo "$(sed -e '1,/genesis_modules/d'  < base-repo/${{ inputs.project-root }}/snt/product.yml | grep "^  - { ")" > /tmp/edited_product.yml
+            while read line
+              do
+                echo "Reading this line from product.yml now  -- $line"
+                wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P rpm/downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip
+              done < /tmp/edited_product.yml
+            echo "Modules required are-->" && cat /tmp/edited_product.yml
+            rm /tmp/edited_product.yml
+          fi
+
+      - name: Download Site zip
+        working-directory: rpm/downloads
+        run: |
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.product_name }}-site-specific-${{ inputs.site-version }}.zip
+
+      - name: Download Web zip
+        working-directory: rpm/web-downloads
+        run: |
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/web/${{ inputs.product_name }}-web-${{ inputs.web-version }}.zip
+
+      - name: Bundle the server zips
+        working-directory: rpm/downloads
+        run: |
+          ls -la
+          for zip_file in *.zip; do
+            if [ -f "$zip_file" ]; then
+              # Extract the zip file in the same folder
+              unzip "$zip_file"
+
+              # Remove the zip file after extraction
+              rm "$zip_file"
+              echo "Extracted and removed: $zip_file"
+            fi
+          done
+          echo "Zipping package"
+          tar cf server-${{ inputs.version }}.tar.gz *
+          mv server-${{ inputs.version }}.tar.gz ../
+
+      - name: Bundle the web zip
+        working-directory: rpm/web-downloads
+        run: |
+          ls -la
+          unzip -q *web*.zip
+          rm *.zip
+          ls -al
+          if [ -n "${{ inputs.nginx-conf }}" ]; then
+            cp "${GITHUB_WORKSPACE}/base-repo/${{ inputs.nginx-conf }}" ./nginx.conf
+          fi
+          echo "Zipping package"
+          tar cf web-${{ inputs.version }}.tar.gz *
+          ls -al
+          echo "Unzipping tar as a test"
+          tar xf web-${{ inputs.version }}.tar.gz
+          mv *.tar.gz ../
+
+      - name: Build RPM
+        working-directory: rpm
+        run: |
+          ls -al
+          rm -rf web-downloads downloads
+          if [ -z "${{ inputs.version }}" ];
+          then
+            sed -i "s/Version://g" product.spec
+            sed -i "s/1.0.0//g" product.spec
+          else
+            sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
+          fi
+          sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
+          sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
+          mkdir -p ~/rpmbuild/SOURCES/
+          mv *.gz ~/rpmbuild/SOURCES/
+          mv product.spec ~/rpmbuild/SOURCES/
+          cd ~/rpmbuild/SOURCES/
+          rpmbuild -bb product.spec
+
+      - name: Upload RPM
+        run: |
+          cd ~/rpmbuild/SRPMS/
+          ls -al
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+
+      - name: GET  RPM NAME
+        id: upload-rpm
+        run: |
+          cd ~/rpmbuild/RPMS/noarch/
+          ls -al
+          uploaded_rpm_name=$(ls -1 *.rpm)
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
