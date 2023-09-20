@@ -96,18 +96,17 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
-      - name: Upload Test Results to Git Repository
+      - name: Copy Test Results
         run: |
-          # Replace with the actual path to your test results files
-          test_results_path=server/jvm/build/test-results/test/*.xml
+          mkdir -p test-results
+          cp -r ./server/jvm/build/reports/tests/* test-results/
+        if: always()  # This step should always run, even if the previous one fails
 
-          # Create a new branch for storing test results
-          git checkout -b test-results
-
-          # Add and commit the test results
-          git add $test_results_path
-          git commit -m "Add test results"
-          git push origin test-results
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: test-results
 
       - name: Docker Build Image
         if: inputs.build_docker
