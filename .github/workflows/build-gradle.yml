@@ -100,9 +100,12 @@ jobs:
         run: |
           mkdir -p test-results
           for dir in /opt/actions-runner/_work/${{ inputs.product_name }}/${{ inputs.product_name }}/server/jvm/*/build/reports/tests/test/; do
-            cp -r "$dir" test-results/
+            if [ -d "$dir" ]; then
+              cp -r "$dir" test-results/
+            fi
           done
         if: always()
+
 
       - name: Upload Test Reports
         uses: actions/upload-artifact@v2
