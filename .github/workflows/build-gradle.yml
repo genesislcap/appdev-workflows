@@ -106,12 +106,14 @@ jobs:
           mkdir -p test-results
           for dir in /opt/actions-runner/_work/${{ inputs.product_name }}/${{ inputs.product_name }}/server/jvm/*/build/reports/tests/test/; do
             if [ -d "$dir" ]; then
-              subfolder_name=$(basename "$dir")
+              # Extract the part of the path that comes after /jvm/
+              subfolder_name=$(echo "$dir" | sed 's/.*\/jvm\///')
               mkdir -p "test-results/$subfolder_name"
               cp -r "$dir"/* "test-results/$subfolder_name/"
             fi
           done
         if: always()
+
 
 
       - name: Upload Test Reports
