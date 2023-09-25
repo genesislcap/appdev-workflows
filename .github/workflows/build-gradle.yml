@@ -96,6 +96,11 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
+      - name: List Contents of Test Directories
+        run: |
+          ls -R /opt/actions-runner/_work/${{ inputs.product_name }}/${{ inputs.product_name }}/server/jvm/*/build/reports/tests/test/
+        if: always()
+
       - name: Copy Test Reports
         run: |
           mkdir -p test-results
