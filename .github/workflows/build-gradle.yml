@@ -96,17 +96,12 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
-      - name: List Contents of Test Directories
-        run: |
-          ls -R /opt/actions-runner/_work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/jvm/*/build/reports/tests/test/
-        if: always()
-
       - name: Copy Test Reports
         run: |
-          mkdir -p test-results
-          for dir in /opt/actions-runner/_work/$${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/jvm/*/build/reports/tests/test/; do
+          for dir in /opt/actions-runner/_work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/jvm/*/build/reports/tests/test/; do
             if [ -d "$dir" ]; then
               subfolder_name=$(echo "$dir" | sed 's/.*\/jvm\///')
+              echo "Subfolder Name: $subfolder_name"
               mkdir -p "test-results/$subfolder_name"
               cp -r "$dir"/* "test-results/$subfolder_name/"
             fi
