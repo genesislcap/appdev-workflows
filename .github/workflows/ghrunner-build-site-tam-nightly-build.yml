@@ -75,7 +75,7 @@ jobs:
               cd /opt/actions-runner/_work/tam2-site-specific/tam2-site-specific/tam2-site-specific-arden
 
 
-                  if [ "$i" == "./snt" ]
+                  if [ -d "./snt" ]; then
                   then
                     WEB_VERSION=$(grep "web_version" $(find $i -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
                     SERVER_VERSION=$(grep server_version $(find  $i -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
