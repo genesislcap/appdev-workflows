@@ -72,7 +72,7 @@ jobs:
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "The current location is :"
               pwd
-              ls -l
+              cd /opt/actions-runner/_work/tam2-site-specific/tam2-site-specific/tam2-site-specific-arden
 
               for i in ./*
               do
