@@ -76,12 +76,11 @@ jobs:
 
 
                   if [ -d "./snt" ]; then
-                  then
-                    WEB_VERSION=$(grep "web_version" $(find $i -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
-                    SERVER_VERSION=$(grep server_version $(find  $i -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')
+                    WEB_VERSION=$(grep "web_version" ./snt/product.yml | awk -F ':' '{print $2}' | sed 's/ //g')
+                    SERVER_VERSION=$(grep "server_version" ./snt/product.yml | awk -F ':' '{print $2}' | sed 's/ //g')
                   else
-                    echo "$i not a client directory"
-                 fi
+                    echo "The 'snt' directory does not exist."
+                  fi
 
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
               [[ ! -z "$WEB_VERSION" ]] && echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
