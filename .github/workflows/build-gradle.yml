@@ -96,6 +96,24 @@ jobs:
           build-root-directory: ./server/jvm
           cache-disabled: true
 
+      - name: Copy Test Reports
+        run: |
+          for dir in /opt/actions-runner/_work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/jvm/*/build/reports/tests/test/; do
+            if [ -d "$dir" ]; then
+              subfolder_name=$(echo "$dir" | sed 's/.*\/jvm\///')
+              echo "Subfolder Name: $subfolder_name"
+              mkdir -p "test-results/$subfolder_name"
+              cp -r "$dir"/* "test-results/$subfolder_name/"
+            fi
+          done
+        if: always()
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-reports
+          path: test-results
+
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
