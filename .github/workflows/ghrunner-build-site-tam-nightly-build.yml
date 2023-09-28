@@ -72,9 +72,11 @@ jobs:
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "The current location is :"
               pwd
-              WEB_VERSION=$(grep "web_version" "/opt/actions-runner/_work/tam2-site-specific/tam2-site-specific/tam2-site-specific-arden/snt/product.yml" | awk -F ':' '{print $2}' | sed 's/ //g')
-              echo "The current location is :"
-              SERVER_VERSION=$(grep server_version" "/opt/actions-runner/_work/tam2-site-specific/tam2-site-specific/tam2-site-specific-arden/snt/product.yml") |  awk -F ':' '{print $2}'| sed 's/ //g')
+              ls
+              cd tam2-site-specific-arden/snt
+              echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
+              echo "SERVER_VERSION=$(grep "server_version" $(find  . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
+
               echo "The current location is :"
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-${{ inputs.branch }}.zip" >> $GITHUB_ENV
               [[ ! -z "$WEB_VERSION" ]] && echo "WEB_VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
