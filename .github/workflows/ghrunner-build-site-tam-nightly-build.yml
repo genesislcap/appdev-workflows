@@ -114,14 +114,11 @@ jobs:
              ls -larth
              ls -larth rpm/
              ls -larth rpm/rpm/legacy
-             TARGET_FOLDER="tam2-site-specific-arden"
-              for i in ./*
+             for i in ./*
               do
-                echo "$i Web version is"
                 if [ "$i" = "./${{ inputs.snt_path }}" ]; then
                   if [ -d "$i/snt" ]
                   then
-                      echo "$i Web version is"
                       CLIENT_DIR=$i
                       CLIENT_NAME=$(echo $i | sed "s/${{ env.REPO_NAME }}\-//g")
                       [[ $(grep "web_version" $i/snt/product.yml) ]] && WEB_VERSION=$(grep "web_version" $(find $i/snt/ -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')
