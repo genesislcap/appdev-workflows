@@ -73,7 +73,7 @@ jobs:
               echo "The current location is :"
               pwd
               ls -l
-              cd ${{ inputs.snt_path }}
+
               for i in ./*
               do
                   if [ "$i" == "./snt" ]
