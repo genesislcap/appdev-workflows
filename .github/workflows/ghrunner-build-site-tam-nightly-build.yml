@@ -115,7 +115,7 @@ jobs:
              ls -larth rpm/
              ls -larth rpm/rpm/legacy
              TARGET_FOLDER="tam2-site-specific-arden"
-              for item in "$TARGET_FOLDER"/*
+              for i in "$TARGET_FOLDER"/*
               do
                 echo "Web version is"
                 if [ -d "$i/snt" ]
