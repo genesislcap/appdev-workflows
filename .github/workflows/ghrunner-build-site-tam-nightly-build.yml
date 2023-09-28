@@ -80,6 +80,7 @@ jobs:
                       then
                           if [ -f "$i/product.yml" ]
                           then
+                              echo "product file read"
                               WEB_VERSION=$(grep "web_version" "$i/product.yml" | awk -F ':' '{print $2}' | sed 's/ //g')
                               SERVER_VERSION=$(grep "server_version" "$i/product.yml" | awk -F ':' '{print $2}' | sed 's/ //g')
 
