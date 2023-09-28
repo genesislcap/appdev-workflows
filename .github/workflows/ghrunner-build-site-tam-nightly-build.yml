@@ -72,7 +72,8 @@ jobs:
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "The current location is :"
               pwd
-              cd ${{ env.PRODUCT_BASE }}/${{ inputs.snt_path }}
+              ls -l
+              cd ${{ inputs.snt_path }}
               for i in ./*
               do
                   if [ "$i" == "./snt" ]
