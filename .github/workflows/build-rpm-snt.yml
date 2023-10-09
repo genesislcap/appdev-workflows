@@ -25,14 +25,10 @@ on:
         required: true
         type: string
         description: site-specific version
-      server-version:
-        required: false
-        type: string
-        description: Server version
-      web-version:
-        required: false
-        type: string
-        description: Client version
+      get-versions-from-snt:
+        required: true
+        type: boolean
+        description: Set to true to read SNT product.yml, set false to use the same as the version provided
       project-root:
         required: true
         type: string
@@ -90,24 +86,24 @@ jobs:
 
       - name: Get Server version from SNT file or input
         run: |
-          if [ -z "${{ inputs.server-version }}" ]; then
+          if [ "${{ inputs.get-versions-from-snt }}" = "true" ]; then
             SERVER_VERSION=$(grep server_version base-repo/${{ inputs.project-root }}/snt/product.yml |  awk -F ':' '{print $2}'| sed 's/ //g')
             echo "Server version is $SERVER_VERSION from the SNT"
             echo "SERVER_VERSION=$SERVER_VERSION" >> $GITHUB_ENV
           else
-            echo "Server version is ${{ inputs.server-version }} from input"
-            echo "SERVER_VERSION=${{ inputs.server-version }}" >> $GITHUB_ENV
+            echo "Server version is ${{ inputs.version }} from input"
+            echo "SERVER_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
           fi
 
       - name: Get Web version from SNT file
         run: |
-          if [ -z "${{ inputs.web-version }}" ]; then
+          if [ "${{ inputs.get-versions-from-snt }}" = "true" ]; then
             WEB_VERSION=$(grep web_version base-repo/${{ inputs.project-root }}/snt/product.yml |  awk -F ':' '{print $2}'| sed 's/ //g')
             echo "Web version is $WEB_VERSION from the SNT"
             echo "WEB_VERSION=$WEB_VERSION" >> $GITHUB_ENV
           else
-            echo "Web version is ${{ inputs.web-version }} from input"
-            echo "WEB_VERSION=${{ inputs.web-version }}" >> $GITHUB_ENV
+            echo "Web version is ${{ inputs.version }} from input"
+            echo "WEB_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
           fi
 
       - name: Get Framework and Auth versions
@@ -157,7 +153,7 @@ jobs:
       - name: Download Web zip
         working-directory: rpm/web-downloads
         run: |
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/web/${{ inputs.product_name }}-web-${{ inputs.web-version }}.zip
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/web/${{ inputs.product_name }}-web-${{ env.WEB_VERSION }}.zip
 
       - name: Bundle the server zips
         working-directory: rpm/downloads
