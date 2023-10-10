@@ -43,8 +43,8 @@ env:
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
-  build:
-    runs-on: [ appdev-selfhosted ]
+  build-server:
+    runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -56,13 +56,6 @@ jobs:
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
-
-      - name: Configure Node
-        uses: actions/setup-node@v2
-        with:
-          node-version: 16.x
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
 
       - name: Restore gradle.properties and setup
         env:
@@ -148,6 +141,39 @@ jobs:
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+
+  build-web:
+    runs-on: [ appdev-selfhosted-al2023 ]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}
+
+      - name: Configure Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
+
+      - name: Restore gradle.properties and setup
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          sudo chmod +x ./gradlew
+          sudo chmod +x ./server/jvm/gradlew
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
 
       - name: Check file existence
         id: web_exists
