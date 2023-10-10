@@ -25,6 +25,16 @@ on:
         required: false
         default: '11'
         type: string
+      use-artifactory-cache:
+        type: boolean
+        description: Use to the Artifactory cache
+        default: false
+        required: false
+      push-to-artifactory-cache:
+        type: boolean
+        description: Push to the Artifactory cache
+        default: false
+        required: false
 
     secrets:
       GRADLE_PROPERTIES:
@@ -85,7 +95,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --stacktrace
+          arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./server/jvm
           cache-disabled: true
 
@@ -185,7 +195,7 @@ jobs:
         if: steps.web_exists.outputs.web_exists
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
+          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./
           cache-disabled: true
 
