@@ -166,6 +166,12 @@ jobs:
           node-version: 16.x
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: 'adopt'
 
       - name: Restore gradle.properties and setup
         shell: bash
