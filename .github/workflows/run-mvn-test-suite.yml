@@ -82,3 +82,11 @@ jobs:
         SLACK_TITLE: ❌ ${{ github.workflow }} failed
         SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
         SLACK_CHANNEL: ${{ inputs.slack-channel }}
+    - name: Notify success on Slack
+      uses: bryannice/gitactions-slack-notification@2.0.0
+      if: success()
+      env:
+        SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: ✅ ${{ github.workflow }} passed
+        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+        SLACK_CHANNEL: ${{ inputs.slack-channel }}
