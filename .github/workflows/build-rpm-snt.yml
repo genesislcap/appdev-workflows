@@ -45,11 +45,19 @@ on:
         required: false
         type: string
         description: Optional nginx override
+      success-slack-channel:
+        required: false
+        type: string
+      failure-slack-channel:
+        required: false
+        type: string
     secrets:
       JFROG_USERNAME:
         required: true
       JFROG_PASSWORD:
         required: true
+      SLACK_WEBHOOK:
+        required: false
 
 env:
   JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
@@ -223,3 +231,21 @@ jobs:
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && inputs.failure-slack-channel
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ RPM build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: ❌ The RPM build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ inputs.failure-slack-channel }}
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && inputs.success-slack-channel
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ RPM build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: ✅ The RPM build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ inputs.success-slack-channel }}
