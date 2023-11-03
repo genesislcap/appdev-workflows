@@ -33,6 +33,12 @@ on:
       skip_tests:
         required: false
         type: string
+      success-slack-channel:
+        required: false
+        type: string
+      failure-slack-channel:
+        required: false
+        type: string
 
 
     secrets:
@@ -42,10 +48,12 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
+      SLACK_WEBHOOK:
+        required: false
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-    
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -55,41 +63,41 @@ jobs:
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
     runs-on: appdev-selfhosted
-    
+
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Set up JDK 11
         uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
           cache: 'maven'
-          
+
       - name: Env Set-Up
         run: |
-             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV 
-             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV                                                               
-             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV                                         
+             echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "REPO_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f2 | xargs)" >> $GITHUB_ENV
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
              echo "PRODUCT_BASE=$(readlink -f $(find . -name pom.xml) | rev | cut -c9- | rev | sort -n | head -n 1)" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-$(git tag)-bin.zip" >> $GITHUB_ENV
- 
+
       - name: Env Setup
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' || inputs.branch == '0.0.0' }}
         run: |
              echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-server-${{ inputs.branch }}-bin.zip" >> $GITHUB_ENV
-             
+
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-              
+
       - name: Env Setup for VERSION if module_name is present
         if: ${{ inputs.module_name }}
         run: |
               echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
-      
+
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
         with:
@@ -97,7 +105,7 @@ jobs:
           plugin_repositories: '[{ "id": "maven-central", "name": "Maven central", "url": "https://repo1.maven.org/maven2/" },{ "id": "genesis-repo", "name": "genesis-repo", "url": "https://genesisglobal.jfrog.io/genesisglobal/dev-repo", "snapshots": {"enabled": "true", "updatePolicy": "always"}} ]'
           servers: '[{ "id": "genesis-repo", "username": "${{ secrets.JFROG_USERNAME }}", "password": "${{ secrets.JFROG_PASSWORD }}", "filePermissions": "664", "directoryPermissions": "775" }]'
           active_profiles: '["github"]'
-          
+
       - name: 'Publish'
         run: |
           cat /home/ec2-user/.m2/settings.xml | base64
@@ -111,9 +119,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
             ${{ runner.os }}-
-     
-               
-      - name: set version 
+
+
+      - name: set version
         run: |
            source ~/.bashrc
            if [ -z "${{ inputs.build_path }}" ]; then
@@ -128,7 +136,7 @@ jobs:
            else
                mvn versions:set -DnewVersion=${{ env.VERSION }} ${{ inputs.mvn_options }}
            fi
-           
+
       - name: Build
         if: ${{ inputs.skip_tests != 'true' }}
         run: |
@@ -141,7 +149,7 @@ jobs:
            else
                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }}
            fi
-           
+
       - name: Build
         if: ${{ inputs.skip_tests == 'true' }}
         run: |
@@ -155,23 +163,40 @@ jobs:
                JAVA_TOOL_OPTIONS="-Xmx8192m" mvn -s ~/.m2/settings.xml  package ${{ inputs.mvn_options }} -DskipTests=true
            fi
 
-      - name: Publish to Artifactory 
+      - name: Publish to Artifactory
         run: |
-           if [ -z "${{ inputs.artifact_product_name }}" ]; then           
+           if [ -z "${{ inputs.artifact_product_name }}" ]; then
               cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/" -T *.zip
-            
+
               cd ${{ env.PRODUCT_BASE }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
             else
               cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/" -T *.zip
-            
+
               cd ${{ env.PRODUCT_BASE }}/
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
             fi
-            
-            
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && inputs.failure-slack-channel
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: ❌ The server build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ inputs.failure-slack-channel }}
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && inputs.success-slack-channel
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: ✅ The server build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ inputs.success-slack-channel }}
+
 #      - name: Depcheck
  #       uses: dependency-check/Dependency-Check_Action@1.0.0
   #      id: Depcheck
