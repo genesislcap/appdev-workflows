@@ -10,6 +10,9 @@ on:
       profile:
         required: false
         type: string
+      options:
+        required: false
+        type: string
       test-root-path:
         required: true
         type: string
@@ -41,7 +44,7 @@ jobs:
     - name: Run mvn
       shell: bash
       run: |
-        MVN_OPTIONS=""
+        MVN_OPTIONS="${{ inputs.options }}"
         if [ -n "${{ inputs.profile }}" ]; then
           MVN_OPTIONS="$MVN_OPTIONS -P ${{ inputs.profile }}"
         fi
