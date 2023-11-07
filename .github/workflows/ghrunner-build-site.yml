@@ -31,6 +31,8 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
+      SLACK_WEBHOOK:
+        required: false
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -247,3 +249,21 @@ jobs:
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
           echo "::set-output name=uploaded_rpm_name::$uploaded_rpm_name"
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Site build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Site build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications

@@ -11,7 +11,7 @@ on:
       product_name:
         required: false
         type: string
-        
+
     secrets:
       JFROG_USERNAME:
         required: true
@@ -22,10 +22,12 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: true
       GPR_READ_TOKEN:
-        required: true        
+        required: true
       GRADLE_PROPERTIES:
         required: true
-    
+      SLACK_WEBHOOK:
+        required: false
+
 env:
   REPO_NAME: ${{ inputs.repo_name }}
 
@@ -49,7 +51,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-          
+
       - name: Bootstrap
         working-directory: ./client
         run: npm run bootstrap
@@ -62,33 +64,33 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-    
+
       - name: Run ESLint
         working-directory: ./client
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
-        
+
       - name: Upload lint artifact
         uses: actions/upload-artifact@v2
         with:
           name: Lint errors
           path: lint-output.txt
-          
+
       - name: Env Set-Up
         run:  |
-             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV 
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
-            
+
       - name: Env Setup for nightly build
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
         run:  |
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-              
+
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-      
-            
+
+
       - name: Package and Publish
         run:  |
               echo "Package:"
@@ -102,4 +104,21 @@ jobs:
               echo ${{ env.OUTPUT }}
               ls | grep zip
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
- 
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Web build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Web build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
