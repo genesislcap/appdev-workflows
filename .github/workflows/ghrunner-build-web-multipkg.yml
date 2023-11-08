@@ -15,7 +15,7 @@ on:
       product_name:
         required: false
         type: string
-        
+
     secrets:
       JFROG_USERNAME:
         required: true
@@ -29,10 +29,12 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: false
-    
+      SLACK_WEBHOOK:
+        required: false
+
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-    
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -43,11 +45,11 @@ jobs:
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
     runs-on: appdev-selfhosted
-    
+
     strategy:
       matrix:
         node-version: [16.x]
-    
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -65,12 +67,12 @@ jobs:
         run:  |
               echo "VERSION=${{ inputs.branch }}" >> $GITHUB_ENV
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-              
+
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-              
+
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
@@ -88,7 +90,7 @@ jobs:
                      echo $combined
                  fi
                done
-              echo "sonar.sources="$combined >> sonar-project.properties     
+              echo "sonar.sources="$combined >> sonar-project.properties
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
 
@@ -106,23 +108,23 @@ jobs:
           npm config set @genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
           npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_authToken=${{secrets.JFROG_NPM_AUTH_TOKEN}}
           npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true
-          
+
       - name: Bootstrap
         run: |
           npm config list
-          npm run bootstrap         
-      
+          npm run bootstrap
+
       - name: Build
-        run: npm run build      
-      
+        run: npm run build
+
       - name: Lint Check
         run: |
           echo "LINT_CHECK=$(grep -Fxq "lint" package.json; echo $?)" >> $GITHUB_ENV
-    
+
       - name: Run ESLint
-        if: ${{env.LINT_CHECK==1 }} 
+        if: ${{env.LINT_CHECK==1 }}
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
-        
+
       - name: Upload lint artifact
         uses: actions/upload-artifact@v2
         with:
@@ -145,7 +147,7 @@ jobs:
                      ls -lart ${{ env.PRODUCT_BASE }}/web/$i
                  fi
                done
-               
+
               cd ${{ env.PRODUCT_BASE }}/web/
               zip -r ${{ env.PRODUCT_BASE }}/${{ env.OUTPUT }} *
               cd ${{ env.PRODUCT_BASE }}
@@ -153,4 +155,20 @@ jobs:
               ls -larth
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
 
-      
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Web build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Web build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications

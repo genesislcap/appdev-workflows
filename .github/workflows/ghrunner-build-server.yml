@@ -33,13 +33,6 @@ on:
       skip_tests:
         required: false
         type: string
-      success-slack-channel:
-        required: false
-        type: string
-      failure-slack-channel:
-        required: false
-        type: string
-
 
     secrets:
       JFROG_USERNAME:
@@ -181,21 +174,21 @@ jobs:
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
-        if: failure() && inputs.failure-slack-channel
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
-          SLACK_MESSAGE: ❌ The server build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.failure-slack-channel }}
+          SLACK_TITLE: ❌ Server build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Server build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
       - name: Notify success on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
-        if: success() && inputs.success-slack-channel
+        if: success() && env.SLACK_INCOMING_WEBHOOK
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
-          SLACK_MESSAGE: ✅ The server build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.success-slack-channel }}
+          SLACK_TITLE: ✅ Server build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Server build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
 #      - name: Depcheck
  #       uses: dependency-check/Dependency-Check_Action@1.0.0

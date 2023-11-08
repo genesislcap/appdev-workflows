@@ -47,6 +47,8 @@ on:
         required: true
       GPR_READ_TOKEN:
         required: true
+      SLACK_WEBHOOK:
+        required: false
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -152,6 +154,24 @@ jobs:
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
@@ -166,7 +186,7 @@ jobs:
           node-version: 16.x
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
-      
+
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -211,3 +231,21 @@ jobs:
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Web build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: The web build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Web build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: The web build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
