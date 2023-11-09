@@ -19,13 +19,13 @@ on:
         required: true
       JFROG_PASSWORD:
         required: true
-      GITHUB_TOKEN1:
+      JENKINS_SECURITYTOKEN :
         required: false
 
 env:
   JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
   JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}  
-  GITHUB_TOKEN2: ${{ secrets.GITHUB_TOKEN1 }}
+  JENKINS_SECURITYTOKEN : ${{ secrets.JENKINS_SECURITYTOKEN  }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -41,7 +41,7 @@ jobs:
           repository: genesislcap/appdev-workflows
           fetch-depth: 2
           ref: DCD-966
-          token: ${{ secrets.GITHUB_TOKEN1 }}
+          token: ${{ secrets.JENKINS_SECURITYTOKEN  }}
          
 
       
