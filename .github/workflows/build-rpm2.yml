@@ -40,7 +40,7 @@ jobs:
         with:
           repository: genesislcap/appdev-workflows
           fetch-depth: 2
-          ref: DCD-966
+          ref: develop
           token: ${{ secrets.JENKINS_SECURITYTOKEN  }}
          
 
