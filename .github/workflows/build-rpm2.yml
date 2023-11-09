@@ -1,0 +1,47 @@
+# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+name: Build RPM
+
+on:
+  workflow_call:
+    outputs:
+      rpm_name:
+        description: "The first output string"
+        value: ${{ jobs.build.outputs.rpm_name }}
+    inputs:
+     
+      genesis-user:
+        required: true
+        type: string
+        description: User to login as when installed
+      
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      GITHUB_TOKEN1:
+        required: false
+
+env:
+  JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+  JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}  
+  GITHUB_TOKEN2: ${{ secrets.GITHUB_TOKEN1 }}
+
+# A workflow run is called from the devops appdev-workflow repos
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
+    steps:
+      
+      - name: Grab spec file
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/appdev-workflows
+          fetch-depth: 2
+          ref: DCD-966
+          token: ${{ secrets.GITHUB_TOKEN1 }}
+         
+
+      
