@@ -10,6 +10,7 @@ on:
       profile:
         required: false
         type: string
+        default: ""
       options:
         required: false
         type: string
@@ -71,6 +72,7 @@ jobs:
         gh_pages: gh-pages
         allure_report: allure-report
         allure_history: allure-history
+        subfolder: ${{ inputs.profile }}
     - name: Deploy report to Github Pages
       if: always()
       uses: peaceiris/actions-gh-pages@v3
@@ -83,7 +85,7 @@ jobs:
       env:
         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_TITLE: ❌ ${{ github.workflow }} failed
-        SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+        SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/${{ inputs.profile }}
         SLACK_CHANNEL: ${{ inputs.slack-channel }}
     - name: Notify success on Slack
       uses: bryannice/gitactions-slack-notification@2.0.0
@@ -91,5 +93,5 @@ jobs:
       env:
         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_TITLE: ✅ ${{ github.workflow }} passed
-        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/${{ inputs.profile }}
         SLACK_CHANNEL: ${{ inputs.slack-channel }}
