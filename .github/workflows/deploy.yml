@@ -31,11 +31,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: develop
+          ref: DCD-971
 
       - name: Env Set-Up
         run: |
-          git checkout develop
+          git checkout DCD-971
           git pull
           echo "Checking out the required TF and ansible scripts- per run"
           /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
