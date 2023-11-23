@@ -49,6 +49,8 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: false
+      JFROG_NPM_AUTH_TOKEN:
+        required: false
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -186,6 +188,15 @@ jobs:
           node-version: 16.x
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
+
+      - name: 'Create .npmrc'
+        shell: bash
+        run: |
+          npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+          echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
       - name: Set up JDK
         uses: actions/setup-java@v2
