@@ -145,6 +145,7 @@ jobs:
           ./gradlew tasks | grep install- | cut -d " " -f1 | xargs ./gradlew
           cd .genesis-home
           pwd
+          sudo chmod -R +rx /server/jvm/
           ls -la
           tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
 
@@ -216,6 +217,8 @@ jobs:
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/jvm/gradlew
+          sudo chmod -R +rx /server/jvm/
+
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
