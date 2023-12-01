@@ -226,7 +226,7 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
+          test -d client && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
 
       - name: Client Build
         if: steps.web_exists.outputs.web_exists
@@ -238,7 +238,7 @@ jobs:
 
       - name: Upload Client Package
         if: inputs.upload && steps.web_exists.outputs.web_exists
-        working-directory: client/web/build/distributions
+        working-directory: client/build/distributions
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
