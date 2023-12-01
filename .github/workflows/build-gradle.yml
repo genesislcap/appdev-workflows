@@ -232,7 +232,7 @@ jobs:
         if: steps.web_exists.outputs.web_exists
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :client:web:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :client:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./
           cache-disabled: true
 
