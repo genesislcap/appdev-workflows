@@ -245,12 +245,12 @@ jobs:
           fi
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
           CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
-          echo "::set-output name=modified-location2::${CLIENT_BUILD_LOCATION}"
+          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
 
       - name: Client Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :${{ steps.modify_location.outputs.modified-location2 }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :${{ steps.modify_location.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./
           cache-disabled: true
 
