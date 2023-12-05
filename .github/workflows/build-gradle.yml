@@ -42,6 +42,7 @@ on:
       client-build-location:
         required: false
         type: string
+        default: 'client/web'
 
     secrets:
       GRADLE_PROPERTIES:
@@ -237,11 +238,18 @@ jobs:
         run: |
           test -d ${{ inputs.client-build-location }} && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
 
+      - name: Modify Client Build Location
+        id: modify_location
+        run: |
+          CLIENT_BUILD_LOCATION="${{ inputs.client-build-location }}"
+          CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
+          echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
+
       - name: Client Build
         if: steps.web_exists.outputs.web_exists
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :${{ inputs.client-build-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :${{ steps.modify_location.outputs.modified-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./
           cache-disabled: true
 
