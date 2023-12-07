@@ -161,6 +161,7 @@ jobs:
       - name: Bundle the server zips
         working-directory: rpm/downloads
         run: |
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
           ls -la
           for zip_file in *.zip; do
             if [ -f "$zip_file" ]; then
@@ -173,12 +174,13 @@ jobs:
             fi
           done
           echo "Zipping package"
-          tar cf server-${{ inputs.version }}.tar.gz *
-          mv server-${{ inputs.version }}.tar.gz ../
+          tar cf server-$VERSION.tar.gz *
+          mv server-$VERSION.tar.gz ../
 
       - name: Bundle the web zip
         working-directory: rpm/web-downloads
         run: |
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
           ls -la
           unzip -q *web*.zip
           rm *.zip
@@ -187,24 +189,19 @@ jobs:
             cp "${GITHUB_WORKSPACE}/base-repo/${{ inputs.nginx-conf }}" ./nginx.conf
           fi
           echo "Zipping package"
-          tar cf web-${{ inputs.version }}.tar.gz *
+          tar cf web-$VERSION.tar.gz *
           ls -al
           echo "Unzipping tar as a test"
-          tar xf web-${{ inputs.version }}.tar.gz
+          tar xf web-$VERSION.tar.gz
           mv *.tar.gz ../
 
       - name: Build RPM
         working-directory: rpm
         run: |
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
           ls -al
           rm -rf web-downloads downloads
-          if [ -z "${{ inputs.version }}" ];
-          then
-            sed -i "s/Version://g" product.spec
-            sed -i "s/1.0.0//g" product.spec
-          else
-            sed -i "s/1.0.0/${{ inputs.version }}/g" product.spec
-          fi
+          sed -i "s/1.0.0/$VERSION/g" product.spec
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
           sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
