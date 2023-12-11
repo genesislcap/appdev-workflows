@@ -233,9 +233,17 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          test -d client/web && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
-          test -d client && echo "client_folder_exists=true" >> $GITHUB_ENV || echo "client_folder_exists=false" >> $GITHUB_ENV
+          if test -d client/web; then
+            echo "web_exists=true" >> $GITHUB_ENV
+          else
+            echo "web_exists=false" >> $GITHUB_ENV
+          fi
 
+          if test -d client; then
+            echo "client_folder_exists=true" >> $GITHUB_ENV
+          else
+            echo "client_folder_exists=false" >> $GITHUB_ENV
+          fi
       - name: Modify Client Build Location
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         id: modify_location
