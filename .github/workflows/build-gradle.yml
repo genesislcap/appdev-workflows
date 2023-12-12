@@ -7,6 +7,9 @@ on:
       branch:
         required: false
         type: string
+      repo-name:
+        required: false
+        type: string
       product_name:
         required: true
         type: string
@@ -100,7 +103,11 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
           sudo chmod -R +rx ./server/jvm/
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
@@ -227,7 +234,11 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
 
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
