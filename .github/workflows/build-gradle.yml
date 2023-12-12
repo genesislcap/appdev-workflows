@@ -103,7 +103,11 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
           sudo chmod -R +rx ./server/jvm/
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
@@ -165,8 +169,8 @@ jobs:
         working-directory: server/jvm/${{ inputs.product_name }}-distribution/build/distributions/
         run: |
           echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo-name || env.REPO_NAME }}/server/" -T genesisproduct*.zip
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo-name || env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
@@ -175,7 +179,7 @@ jobs:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.repo-name || env.REPO_NAME }}-build-notifications
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
       - name: Notify success on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
@@ -184,7 +188,7 @@ jobs:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.repo-name || env.REPO_NAME }}-build-notifications
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
@@ -230,7 +234,11 @@ jobs:
           sudo chmod +x ./server/jvm/gradlew
 
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          echo "REPO_NAME=$(echo "${{ github.event.repository.name }}" | cut -d"-" -f1)" >> $GITHUB_ENV
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
@@ -260,8 +268,8 @@ jobs:
         if: inputs.upload && steps.web_exists.outputs.web_exists
         working-directory: ${{ inputs.client-build-location }}/build/distributions
         run: |
-          mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ inputs.repo-name || env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.repo-name || env.REPO_NAME }}/web/" -T *.zip
+          mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
@@ -270,7 +278,7 @@ jobs:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ❌ Web build for ${{ inputs.product_name }} failed
           SLACK_MESSAGE: The web build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.repo-name || env.REPO_NAME }}-build-notifications
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
       - name: Notify success on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
@@ -279,4 +287,4 @@ jobs:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ✅ Web build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The web build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
-          SLACK_CHANNEL: ${{ inputs.repo-name || env.REPO_NAME }}-build-notifications
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
