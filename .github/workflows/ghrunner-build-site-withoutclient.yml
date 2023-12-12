@@ -166,7 +166,7 @@ jobs:
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
-               unzip \*.zip
+               unzip -o \*.zip
                if [ -n "${{ inputs.nginx-conf }}" ]; then
                  cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" ./nginx.conf
                fi
