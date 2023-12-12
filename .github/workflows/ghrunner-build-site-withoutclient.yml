@@ -74,10 +74,6 @@ jobs:
 
               echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
-              if [ -z "${{ env.SERVER_VERSION }}" ]; then
-                  echo "SERVER_VERSION=${{ env.VERSION }}" >> $GITHUB_ENV
-              if [ -z "${{ env.WEB_VERSION }}" ]; then
-                  echo "WEB_VERSION=${{ env.VERSION }}" >> $GITHUB_ENV                  
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
 
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
@@ -105,11 +101,7 @@ jobs:
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
-             if [ -d "${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src/*site-specific*" ]; then
-                cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
-             else
-                cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}
-             fi
+             cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
              zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
              echo $(pwd)
              ls -a
