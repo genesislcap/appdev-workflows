@@ -76,8 +76,10 @@ jobs:
               echo "SERVER_VERSION=$(grep "server_version" $(find  . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               if [ -z "${{ env.SERVER_VERSION }}" ]; then
                   echo "SERVER_VERSION=${{ env.VERSION }}" >> $GITHUB_ENV
+              fi
               if [ -z "${{ env.WEB_VERSION }}" ]; then
                   echo "WEB_VERSION=${{ env.VERSION }}" >> $GITHUB_ENV                  
+              fi
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
 
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
