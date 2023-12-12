@@ -101,7 +101,11 @@ jobs:
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
-             cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             if [ -d "${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src/*site-specific*" ]; then
+                cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             else
+                ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/
+             fi
              zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
              echo $(pwd)
              ls -a
