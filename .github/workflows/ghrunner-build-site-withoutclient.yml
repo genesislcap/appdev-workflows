@@ -62,6 +62,11 @@ jobs:
 
       - name: Environment Variables
         run: |
+              echo "$(git config --get remote.origin.url )"
+              echo "$(git config --get remote.origin.url | cut -d"." -f2)"
+              echo "$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 )"
+              echo "$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 |cut -d"-" -f1 )"
+              echo "$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 |cut -d"-" -f1 | cut -d"_" -f2)"
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
               echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-site-specific-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
               echo "VERSION=$(git describe --tags | cut -d"_" -f2)" >> $GITHUB_ENV
