@@ -238,7 +238,6 @@ jobs:
             CLIENT_BUILD_LOCATION="client"
           fi
           if test -d client/web; then
-            echo "web_exists=true" >> $GITHUB_OUTPUT
             CLIENT_BUILD_LOCATION="client/web"
           fi
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
