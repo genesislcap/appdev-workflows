@@ -233,14 +233,13 @@ jobs:
         id: web_exists
         working-directory: .
         run: |
-          if test -d client/web; then
-            echo "web_exists=true" >> $GITHUB_OUTPUT
-            CLIENT_BUILD_LOCATION="client/web"
-          fi
-
           if test -d client; then
             echo "client_folder_exists=true" >> $GITHUB_OUTPUT
             CLIENT_BUILD_LOCATION="client"
+          fi
+          if test -d client/web; then
+            echo "web_exists=true" >> $GITHUB_OUTPUT
+            CLIENT_BUILD_LOCATION="client/web"
           fi
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
           CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
