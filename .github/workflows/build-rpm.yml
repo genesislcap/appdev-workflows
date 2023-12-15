@@ -154,7 +154,12 @@ jobs:
         run: |
           cd ~/rpmbuild/SRPMS/
           ls -al
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/${{ inputs.artifactory_deploy_locations }}" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+          IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
+
+          # Iterate over the locations and deploy the RPMs
+          for location in "${locations[@]}"; do
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/$location" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
+          done
 
       - name: GET  RPM NAME
         id: upload-rpm
