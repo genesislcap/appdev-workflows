@@ -42,10 +42,6 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
-      client-build-location:
-        required: false
-        type: string
-        default: 'client/web'
 
     secrets:
       GRADLE_PROPERTIES:
@@ -243,30 +239,33 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/jvm/build.gradle.kts
 
+
       - name: Check file existence
         id: web_exists
         working-directory: .
         run: |
-          test -d ${{ inputs.client-build-location }} && echo "web_exists=true" >> $GITHUB_OUTPUT || exit 0
-
-      - name: Modify Client Build Location
-        id: modify_location
-        run: |
-          CLIENT_BUILD_LOCATION="${{ inputs.client-build-location }}"
-          CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
+          if test -d client; then
+            echo "client_folder_exists=true" >> $GITHUB_OUTPUT
+            CLIENT_BUILD_LOCATION="client"
+          fi
+          if test -d client/web; then
+            CLIENT_BUILD_LOCATION="client/web"
+          fi
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
+          CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
+          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
 
       - name: Client Build
-        if: steps.web_exists.outputs.web_exists
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :${{ steps.modify_location.outputs.modified-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: ./
           cache-disabled: true
 
       - name: Upload Client Package
-        if: inputs.upload && steps.web_exists.outputs.web_exists
-        working-directory: ${{ inputs.client-build-location }}/build/distributions
+        if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: ${{ steps.web_exists.outputs.modified-location }}/build/distributions
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
