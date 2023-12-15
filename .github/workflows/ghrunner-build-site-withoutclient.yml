@@ -75,6 +75,15 @@ jobs:
               echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
+      
+      
+      - name: Check server env var if empty set it to the tag version
+        run: |
+              if [ -z "${{ env.SERVER_VERSION }}" ]; then
+                  echo "SERVER_VERSION=${{ env.VERSION }}" >> $GITHUB_ENV
+              else
+                  echo "Server version present in product.yaml"
+              fi
 
       - name: Env Setup for PRODUCT_NAME for repos not following a conventions
         if: ${{ inputs.product_name }}
@@ -101,7 +110,11 @@ jobs:
       - name: Package + Deploy Site
         run: |
              sudo yum install zip
-             cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             if [ -d "${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src/site-specific" ]; then
+                cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/src
+             else
+                cd ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}
+             fi
              zip -r ${{ env.PRODUCT_BASE }}/${{ env.CLIENT_DIR }}/${{ env.OUTPUT }} site-specific/*
              echo $(pwd)
              ls -a
@@ -129,11 +142,13 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
              #download modules into server_downloads folder
 
-             cd snt
-             if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
-             wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
-             echo "this is the present directory: $(pwd)"
-             echo "LIST of FILES: $(ls -a)"
+             if [ -d "snt" ]; then 
+                 cd snt
+                 if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
+                 wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
+                 echo "this is the present directory: $(pwd)"
+                 echo "LIST of FILES: $(ls -a)"
+             fi
 
              if [ "${{ env.WEB_VERSION }}" == "" ]; then
                echo "Product Name: ${{ env.PRODUCT_NAME }}"
@@ -157,7 +172,7 @@ jobs:
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
-               unzip \*.zip
+               unzip -o \*.zip
                if [ -n "${{ inputs.nginx-conf }}" ]; then
                  cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" ./nginx.conf
                fi
@@ -165,7 +180,7 @@ jobs:
                cd ../server_downloads
              fi
              echo "displaying files in server_downloads folder: $(ls -a)"
-             unzip \*.zip
+             unzip -o \*.zip
              ls
              rm *.zip
              tar czvf /tmp/genesis_${{env.PRODUCT_NAME}}_package.tar.gz *
