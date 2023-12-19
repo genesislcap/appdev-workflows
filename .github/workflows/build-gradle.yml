@@ -213,6 +213,9 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
       - name: Set up JDK
         uses: actions/setup-java@v2
