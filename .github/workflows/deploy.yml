@@ -35,7 +35,7 @@ jobs:
 
       - name: Env Set-Up
         run: |
-          git checkout "DCD-1055"
+          git checkout DCD-1055
           git pull
           echo "Checking out the required TF and ansible scripts- per run"
           /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh DCD-1055 DCD-1055
