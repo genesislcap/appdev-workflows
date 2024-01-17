@@ -46,6 +46,10 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
+      working-directory:
+        type: string
+        default: .
+        required: false
 
     secrets:
       GRADLE_PROPERTIES:
@@ -85,6 +89,7 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        working-directory: "{{ inputs.working-directory }}"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -116,10 +121,11 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
-          build-root-directory: ./${{ inputs.server-path }}
+          build-root-directory: "{{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
       - name: Copy Test Reports
+        working-directory: "{{ inputs.working-directory }}"
         run: |
           for dir in /opt/actions-runner/_work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/${{ inputs.server-path }}/*/build/reports/tests/test/; do
             if [ -d "$dir" ]; then
@@ -135,14 +141,14 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-reports
-          path: test-results
+          path: "{{ inputs.working-directory }}/test-results"
 
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: ./
+          build-root-directory: "{{ inputs.working-directory }}/"
           cache-disabled: true
 
       - name: Docker Push Image
@@ -150,13 +156,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: ./
+          build-root-directory: "{{ inputs.working-directory }}/"
           cache-disabled: true
 
       - name: Create Giant Server Zip
         if: inputs.upload
         shell: bash
-        working-directory: ${{ inputs.server-path }}/
+        working-directory: "{{ inputs.working-directory }}/${{ inputs.server-path }}/"
         run: |
           ./gradlew tasks | grep install- | cut -d " " -f1 | xargs ./gradlew
           cd .genesis-home
@@ -166,7 +172,7 @@ jobs:
 
       - name: Upload Server Package
         if: inputs.upload
-        working-directory: ${{ inputs.server-path }}/${{ inputs.product_name }}-distribution/build/distributions/
+        working-directory: "{{ inputs.working-directory }}/${{ inputs.server-path }}/${{ inputs.product_name }}-distribution/build/distributions/"
         run: |
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
@@ -227,6 +233,7 @@ jobs:
           distribution: 'adopt'
 
       - name: Restore gradle.properties and setup
+        working-directory: "{{ inputs.working-directory }}"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -252,7 +259,7 @@ jobs:
 
       - name: Check file existence
         id: web_exists
-        working-directory: .
+        working-directory: "{{ inputs.working-directory }}"
         run: |
           if test -d client; then
             echo "client_folder_exists=true" >> $GITHUB_OUTPUT
@@ -270,12 +277,12 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
-          build-root-directory: ./
+          build-root-directory: "{{ inputs.working-directory }}/"
           cache-disabled: true
 
       - name: Upload Client Package
         if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
-        working-directory: ${{ steps.web_exists.outputs.modified-location }}/build/distributions
+        working-directory: "{{ inputs.working-directory }}/${{ steps.web_exists.outputs.modified-location }}/build/distributions"
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
