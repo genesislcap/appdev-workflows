@@ -37,6 +37,10 @@ on:
         required: false
         default: '11'
         type: string
+      upload:
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       JFROG_USERNAME:
@@ -119,6 +123,7 @@ jobs:
 
 
       - name: set version
+        if: inputs.upload
         run: |
            source ~/.bashrc
            if [ -z "${{ inputs.build_path }}" ]; then
@@ -161,6 +166,7 @@ jobs:
            fi
 
       - name: Publish to Artifactory
+        if: inputs.upload
         run: |
            if [ -z "${{ inputs.artifact_product_name }}" ]; then
               cd ${{ env.PRODUCT_BASE }}/${{ inputs.artifact_location }}/
