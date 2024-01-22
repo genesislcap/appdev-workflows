@@ -146,7 +146,7 @@ jobs:
               pwd
               echo ${{ env.OUTPUT }}
               ls -lrt
-              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.PRODUCT_NAME }}" -T ${{ env.OUTPUT }} -v
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
