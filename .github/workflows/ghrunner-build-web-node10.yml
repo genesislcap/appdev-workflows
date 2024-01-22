@@ -72,6 +72,7 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+              echo "OUTPUT=${{ inputs.product_name }}-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV 
 
       - name: Sonar Setup
         run:  |
