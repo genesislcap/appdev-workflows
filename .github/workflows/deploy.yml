@@ -38,7 +38,7 @@ jobs:
           git checkout DCD-1055
           git pull
           echo "Checking out the required TF and ansible scripts- per run"
-          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh f/DCD-1055 f/DCD-1055
+          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
           ls -larth
           ls -larth ~/selfserve
           rm -rf ~/selfserve/scripts/config
