@@ -108,22 +108,16 @@ jobs:
           rm genesis_*.tar.gz
           if ls *octopus-config*.zip 1> /dev/null 2>&1; then
             echo "Detected octopus-config override, using that one"
-
             rm -rf site-specific
-
-
 
             mkdir site-specific
 
             echo A | unzip -q *octopus-config*.zip -d site-specific
 
-
             clientdistribution=${{ inputs.site-clientdistribution }}
             cd site-specific/
             ls -al
-
             cp -r "$clientdistribution" site-specific/
-
 
             ls -l site-specific | grep '^d' | wc -l
 
