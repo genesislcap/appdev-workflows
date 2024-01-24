@@ -122,11 +122,13 @@ jobs:
             ls -l site-specific | grep '^d' | wc -l
 
             find . -mindepth 1 -maxdepth 1 -type d ! -name "site-specific" -exec rm -rf {} +
+            ls -al
             echo "Processing complete"
           fi
 
           cd ..
-
+          echo "Removing zip files"
+          rm *.zip
           echo "Zipping package"
           tar cf server-$VERSION.tar.gz *
           ls -al
