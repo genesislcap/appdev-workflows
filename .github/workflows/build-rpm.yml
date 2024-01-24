@@ -125,7 +125,7 @@ jobs:
 
             find . -mindepth 1 -maxdepth 1 -type d ! -name "site-specific" -exec rm -rf {} +
 
-            rm *.zip
+
 
             echo "Processing complete"
           fi
