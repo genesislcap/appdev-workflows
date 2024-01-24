@@ -113,13 +113,9 @@ jobs:
 
             echo A | unzip -q *octopus-config*.zip
 
-            mkdir site-specific
-
             clientdistribution=${{ inputs.site-clientdistribution }}
 
             cp -r "$clientdistribution"/* site-specific/
-
-            ls -l site-specific | grep '^d' | wc -l
 
             find . -mindepth 1 -maxdepth 1 -type d ! -name "site-specific" -exec rm -rf {} +
 
