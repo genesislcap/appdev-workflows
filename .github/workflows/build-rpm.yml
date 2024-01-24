@@ -30,6 +30,10 @@ on:
         required: false
         type: string
         description: Optional site-specific override
+      site-clientdistribution:
+        required: false
+        type: string
+        description: Optional
       genesis-user:
         required: true
         type: string
@@ -102,13 +106,26 @@ jobs:
           ls -al
           tar xf genesis_*.tar.gz
           rm genesis_*.tar.gz
-          if ls *site-specific*.zip 1> /dev/null 2>&1; then
-            echo "Detected site-specific override, using that one"
+          if ls *octopus-config*.zip 1> /dev/null 2>&1; then
+            echo "Detected octopus-config override, using that one"
+
             rm -rf site-specific
-            echo A | unzip -q *-site-specific-*.zip
-            echo "Removing zip files"
+
+            echo A | unzip -q *-octopus-config-*.zip
+
+            mkdir site-specific
+
+            clientdistribution=${{ inputs.site-clientdistribution }}
+
+            cp -r "$clientdistribution"/* site-specific/
+
+            find . -mindepth 1 -maxdepth 1 -type d ! -name "site-specific" -exec rm -rf {} +
+
             rm *.zip
-          fi
+
+            echo "Processing complete"
+        fi
+
           echo "Zipping package"
           tar cf server-$VERSION.tar.gz *
           ls -al
