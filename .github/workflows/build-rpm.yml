@@ -119,12 +119,12 @@ jobs:
 
 
             clientdistribution=${{ inputs.site-clientdistribution }}
-
+            cd site-specific/
             cp -r "$clientdistribution"/* site-specific/
 
             ls -l site-specific | grep '^d' | wc -l
 
-            cd site-specific/
+
 
             find . -mindepth 1 -maxdepth 1 -type d ! -name "site-specific" -exec rm -rf {} +
 
