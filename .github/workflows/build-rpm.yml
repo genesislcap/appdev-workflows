@@ -111,9 +111,12 @@ jobs:
 
             rm -rf site-specific
 
-            echo A | unzip -q *octopus-config*.zip
+
 
             mkdir site-specific
+
+            echo A | unzip -q *octopus-config*.zip -d site-specific
+
 
             clientdistribution=${{ inputs.site-clientdistribution }}
 
