@@ -124,7 +124,7 @@ jobs:
             rm *.zip
 
             echo "Processing complete"
-        fi
+          fi
 
           echo "Zipping package"
           tar cf server-$VERSION.tar.gz *
