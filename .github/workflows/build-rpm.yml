@@ -117,7 +117,7 @@ jobs:
             clientdistribution=${{ inputs.site-clientdistribution }}
             cd site-specific/
             ls -al
-            cp -r "$clientdistribution" site-specific/
+            cp -r "$clientdistribution" .
 
             ls -l site-specific | grep '^d' | wc -l
 
