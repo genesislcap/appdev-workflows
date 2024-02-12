@@ -50,6 +50,10 @@ on:
         type: string
         default: .
         required: false
+      server-gradle-arguments:
+        type: string
+        description: Additional arguments/properties to be passed to the server gradle build command
+        required: false
 
     secrets:
       GRADLE_PROPERTIES:
@@ -120,7 +124,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
