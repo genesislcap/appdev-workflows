@@ -25,6 +25,10 @@ on:
         required: false
         type: boolean
         default: true
+      browser:
+        required: false
+        type: string
+        default: chrome-headless
 
     secrets:
       PAGES_TOKEN:
@@ -54,7 +58,7 @@ jobs:
           MVN_OPTIONS="$MVN_OPTIONS -P ${{ inputs.profile }}"
         fi
         cd ${{ inputs.test-root-path }}
-        command="mvn clean test $MVN_OPTIONS -Dbrowser=chrome-headless"
+        command="mvn clean test $MVN_OPTIONS -Dbrowser=${{ inputs.browser }}"
 
         if $command | grep -q "There are test failures"; then
           exit 1
