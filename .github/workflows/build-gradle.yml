@@ -50,9 +50,13 @@ on:
         type: string
         default: .
         required: false
-      server-gradle-arguments:
+      server-build-gradle-arguments:
         type: string
         description: Additional arguments/properties to be passed to the server gradle build command
+        required: false
+      server-install-gradle-arguments:
+        type: string
+        description: Additional arguments/properties to be passed to the server gradle instal-* commands
         required: false
 
     secrets:
@@ -124,7 +128,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-gradle-arguments }}
+          arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
@@ -168,7 +172,7 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
         run: |
-          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-gradle-arguments }}
+          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-install-gradle-arguments }}
           cd .genesis-home
           pwd
           ls -la
