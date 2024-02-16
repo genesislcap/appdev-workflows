@@ -256,7 +256,7 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ❌ Site build for ${{ env.PRODUCT_NAME }} failed
-          SLACK_MESSAGE: The Site build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
       - name: Notify success on Slack
@@ -265,5 +265,5 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ✅ Site build for ${{ env.PRODUCT_NAME }} passed
-          SLACK_MESSAGE: The Site build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications

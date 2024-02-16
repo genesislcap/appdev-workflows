@@ -75,8 +75,8 @@ jobs:
               echo "WEB_VERSION=$(grep "web_version" $(find . -name product.yml) | awk -F ':' '{print $2}' | sed 's/ //g')" >> $GITHUB_ENV
               echo "SERVER_VERSION=$(grep "server_version" $(find  . -name product.yml) |  awk -F ':' '{print $2}'| sed 's/ //g')" >> $GITHUB_ENV
               echo "CLIENT_NAME=$([[ $(git describe --tags) = [A-Z]* ]] && echo $(git describe --tags | cut -d"_" -f1 | tr "[:upper:]" "[:lower:]") || echo genesis)" >> $GITHUB_ENV
-      
-      
+
+
       - name: Check server env var if empty set it to the tag version
         run: |
               if [ -z "${{ env.SERVER_VERSION }}" ]; then
@@ -142,7 +142,7 @@ jobs:
              wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/server/genesisproduct-"${{ env.PRODUCT_NAME }}"-"${{ env.SERVER_VERSION }}"-bin.zip
              #download modules into server_downloads folder
 
-             if [ -d "snt" ]; then 
+             if [ -d "snt" ]; then
                  cd snt
                  if [[ $(grep -c "genesis_modules" ./product.yml) -ge 1 ]]; then   echo "$(sed -e '1,/genesis_modules/d'  < ./product.yml | grep "^  - { ")" > /tmp/edited_product.yml;   while read line; do echo
                  wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" -P "${{env.PRODUCT_BASE}}"/server_downloads https://genesisglobal.jfrog.io/artifactory/product/$((grep -oP '(?<=name:).*?(?=,)' <<< $line)|awk '$1=$1')/server/genesisproduct-$((grep -oP '(?<=name:).*?(?=,)' <<< $line) | awk '$1=$1')-$((grep -oP '(?<=version: )[^ ]*' <<< $line)|awk '$1=$1' )-bin.zip ;   done < /tmp/edited_product.yml;   rm /tmp/edited_product.yml; fi
@@ -240,7 +240,7 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ❌ Site build for ${{ env.PRODUCT_NAME }} failed
-          SLACK_MESSAGE: The Site build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
       - name: Notify success on Slack
@@ -249,5 +249,5 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ✅ Site build for ${{ env.PRODUCT_NAME }} passed
-          SLACK_MESSAGE: The Site build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The Site build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications

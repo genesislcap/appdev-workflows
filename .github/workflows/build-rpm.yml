@@ -175,7 +175,7 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ❌ RPM build for ${{ inputs.product_name }} failed
-          SLACK_MESSAGE: The RPM build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The RPM build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ inputs.product_name }}-build-notifications
 
       - name: Notify success on Slack
@@ -184,5 +184,5 @@ jobs:
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TITLE: ✅ RPM build for ${{ inputs.product_name }} passed
-          SLACK_MESSAGE: The RPM build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
+          SLACK_MESSAGE: The RPM build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ inputs.product_name }}-build-notifications
