@@ -58,6 +58,11 @@ on:
         type: string
         description: Additional arguments/properties to be passed to the server gradle instal-* commands
         required: false
+      publish-to-artifactory:
+        type: boolean
+        description: Publish to artifactory libs-release-local or lib-release-client
+        default: false
+        required: false
 
     secrets:
       GRADLE_PROPERTIES:
@@ -104,6 +109,9 @@ jobs:
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
 
           echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
           echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
@@ -185,6 +193,14 @@ jobs:
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+
+      - name: Artifactory Publish
+        if: inputs.publish-to-artifactory
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
