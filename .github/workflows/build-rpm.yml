@@ -161,6 +161,18 @@ jobs:
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/$location" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
           done
 
+      - name: Upload RPMs to S3
+        run: |
+          cd ~/rpmbuild/SRPMS/
+          ls -al
+          IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
+          for location in "${locations[@]}"; do
+              aws s3 sync ~/rpmbuild/RPMS/noarch/ s3://cdservice-jenkins-backup/"$location"/
+          done
+        # env:
+        #   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        #   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
       - name: GET  RPM NAME
         id: upload-rpm
         run: |
