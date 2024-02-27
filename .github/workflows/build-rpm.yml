@@ -50,16 +50,10 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: false
-      AWS_ACCESS_KEY_ID:
-        required: false
-      AWS_SECRET_ACCESS_KEY:
-        required: false
 
 env:
   JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
   JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
-  # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -156,28 +150,14 @@ jobs:
           cd ~/rpmbuild/SOURCES/
           rpmbuild -bb product.spec
 
-      # - name: Upload RPM
-      #   run: |
-      #     cd ~/rpmbuild/SRPMS/
-      #     ls -al
-      #     IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
-
-      #     # Iterate over the locations and deploy the RPMs
-      #     for location in "${locations[@]}"; do
-      #         curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/$location" -T $HOME/rpmbuild/RPMS/noarch/*.rpm
-      #     done
-
       - name: Upload RPMs to S3
         run: |
           cd ~/rpmbuild/SRPMS/
           ls -al
           IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
           for location in "${locations[@]}"; do
-              aws s3 sync ~/rpmbuild/RPMS/noarch/ s3://product-rpms/"$location"/
+              aws s3 sync ~/rpmbuild/RPMS/noarch/ s3://product-rpms/"$location"
           done
-        # env:
-        #   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        #   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: GET  RPM NAME
         id: upload-rpm
