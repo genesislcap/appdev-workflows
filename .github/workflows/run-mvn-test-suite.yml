@@ -55,7 +55,7 @@ jobs:
     - name: Run mvn
       shell: bash
       run: |
-        export GENESIS_USER_PRIVATE_KEY=${{ secrets.GENESIS_USER_PRIVATE_KEY }}
+        export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"
         MVN_OPTIONS="${{ inputs.options }}"
         if [ -n "${{ inputs.profile }}" ]; then
           MVN_OPTIONS="$MVN_OPTIONS -P ${{ inputs.profile }}"
