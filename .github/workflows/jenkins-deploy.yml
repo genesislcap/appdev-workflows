@@ -57,6 +57,10 @@ on:
         required: false
         type: string
 
+      repotype:
+        required: false
+        type: string
+
     secrets:
       JENKINS_SECURITYTOKEN:
         required: true
@@ -88,4 +92,5 @@ jobs:
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.PRODUCT }}"
+            --data-urlencode "product=${{ inputs.PRODUCT }}" \
+            --data-urlencode "repotype=${{ inputs.repotype }}"
