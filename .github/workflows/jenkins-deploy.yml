@@ -92,5 +92,4 @@ jobs:
             --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.PRODUCT }}" \
-            --data-urlencode "repotype=${{ inputs.REPOTYPE }}"
+            --data-urlencode "product=${{ inputs.PRODUCT }}"
