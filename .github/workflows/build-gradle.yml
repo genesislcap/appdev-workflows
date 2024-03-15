@@ -86,7 +86,7 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-  DISTRIBUTION_DIR: ${{ inputs.distribution_path != '' && inputs.distribution_path || format('{0}-distribution', inputs.product_name) }}
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir != '' && inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
