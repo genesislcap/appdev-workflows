@@ -14,6 +14,9 @@ on:
         required: false
         type: string
         default: 'server/jvm'
+      distribution_dir:
+        required: false
+        type: string
       product_name:
         required: true
         type: string
@@ -82,6 +85,7 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -184,7 +188,7 @@ jobs:
           cd .genesis-home
           pwd
           ls -la
-          tar czvf ../${{ inputs.product_name }}-distribution/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+          tar czvf ../${{ env.DISTRIBUTION_DIR }}/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
 
       - name: Upload Server Package
         if: inputs.upload
