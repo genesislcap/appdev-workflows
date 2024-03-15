@@ -192,7 +192,7 @@ jobs:
 
       - name: Upload Server Package
         if: inputs.upload
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/${{ inputs.product_name }}-distribution/build/distributions/"
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/${{ env.DISTRIBUTION_DIR }}/build/distributions/"
         run: |
           echo "${{ env.REPO_NAME }}"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
