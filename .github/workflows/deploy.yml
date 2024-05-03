@@ -18,7 +18,7 @@ on:
         type: string
       ansible_branch:
         description: 'Branch name for services_ansible repo'
-        default: devops
+        default: master
         required: false
         type: string
 
