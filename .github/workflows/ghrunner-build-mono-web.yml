@@ -35,7 +35,7 @@ jobs:
 
   build:
     name: Steps to build mono repo artifact and upload it to jfrog
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
 
     strategy:
       matrix:

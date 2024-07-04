@@ -51,7 +51,7 @@ jobs:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
 
     steps:
       - uses: actions/checkout@v2

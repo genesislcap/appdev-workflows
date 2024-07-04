@@ -34,7 +34,7 @@ env:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
     strategy:
       matrix:
         node-version: [16.x]

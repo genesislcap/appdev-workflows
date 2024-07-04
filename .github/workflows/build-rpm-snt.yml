@@ -61,7 +61,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
     outputs:
       rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
     steps:

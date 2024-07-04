@@ -43,7 +43,7 @@ jobs:
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
 
     strategy:
       matrix:
