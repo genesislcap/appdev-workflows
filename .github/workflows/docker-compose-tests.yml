@@ -27,7 +27,7 @@ on:
 
 jobs:
   build:
-    runs-on: [ appdev-selfhosted ]
+    runs-on: [ appdev-selfhosted-al2023 ]
     env:
       genesisArtifactoryUser: ${{ secrets.JFROG_USERNAME }}
       genesisArtifactoryPassword: ${{ secrets.JFROG_PASSWORD }}
