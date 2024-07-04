@@ -68,7 +68,7 @@ on:
 jobs:
   build:
     name: Steps to trigger jenkins job
-    runs-on: appdev-selfhosted
+    runs-on: appdev-selfhosted-al2023
 
     steps:
 
