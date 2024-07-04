@@ -24,14 +24,14 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 
 %install
 cd $HOME
-mkdir -p rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64
-ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64
+mkdir -p rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
+ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
 pwd
-mkdir rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64/tmp
-ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64
-cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64/tmp/
-cp rpmbuild/SOURCES/web-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64/tmp/
-cd rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2.x86_64/tmp/
+mkdir rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp
+ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
+cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
+cp rpmbuild/SOURCES/web-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
+cd rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
 ls
 pwd
 
