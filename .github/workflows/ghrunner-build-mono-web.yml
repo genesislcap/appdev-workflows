@@ -75,8 +75,8 @@ jobs:
 
       - name: Env Set-Up
         run:  |
-          echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f3 | cut -d'-' -f1 | cut -d'_' -f2)" >> $GITHUB_ENV
-          echo "OUTPUT=$(git config --get remote.origin.url | cut -d'.' -f2 | cut -d'/' -f3 | cut -d'-' -f1 | cut -d'_' -f2)-web-$(git describe --tags | cut -d'_' -f2)_$(git describe --tags | cut -d'_' -f3).zip" >> $GITHUB_ENV
+              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
 
       - name: Env Setup for nightly build
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
