@@ -4,9 +4,7 @@ name: Run Maven test suite
 on:
   workflow_call:
     inputs:
-      branch:
-        required: false
-        type: string
+      
       profile:
         required: false
         type: string
@@ -29,6 +27,12 @@ on:
         required: false
         type: string
         default: chrome-headless
+      repo:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
 
     secrets:
       PAGES_TOKEN:
@@ -45,6 +49,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
+        repository: ${{ inputs.repo }}
         fetch-depth: '0'
         ref: ${{ inputs.branch }}
     - name: Set up JDK 11
