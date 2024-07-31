@@ -48,9 +48,7 @@ jobs:
     #   image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
     - uses: actions/checkout@v3
-      with:
-        repository: ${{ inputs.repo }}
-        token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+      with:        
         fetch-depth: '0'
         ref: ${{ inputs.branch }}
     # - name: Set up JDK 11
