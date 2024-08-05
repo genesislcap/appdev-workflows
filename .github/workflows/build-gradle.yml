@@ -198,10 +198,9 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      - name: Server Build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-        
+      - name: Server Build        
         uses: gradle/gradle-build-action@v2
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
         with:
           arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
