@@ -152,11 +152,11 @@ jobs:
           fi
           
       - name: Print gradle.properties
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-      #   run: |
-      #     echo "Contents of gradle.properties after modification:"
-      #     cat gradle.properties
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          echo "Contents of gradle.properties after modification:"
+          cat gradle.properties
           
       - name: Set up JDK
         uses: actions/setup-java@v2
