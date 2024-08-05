@@ -107,14 +107,14 @@ jobs:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - name: Checkout code
-        if: inputs.testautomation_build != 'true'
+        if: inputs.testautomation_build == 'false'
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}     
 
       - uses: actions/checkout@v3
-        if: inputs.testautomation_build
+        if: inputs.testautomation_build == 'true'
         with:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
@@ -251,10 +251,26 @@ jobs:
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - uses: actions/checkout@v3
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
+
+       - name: Checkout code
+        if: inputs.testautomation_build == 'false'
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch }}     
+
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build == 'true'
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
+
 
       - name: Configure Node
         uses: actions/setup-node@v2
