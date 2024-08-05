@@ -66,11 +66,11 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+
       testautomation_build:
         required: false
         default: false
         type: boolean
-
       testautorepo:
         required: true
         type: string
@@ -119,7 +119,7 @@ jobs:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
-          token: ${{ secrets.GHA_TOKEN }}
+          token: ${{ env.GHA_TOKEN }}
 
       - name: Set up JDK
         uses: actions/setup-java@v2
