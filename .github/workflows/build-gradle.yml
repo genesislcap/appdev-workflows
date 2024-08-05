@@ -106,15 +106,15 @@ jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code
-        if: inputs.testautomation_build == 'false'
+      - name: Checkout code      
+        if: ${{ !inputs.testautomation_build }}
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}     
 
       - uses: actions/checkout@v3
-        if: inputs.testautomation_build == 'true'
+        if: inputs.testautomation_build
         with:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
@@ -257,14 +257,14 @@ jobs:
       #     ref: ${{ inputs.branch }}
 
       - name: Checkout code
-        if: inputs.testautomation_build == 'false'
+        if: ${{ !inputs.testautomation_build }}
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}     
 
       - uses: actions/checkout@v3
-        if: inputs.testautomation_build == 'true'
+        if: inputs.testautomation_build
         with:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
