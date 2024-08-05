@@ -93,9 +93,12 @@ on:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
+      GHA_TOKEN:
+        required: true
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 # A workflow run is called from the devops appdev-workflow repos
@@ -114,6 +117,7 @@ jobs:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
+          token: ${{ secrets.GHA_TOKEN }}
 
       - name: Set up JDK
         uses: actions/setup-java@v2
