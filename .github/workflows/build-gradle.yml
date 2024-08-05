@@ -72,11 +72,15 @@ on:
         default: false
         type: boolean
       testautorepo:
-        required: true
+        required: false
         type: string
       testautobranch:
-        required: true
+        required: false
         type: string
+      GENESIS_VERSION:
+        required: false
+        type: string
+      
 
     secrets:
       GRADLE_PROPERTIES:
