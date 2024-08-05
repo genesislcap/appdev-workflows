@@ -66,6 +66,17 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+
+      testautorepo:
+        required: true
+        type: string
+      testautobranch:
+        required: true
+        type: string
 
     secrets:
       GRADLE_PROPERTIES:
@@ -92,10 +103,17 @@ jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
+
       - uses: actions/checkout@v3
+        if: inputs.testautomation_build
         with:
+          repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.testautobranch }}
 
       - name: Set up JDK
         uses: actions/setup-java@v2
