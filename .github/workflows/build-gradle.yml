@@ -121,6 +121,19 @@ jobs:
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
+      - name: Set genesisVersion in gradle.properties
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
+            sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
+          fi
+          
+      - name: Print gradle.properties
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          echo "Contents of gradle.properties after modification:"
+          cat gradle.properties
+          
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
