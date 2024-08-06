@@ -100,8 +100,6 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
 
       - name: Restore gradle.properties and setup
         env:
