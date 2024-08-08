@@ -82,6 +82,10 @@ on:
       NOTIFY_VERSION:
         required: false
         type: string
+      server-path:
+        required: false
+        type: string
+        default: 'server'
       
 
     secrets:
@@ -129,7 +133,7 @@ jobs:
 
       - name: Set genesisVersion in gradle.properties
         if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
         run: |
           if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
             sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
@@ -146,7 +150,7 @@ jobs:
           
       - name: Print gradle.properties
         if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
         run: |
           echo "Contents of gradle.properties after modification:"
           cat gradle.properties
