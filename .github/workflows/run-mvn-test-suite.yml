@@ -59,7 +59,7 @@ env:
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 jobs:
-  build Tests:
+  build-Tests:
     runs-on: [ appdev-selfhosted-al2023 ]
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
