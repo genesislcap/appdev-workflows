@@ -60,6 +60,30 @@ on:
         default: false
         required: false
 
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+      GENESIS_VERSION:
+        required: false
+        type: string
+      AUTH_VERSION:
+        required: false
+        type: string
+      GENESIS_NOTIFY:
+        required: false
+        type: string
+      NOTIFY_VERSION:
+        required: false
+        type: string
+      
+
     secrets:
       GRADLE_PROPERTIES:
         required: true
@@ -75,20 +99,57 @@ on:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
+      GHA_TOKEN:
+        required: true
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code      
+        if: ${{ !inputs.testautomation_build }}
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch }}     
+
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
+
+      - name: Set genesisVersion in gradle.properties
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
+            sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
+            sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
+            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
+            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
+          fi
+          
+      - name: Print gradle.properties
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          echo "Contents of gradle.properties after modification:"
+          cat gradle.properties
 
       - name: Set up JDK
         uses: actions/setup-java@v2
