@@ -81,19 +81,19 @@ jobs:
         id: trigger_jenkins
         run: |
           response=$(curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
-            --data-urlencode "client=${{ inputs.client }}" \
-            --data-urlencode "environment=${{ inputs.environment }}" \
-            --data-urlencode "hosts=${{ inputs.hosts }}" \
-            --data-urlencode "package_version=${{ inputs.package_version }}" \
-            --data-urlencode "db_backup=${{ inputs.db_backup }}" \
-            --data-urlencode "run_clear_codegen_cache=${{ inputs.run_clear_codegen_cache }}" \
-            --data-urlencode "run_genesis_install=${{ inputs.run_genesis_install }}" \
-            --data-urlencode "run_install_hooks=${{ inputs.run_install_hooks }}" \
-            --data-urlencode "run_remap=${{ inputs.run_remap }}" \
-            --data-urlencode "start_server=${{ inputs.start_server }}" \
-            --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
+            --data-urlencode "client=${{ inputs.CLIENT }}" \
+            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
+            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
+            --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
+            --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
+            --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
+            --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
+            --data-urlencode "run_install_hooks=${{ inputs.RUN_INSTALL_HOOKS }}" \
+            --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
+            --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
+            --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.product }}" \
+            --data-urlencode "product=${{ inputs.PRODUCT }}" \
             --data-urlencode "repotype=${{ inputs.repotype }}" \
             --silent --write-out "%{http_code}" --output /dev/null)
 
