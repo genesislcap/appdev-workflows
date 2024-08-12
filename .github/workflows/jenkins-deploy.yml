@@ -96,7 +96,7 @@ jobs:
             --data-urlencode "repotype=${{ inputs.repotype }}"
 
       - name: Install jq
-        run: run: sudo dnf install -y jq
+        run: sudo dnf install -y jq
 
       - name: Poll Jenkins for Job Status
         run: |
