@@ -100,9 +100,10 @@ jobs:
 
       - name: Debug Jenkins API Response
         run: |
-          JOB_URL=$(curl -s "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade/lastBuild/api/json" | jq -r .url)
-          curl -s "$JOB_URL/api/json" | jq .
+          curl -s "https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json?token=${{ secrets.JENKINS_SECURITYTOKEN }}" > response.json
+          cat response.json
 
+      
       - name: Poll Jenkins for Job Status
         run: |
           JOB_STATUS=""
