@@ -79,7 +79,7 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
-          response=$(curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
             --data-urlencode "client=${{ inputs.CLIENT }}" \
             --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
             --data-urlencode "hosts=${{ inputs.HOSTS }}" \
@@ -93,7 +93,7 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
             --data-urlencode "product=${{ inputs.PRODUCT }}" \
-            --data-urlencode "repotype=${{ inputs.repotype }}" 
+            --data-urlencode "repotype=${{ inputs.repotype }}"
 
       - name: Install jq
         run: sudo dnf install -y jq
