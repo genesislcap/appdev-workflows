@@ -98,21 +98,31 @@ jobs:
       - name: Install jq
         run: sudo dnf install -y jq
 
+      - name: Debug Jenkins API Response
+        run: |
+          JOB_URL=$(curl -s "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade/lastBuild/api/json" | jq -r .url)
+          curl -s "$JOB_URL/api/json" | jq .
+
       - name: Poll Jenkins for Job Status
         run: |
-          JOB_STATUS="null"
-          while [ "$JOB_STATUS" != "SUCCESS" ] && [ "$JOB_STATUS" != "FAILURE" ]; do
-            JOB_URL=$(curl -s "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade/lastBuild/api/json" | jq -r .url)
-            JOB_STATUS=$(curl -s "$JOB_URL/api/json" | jq -r .result)
+          JOB_STATUS=""
+          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json"
+          
+          while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
+            RESPONSE=$(curl -s "$JOB_URL?token=${{ secrets.JENKINS_SECURITYTOKEN }}")
+            JOB_STATUS=$(echo $RESPONSE | jq -r .result)
             echo "Current status: $JOB_STATUS"
+            
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
               echo "Jenkins job completed successfully."
+              exit 0
             elif [ "$JOB_STATUS" == "FAILURE" ]; then
               echo "Jenkins job failed."
               exit 1
-            else
+            elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
               echo "Job is still running..."
               sleep 10
             fi
           done
+
         
