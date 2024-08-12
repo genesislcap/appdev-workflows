@@ -93,39 +93,26 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
             --data-urlencode "product=${{ inputs.PRODUCT }}" \
-            --data-urlencode "repotype=${{ inputs.repotype }}" \
-            --silent --write-out "%{http_code}" --output /dev/null)
+            --data-urlencode "repotype=${{ inputs.repotype }}" 
 
-          if [ "$response" -ne 201 ]; then
-            echo "Failed to trigger Jenkins job"
-            exit 1
-          fi
+      - name: Install jq
+        run: sudo dnf install -y jq
 
-          # Extract Jenkins job queue URL
-          queue_url=$(curl -s -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" --data-urlencode "client=${{ inputs.client }}" --data-urlencode "environment=${{ inputs.environment }}" --output /dev/null -I -L -w "%{url_effective}")
-
-          # Extracting job ID from queue URL
-          job_id=${queue_url##*/}
-          echo "Jenkins Job ID: $job_id"
-
-      - name: Poll Jenkins Job Status
-        id: poll_jenkins
+      - name: Poll Jenkins for Job Status
         run: |
-          while true; do
-            status=$(curl -s "https://jenkinsdev.cdservice.genesis.global/queue/item/$job_id/api/json" | jq -r '.executable.result')
-            echo "Current Status: $status"
-
-            if [ "$status" = "SUCCESS" ]; then
+          JOB_STATUS="null"
+          while [ "$JOB_STATUS" != "SUCCESS" ] && [ "$JOB_STATUS" != "FAILURE" ]; do
+            JOB_URL=$(curl -s "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade/lastBuild/api/json" | jq -r .url)
+            JOB_STATUS=$(curl -s "$JOB_URL/api/json" | jq -r .result)
+            echo "Current status: $JOB_STATUS"
+            if [ "$JOB_STATUS" == "SUCCESS" ]; then
               echo "Jenkins job completed successfully."
-              break
-            elif [ "$status" = "FAILURE" ]; then
+            elif [ "$JOB_STATUS" == "FAILURE" ]; then
               echo "Jenkins job failed."
               exit 1
-            elif [ "$status" = "ABORTED" ]; then
-              echo "Jenkins job was aborted."
-              exit 1
+            else
+              echo "Job is still running..."
+              sleep 10
             fi
-
-            echo "Waiting for Jenkins job to complete..."
-            sleep 30
           done
+        
