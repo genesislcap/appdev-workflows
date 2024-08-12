@@ -80,27 +80,53 @@ jobs:
       - name: Trigger Jenkins Job
         id: trigger_jenkins
         run: |
-          response=$(curl -w "%{http_code}" -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
-            --data-urlencode "client=${{ inputs.CLIENT }}" \
-            --data-urlencode "environment=${{ inputs.ENVIRONMENT }}" \
-            --data-urlencode "hosts=${{ inputs.HOSTS }}" \
-            --data-urlencode "package_version=${{ inputs.PACKAGE_VERSION }}" \
-            --data-urlencode "db_backup=${{ inputs.DB_BACKUP }}" \
-            --data-urlencode "run_clear_codegen_cache=${{ inputs.RUN_CLEAR_CODEGEN_CACHE }}" \
-            --data-urlencode "run_genesis_install=${{ inputs.RUN_GENESIS_INSTALL }}" \
-            --data-urlencode "run_install_hooks=${{ inputs.RUN_INSTALL_HOOKS }}" \
-            --data-urlencode "run_remap=${{ inputs.RUN_REMAP }}" \
-            --data-urlencode "start_server=${{ inputs.START_SERVER }}" \
-            --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" \
-            --data-urlencode "environment_level=${{ inputs.environment_level }}" \
-            --data-urlencode "product=${{ inputs.PRODUCT }}" \
-            --data-urlencode "repotype=${{ inputs.repotype }}" \
+          response=$(curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=***&job=AppDev-CI_CD/cpri/qa/product_cpri_upgrade" \
+            --data-urlencode "client=rmb" \
+            --data-urlencode "environment=plt-cpri-rmb-qa" \
+            --data-urlencode "hosts=ALL" \
+            --data-urlencode "package_version=s3/rmb/genesis-cpri-DCD_1629-1.amzn2023.noarch.rpm" \
+            --data-urlencode "db_backup=false" \
+            --data-urlencode "run_clear_codegen_cache=true" \
+            --data-urlencode "run_genesis_install=true" \
+            --data-urlencode "run_install_hooks=true" \
+            --data-urlencode "run_remap=true" \
+            --data-urlencode "start_server=true" \
+            --data-urlencode "genesis_user=cpri" \
+            --data-urlencode "environment_level=qa" \
+            --data-urlencode "product=cpri" \
+            --data-urlencode "repotype=" \
             --silent --write-out "%{http_code}" --output /dev/null)
 
-          echo "HTTP response code: ${response: -3}"
-
-          if [ "${response: -3}" != "201" ]; then
-            echo "Jenkins job trigger failed with response code ${response: -3}"
+          if [ "$response" -ne 201 ]; then
+            echo "Failed to trigger Jenkins job. HTTP response code: $response"
             exit 1
           fi
-        continue-on-error: false
+
+          # Trigger Jenkins Job and Capture Queue URL
+          queue_url=$(curl -s -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=***&job=AppDev-CI_CD/cpri/qa/product_cpri_upgrade" \
+            --data-urlencode "client=rmb" \
+            --data-urlencode "environment=plt-cpri-rmb-qa" \
+            --data-urlencode "hosts=ALL" \
+            --data-urlencode "package_version=s3/rmb/genesis-cpri-DCD_1629-1.amzn2023.noarch.rpm" \
+            --data-urlencode "db_backup=false" \
+            --data-urlencode "run_clear_codegen_cache=true" \
+            --data-urlencode "run_genesis_install=true" \
+            --data-urlencode "run_install_hooks=true" \
+            --data-urlencode "run_remap=true" \
+            --data-urlencode "start_server=true" \
+            --data-urlencode "genesis_user=cpri" \
+            --data-urlencode "environment_level=qa" \
+            --data-urlencode "product=cpri" \
+            --data-urlencode "repotype=" \
+            --output /dev/null -I -L -w "%{url_effective}")
+
+          echo "Queue URL: $queue_url"
+
+          # Extracting job ID from queue URL
+          if [[ "$queue_url" =~ /queue/item/([0-9]+) ]]; then
+            job_id=${BASH_REMATCH[1]}
+            echo "Jenkins Job ID: $job_id"
+          else
+            echo "Failed to extract Jenkins Job ID. Queue URL: $queue_url"
+            exit 1
+          fi
