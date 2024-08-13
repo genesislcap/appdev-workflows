@@ -61,14 +61,22 @@ on:
         required: false
         type: string
 
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+
     secrets:
       JENKINS_SECURITYTOKEN:
         required: true
+      JENKINS_TOKEN:
+        required: false
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to trigger jenkins job
     runs-on: appdev-selfhosted-al2023
+    environment: master
 
     steps:
 
@@ -96,22 +104,18 @@ jobs:
             --data-urlencode "repotype=${{ inputs.repotype }}"
 
       - name: Install jq
-        run: sudo dnf install -y jq
+        if: ${{ !inputs.testautomation_build }}
+        run: sudo dnf install -y jq 
 
-      - name: Debug Jenkins API Response
-        run: |
-          curl -s "https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json?token=${{ secrets.JENKINS_SECURITYTOKEN }}" > response.json
-          cat response.json
-
-      
       - name: Poll Jenkins for Job Status
+        if: ${{ !inputs.testautomation_build }}
         run: |
           JOB_STATUS=""
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json"
           
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            RESPONSE=$(curl -s "$JOB_URL?token=${{ secrets.JENKINS_SECURITYTOKEN }}")
-            JOB_STATUS=$(echo $RESPONSE | jq -r .result)
+            RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
+            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
             
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
@@ -120,10 +124,11 @@ jobs:
             elif [ "$JOB_STATUS" == "FAILURE" ]; then
               echo "Jenkins job failed."
               exit 1
+            elif [ "$JOB_STATUS" == "ABORTED" ]; then
+              echo "Jenkins job was aborted."
+              exit 2
             elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
               echo "Job is still running..."
               sleep 10
             fi
           done
-
-        
