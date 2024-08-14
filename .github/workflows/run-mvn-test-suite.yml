@@ -68,7 +68,7 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
-    - name: Checkout code      
+      - name: Checkout code      
         if: ${{ !inputs.testautomation_build }}
         uses: actions/checkout@v3
         with:
