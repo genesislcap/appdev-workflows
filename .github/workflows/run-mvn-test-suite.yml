@@ -83,12 +83,19 @@ jobs:
         ref: ${{ inputs.testautobranch }}
         token: ${{ env.GHA_TOKEN }}
 
+    - name: Print config.properties
+      if: inputs.testautomation_build
+      working-directory: "${{ inputs.test-root-path }}"
+      run: |
+        echo "Contents of config.properties after modification:"
+        cat config.properties
+        
     - name: Set defaultEnv value in config.properties
       if: inputs.testautomation_build
       working-directory: "${{ inputs.test-root-path }}"
       run: |
         if [ -n "${{ inputs.defaultEnv }}" ]; then
-          sed -i 's/^admin-defaultEnv=.*/admin-defaultEnv=${{ inputs.defaultEnv }}/' config.properties
+          sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
         fi
           
           
