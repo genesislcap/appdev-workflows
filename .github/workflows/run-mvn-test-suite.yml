@@ -85,7 +85,7 @@ jobs:
 
     - name: Set defaultEnv value in config.properties
       if: inputs.testautomation_build
-      # working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+      working-directory: "${{ inputs.test-root-path }}"
       run: |
         if [ -n "${{ inputs.defaultEnv }}" ]; then
           sed -i 's/^admin-defaultEnv=.*/admin-defaultEnv=${{ inputs.defaultEnv }}/' config.properties
@@ -94,7 +94,7 @@ jobs:
           
     - name: Print config.properties
       if: inputs.testautomation_build
-      # working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+      working-directory: "${{ inputs.test-root-path }}"
       run: |
         echo "Contents of config.properties after modification:"
         cat config.properties
