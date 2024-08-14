@@ -44,6 +44,10 @@ on:
       GENESIS_VERSION:
         required: false
         type: string
+      defaultEnv:
+        required: false
+        type: string
+
 
     secrets:
       PAGES_TOKEN:
@@ -64,13 +68,37 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
-    - uses: actions/checkout@v3
-      if: inputs.testautomation_build
-      with:
-        repository: ${{ inputs.testautorepo }}        
-        fetch-depth: '0'
-        ref: ${{ inputs.testautobranch }}
-        token: ${{ env.GHA_TOKEN }}
+    - name: Checkout code      
+        if: ${{ !inputs.testautomation_build }}
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}     
+
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
+
+      - name: Set defaultEnv value in config.properties
+        if: inputs.testautomation_build
+        # working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          if [ -n "${{ inputs.defaultEnv }}" ]; then
+            sed -i 's/^admin-defaultEnv=.*/admin-defaultEnv=${{ inputs.defaultEnv }}/' config.properties
+          fi
+          
+          
+      - name: Print config.properties
+        if: inputs.testautomation_build
+        # working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          echo "Contents of config.properties after modification:"
+          cat config.properties
+
     - name: Set up JDK 11
       uses: actions/setup-java@v3
       with:
