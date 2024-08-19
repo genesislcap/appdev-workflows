@@ -66,11 +66,11 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
-      registry-url:
+      REGISTRY_URL:
         type: string
         description: Only used by the older version of genesisframework
         required: false
-      scope:
+      SCOPE:
         type: string
         description: Only used by the older version of genesisframework
         required: false
@@ -244,8 +244,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
+          registry-url: ${{ inputs.REGISTRY_URL }}
+          scope: ${{ inputs.SCOPE }}
 
       - name: 'Create .npmrc'
         shell: bash
