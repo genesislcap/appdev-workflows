@@ -246,7 +246,7 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Configure Node
+      - name: Configure Node if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
         uses: actions/setup-node@v2
         with:
