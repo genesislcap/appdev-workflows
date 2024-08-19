@@ -66,6 +66,14 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+      registry-url:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
+      scope:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
 
     secrets:
       GRADLE_PROPERTIES:
@@ -236,6 +244,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
 
       - name: 'Create .npmrc'
         shell: bash
