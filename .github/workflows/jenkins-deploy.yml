@@ -75,7 +75,7 @@ on:
 jobs:
   build:
     name: Steps to trigger jenkins job
-    runs-on: appdev-selfhosted-al2023
+    runs-on: genesiscicd-selfhosted
     environment: master
 
     steps:
