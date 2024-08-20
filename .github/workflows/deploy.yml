@@ -54,17 +54,17 @@ jobs:
         id: extract_vars
         run: |
           product_name=$(grep 'product_name' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
-          environment_name=$(grep 'environment_name' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
+          environment_type=$(grep 'environment_type' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
           user=$(grep 'user' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
           echo "product_name=${product_name}" >> $GITHUB_ENV
-          echo "environment_name=${environment_name}" >> $GITHUB_ENV
+          echo "environment_type=${environment_type}" >> $GITHUB_ENV
           echo "user=${user}" >> $GITHUB_ENV
 
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
             --data-urlencode "product=${{ env.product_name }}" \
-            --data-urlencode "environment_level=${{ env.environment_name }}" \
+            --data-urlencode "environment_level=${{ env.environment_type }}" \
             --data-urlencode "job_name=product_${{ env.product_name }}_upgrade" \
             --data-urlencode "base_path=AppDev-CI_CD" \
             --data-urlencode "genesis_user=${{ env.user }}"
