@@ -33,27 +33,27 @@ jobs:
         with:
           ref: develop
 
-      - name: Env Set-Up
-        run: |
-          git checkout develop
-          git pull
-          echo "Checking out the required TF and ansible scripts- per run"
-          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
-          ls -larth
-          ls -larth ~/selfserve
-          rm -rf ~/selfserve/scripts/config
-          mv config ~/selfserve/scripts/
-          ls -larth ~/selfserve/scripts/config
-          export PYTHONUNBUFFERED=TRUE
-          export ANSIBLE_STDOUT_CALLBACK=debug
+      # - name: Env Set-Up
+      #   run: |
+      #     git checkout develop
+      #     git pull
+      #     echo "Checking out the required TF and ansible scripts- per run"
+      #     /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
+      #     ls -larth
+      #     ls -larth ~/selfserve
+      #     rm -rf ~/selfserve/scripts/config
+      #     mv config ~/selfserve/scripts/
+      #     ls -larth ~/selfserve/scripts/config
+      #     export PYTHONUNBUFFERED=TRUE
+      #     export ANSIBLE_STDOUT_CALLBACK=debug
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
       - name: Extract Variables from YAML
         id: extract_vars
         run: |
-          product_name=$(grep 'product_name' ${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
-          environment_name=$(grep 'environment_name' ${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
-          user=$(grep 'user' ${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
+          product_name=$(grep 'product_name' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
+          environment_name=$(grep 'environment_name' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
+          user=$(grep 'user' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
           echo "product_name=${product_name}" >> $GITHUB_ENV
           echo "environment_name=${environment_name}" >> $GITHUB_ENV
           echo "user=${user}" >> $GITHUB_ENV
