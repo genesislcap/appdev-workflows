@@ -46,9 +46,9 @@ jobs:
           rm -rf ~/selfserve/scripts/config
           mv config ~/selfserve/scripts/
           ls -larth ~/selfserve/scripts/config
-      #     export PYTHONUNBUFFERED=TRUE
-      #     export ANSIBLE_STDOUT_CALLBACK=debug
-          # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+          export PYTHONUNBUFFERED=TRUE
+          export ANSIBLE_STDOUT_CALLBACK=debug
+          python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
       - name: Extract Variables from YAML
         id: extract_vars
