@@ -33,17 +33,17 @@ jobs:
         with:
           ref: develop
 
-      # - name: Env Set-Up
-      #   run: |
-      #     git checkout develop
-      #     git pull
-      #     echo "Checking out the required TF and ansible scripts- per run"
-      #     /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
-      #     ls -larth
-      #     ls -larth ~/selfserve
-      #     rm -rf ~/selfserve/scripts/config
-      #     mv config ~/selfserve/scripts/
-      #     ls -larth ~/selfserve/scripts/config
+      - name: Env Set-Up
+        run: |
+          git checkout develop
+          git pull
+          echo "Checking out the required TF and ansible scripts- per run"
+          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
+          ls -larth
+          ls -larth ~/selfserve
+          rm -rf ~/selfserve/scripts/config
+          mv config ~/selfserve/scripts/
+          ls -larth ~/selfserve/scripts/config
       #     export PYTHONUNBUFFERED=TRUE
       #     export ANSIBLE_STDOUT_CALLBACK=debug
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
