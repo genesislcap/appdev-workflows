@@ -46,7 +46,7 @@ jobs:
           ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
-          python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+          # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
       - name: Extract Variables from YAML
         id: extract_vars
@@ -57,7 +57,7 @@ jobs:
           echo "product_name=${product_name}" >> $GITHUB_ENV
           echo "environment_name=${environment_name}" >> $GITHUB_ENV
           echo "user=${user}" >> $GITHUB_ENV
-          
+
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
