@@ -49,18 +49,19 @@ jobs:
           # export PYTHONUNBUFFERED=TRUE
           # export ANSIBLE_STDOUT_CALLBACK=debug
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
-      - name: Install yq
+      
+      - name: Install Dependencies
         run: |
           sudo dnf install -y curl
+
+      - name: Install yq
+        run: |
           curl -LJO "https://github.com/mikefarah/yq/releases/download/v4.19.3/yq_linux_amd64" -o /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
       - name: Extract Variables from YAML
         id: extract_vars
         run: |
-          # # Install yq if it's not already installed
-          # sudo apt-get install -y yq
-
           # Extract values from YAML file
           product_name=$(yq eval '.product_info.product_name' ~/selfserve/scripts/${{ inputs.file_name }})
           environment_type=$(yq eval '.environment_type' ~/selfserve/scripts/${{ inputs.file_name }})
