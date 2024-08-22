@@ -50,6 +50,23 @@ jobs:
           # export ANSIBLE_STDOUT_CALLBACK=debug
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
       
+      - name: Fix curl Installation
+        run: |
+          # Remove any conflicting curl packages
+          sudo dnf remove -y curl curl-minimal
+          
+          # Clean DNF cache
+          sudo dnf clean all
+          
+          # Update DNF metadata
+          sudo dnf update -y
+          
+          # Install curl
+          sudo dnf install -y curl
+          
+          # Check curl installation
+          curl --version
+          
       - name: Install Dependencies
         run: |
           sudo dnf install -y curl
