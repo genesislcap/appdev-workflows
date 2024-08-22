@@ -75,10 +75,6 @@ jobs:
             echo "curl is already installed."
           fi
 
-      - name: Install Dependencies
-        run: |
-          sudo dnf install -y curl
-
       - name: Install yq
         run: |
           curl -LJO "https://github.com/mikefarah/yq/releases/download/v4.19.3/yq_linux_amd64" -o /usr/local/bin/yq
