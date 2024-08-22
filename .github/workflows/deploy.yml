@@ -53,12 +53,20 @@ jobs:
       - name: Extract Variables from YAML
         id: extract_vars
         run: |
-          product_name=$(grep 'product_name' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
-          environment_type=$(grep 'environment_type' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
-          user=$(grep 'user' ~/selfserve/scripts/${{ inputs.file_name }} | head -n 1 | awk '{print $2}')
+          # Install yq if it's not already installed
+          sudo apt-get install -y yq
+
+          # Extract values from YAML file
+          product_name=$(yq eval '.product_info.product_name' ~/selfserve/scripts/${{ inputs.file_name }})
+          environment_type=$(yq eval '.environment_type' ~/selfserve/scripts/${{ inputs.file_name }})
+          user=$(yq eval '.vms | keys | .[0] | .genesis_app.user' ~/selfserve/scripts/${{ inputs.file_name }})
+
+          # Export values to GitHub Actions environment
           echo "product_name=${product_name}" >> $GITHUB_ENV
           echo "environment_type=${environment_type}" >> $GITHUB_ENV
           echo "user=${user}" >> $GITHUB_ENV
+
+
 
       - name: Trigger Jenkins Job
         run: |
