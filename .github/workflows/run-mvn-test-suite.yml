@@ -62,8 +62,8 @@ jobs:
         fi
         cd ${{ inputs.test-root-path }}
         command="mvn clean test $MVN_OPTIONS -Dbrowser=${{ inputs.browser }}"
-
-        if $command | grep -q "There are test failures"; then
+        eval $command | tee mvn.log
+        if grep -q "There are test failures" mvn.log; then
           exit 1
         else
           exit 0
