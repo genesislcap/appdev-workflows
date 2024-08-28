@@ -20,6 +20,17 @@ on:
         type: boolean
         default: true
 
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
