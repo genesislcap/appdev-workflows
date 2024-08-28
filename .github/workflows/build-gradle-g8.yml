@@ -131,22 +131,22 @@ jobs:
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
-      - name: Set genesisVersion in gradle.properties
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-        run: |
-          if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
-            sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
-            sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
-            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
-            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
-          fi
+      # - name: Set genesisVersion in gradle.properties
+      #   if: inputs.testautomation_build
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+      #   run: |
+      #     if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
+      #       sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
+      #     fi
+      #     if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
+      #       sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
+      #     fi
+      #     if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
+      #       sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
+      #     fi
+      #     if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
+      #       sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
+      #     fi
           
       - name: Print gradle.properties
         if: inputs.testautomation_build
