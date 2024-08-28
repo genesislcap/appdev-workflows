@@ -35,9 +35,12 @@ on:
         required: false
       SLACK_WEBHOOK:
         required: false
+      GHA_TOKEN:
+        required: true
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -55,9 +58,20 @@ jobs:
         node-version: [16.x]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        if: ${{ !inputs.testautomation_build }}
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
+          ref: ${{ inputs.branch }}     
+
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
 
       - name: Env Setup
         run:  |
