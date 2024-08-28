@@ -117,7 +117,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
-    runs-on: appdev-small
+    runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - name: Checkout code      
         if: ${{ !inputs.testautomation_build }}
