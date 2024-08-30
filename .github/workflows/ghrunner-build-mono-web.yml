@@ -46,6 +46,7 @@ on:
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 jobs:
 
