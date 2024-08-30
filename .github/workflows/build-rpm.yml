@@ -1,12 +1,12 @@
 # This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
-name: Build RPM
+name: Build Package
 
 on:
   workflow_call:
     outputs:
       rpm_name:
         description: "The first output string"
-        value: ${{ jobs.build-RPM.outputs.rpm_name }}
+        value: ${{ jobs.build-Package.outputs.rpm_name }}
     inputs:
       product_name:
         required: true
@@ -57,7 +57,7 @@ env:
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
-  build-RPM:
+  build-Package:
     runs-on: appdev-selfhosted-al2023
     outputs:
       rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}

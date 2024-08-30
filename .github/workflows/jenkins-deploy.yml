@@ -1,4 +1,4 @@
-name:  Trigger Jenkins job to deploy RPM
+name:  Deploy package
 
 on:
   workflow_call:
@@ -74,7 +74,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    name: Steps to trigger jenkins job
+    name: Steps to Deploy package
     runs-on: appdev-small
     environment: master
 
