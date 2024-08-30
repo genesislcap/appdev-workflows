@@ -82,6 +82,18 @@ on:
       NOTIFY_VERSION:
         required: false
         type: string
+      FIX_VERSION:
+        required: false
+        type: string
+      FIlESERVER_VERSION:
+        required: false
+        type: string
+      EXPORT_VERSION:
+        required: false
+        type: string
+      DEPLOYPLUGIN_VERSION:
+        required: false
+        type: string
       server-path:
         required: false
         type: string
@@ -131,22 +143,34 @@ jobs:
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
-      # - name: Set genesisVersion in gradle.properties
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-      #   run: |
-      #     if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
-      #       sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
-      #     fi
-      #     if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
-      #       sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
-      #     fi
-      #     if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
-      #       sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
-      #     fi
-      #     if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
-      #       sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
-      #     fi
+      - name: Set genesisVersion in gradle.properties
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        run: |
+          if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
+            sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
+            sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
+            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
+            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.FIX_VERSION }}" ]; then
+            sed -i 's/^fixVersion=.*/fixVersion=${{ inputs.FIX_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.FIlESERVER_VERSION }}" ]; then
+            sed -i 's/^fileserverVersion=.*/fileserverVersion=${{ inputs.FIlESERVER_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.EXPORT_VERSION }}" ]; then
+            sed -i 's/^exportVersion=.*/exportVersion=${{ inputs.EXPORT_VERSION }}/' gradle.properties
+          fi
+          if [ -n "${{ inputs.DEPLOYPLUGIN_VERSION }}" ]; then
+            sed -i 's/^deployPluginVersion=.*/deployPluginVersion=${{ inputs.DEPLOYPLUGIN_VERSION }}/' gradle.properties
+          fi
           
       - name: Print gradle.properties
         if: inputs.testautomation_build
