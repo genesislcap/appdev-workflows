@@ -6,7 +6,7 @@ on:
     outputs:
       rpm_name:
         description: "The first output string"
-        value: ${{ jobs.build.outputs.rpm_name }}
+        value: ${{ jobs.build-RPM.outputs.rpm_name }}
     inputs:
       product_name:
         required: true
