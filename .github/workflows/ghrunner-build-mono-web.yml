@@ -12,6 +12,20 @@ on:
         required: false
         type: string
 
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+      version:
+        required: false
+        type: string
+
     secrets:
       JFROG_USERNAME:
         required: true
@@ -27,6 +41,8 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: false
+      GHA_TOKEN:
+        required: true
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -43,7 +59,20 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        if: ${{ !inputs.testautomation_build }}
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}     
+
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
 
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
