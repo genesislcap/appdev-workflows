@@ -15,6 +15,14 @@ on:
       product_name:
         required: false
         type: string
+      REGISTRY_URL:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
+      SCOPE:
+        type: string
+        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
+        required: false
 
     secrets:
       JFROG_USERNAME:
@@ -94,10 +102,21 @@ jobs:
               cat sonar-project.properties
               cd ${{ env.PRODUCT_BASE }}
 
-      - name: Configure Node ${{ matrix.node-version }}
+      - name: Configure Node  ${{ matrix.node-version }}
+        if: ${{ !inputs.REGISTRY_URL  }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+      - name: Configure Node  ${{ matrix.node-version }} if using JFROG npm packages
+        if: ${{ inputs.REGISTRY_URL }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: ${{ inputs.REGISTRY_URL }}
+          scope: ${{ inputs.SCOPE }}
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
