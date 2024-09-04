@@ -104,6 +104,10 @@ on:
       FOUNDATION_VERSION:
         required: false
         type: string
+      web-path:
+        required: false
+        type: string
+        default: 'client/web'
       
 
     secrets:
@@ -355,7 +359,7 @@ jobs:
 
       - name: Update @genesislcap/foundation dependencies to 15.2.3
         if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/client/web"
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
           NEW_VERSION="15.2.3"
           jq --arg version "$NEW_VERSION" '
@@ -369,6 +373,7 @@ jobs:
           echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
 
       - name: Print updated package.json
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
         run: |
           echo "Updated package.json:"
           cat package.json
