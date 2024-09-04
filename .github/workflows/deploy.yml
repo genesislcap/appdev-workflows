@@ -60,21 +60,18 @@ jobs:
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
 
-      - name: Extract Variables from YAML
+      - name: Extract Variables from JSON
         id: extract_vars
         run: |
-          # Convert YAML to JSON and extract variables using jq
-          yq eval -o=json ~/selfserve/scripts/${{ inputs.file_name }} | jq -r '
-            .environment_name as $env_name |
-            .environment_type as $env_type |
-            .product_info.product_name as $product_name |
-            .vms[].genesis_app.user as $user |
-            "environment_name=\($env_name)\nenvironment_type=\($env_type)\nproduct_name=\($product_name)\nuser=\($user)"
-          ' | while IFS= read -r line; do
-            key=$(echo $line | cut -d'=' -f1)
-            value=$(echo $line | cut -d'=' -f2-)
-            echo "${key}=${value}" >> $GITHUB_ENV
-          done
+          # Extract values from the JSON file
+          product_name=$(jq -r '.product_name' ~/selfserve/scripts/${{ inputs.file_name }})
+          environment_type=$(jq -r '.environment_type' ~/selfserve/scripts/${{ inputs.file_name }})
+          user=$(jq -r '.user' ~/selfserve/scripts/${{ inputs.file_name }})
+
+          # Output the extracted values as GitHub Actions environment variables
+          echo "product_name=${product_name}" >> $GITHUB_ENV
+          echo "environment_type=${environment_type}" >> $GITHUB_ENV
+          echo "user=${user}" >> $GITHUB_ENV
 
       - name: Trigger Jenkins Job
         run: |
