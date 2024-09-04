@@ -54,7 +54,7 @@ jobs:
           ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
-          python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }} || { echo "Python deployment script failed"; exit 1; }
+          # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }} || { echo "Python deployment script failed"; exit 1; }
 
       - name: Extract Variables from YAML
         id: extract_vars
