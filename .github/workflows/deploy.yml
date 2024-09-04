@@ -22,8 +22,8 @@ on:
         required: false
         type: string
       secrets:
-      JENKINS_SECURITYTOKEN:
-        required: true
+        JENKINS_SECURITYTOKEN:
+          required: true
 
 jobs:
   build:
