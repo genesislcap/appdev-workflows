@@ -64,10 +64,11 @@ jobs:
         run: |
           # Convert YAML to JSON and extract variables using jq
           yq eval -o=json ~/selfserve/scripts/${{ inputs.file_name }} | jq -r '
-            .product_name as $product_name |
-            .environment_type as $environment_type |
-            .user as $user |
-            "product_name=\($product_name)\nenvironment_type=\($environment_type)\nuser=\($user)"
+            .environment_name as $env_name |
+            .environment_type as $env_type |
+            .product_info.product_name as $product_name |
+            .vms[].genesis_app.user as $user |
+            "environment_name=\($env_name)\nenvironment_type=\($env_type)\nproduct_name=\($product_name)\nuser=\($user)"
           ' | while IFS= read -r line; do
             key=$(echo $line | cut -d'=' -f1)
             value=$(echo $line | cut -d'=' -f2-)
