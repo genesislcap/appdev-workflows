@@ -357,7 +357,7 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-      - name: Update @genesislcap/foundation dependencies to 15.2.3
+      - name: Update @genesislcap/foundation dependencies 
         if: inputs.FOUNDATION_VERSION
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
@@ -374,6 +374,7 @@ jobs:
           echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
 
       - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
         run: |
           echo "Updated package.json:"
