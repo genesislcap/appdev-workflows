@@ -1,4 +1,4 @@
-name: Deploy Self-Serve Environments
+name:  Deploy Self serve envs
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       file_name:
-        description: 'Comma separated list of file YAML names'
+        description: 'Comma separated list of file yaml name'
         required: false
         type: string
       tf_branch:
@@ -23,8 +23,9 @@ on:
         type: string
     secrets:
       JENKINS_SECURITYTOKEN:
-        required: true
+        required: false
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to create resources in cddev account
@@ -35,6 +36,21 @@ jobs:
         with:
           ref: develop
 
+      - name: Env Set-Up
+        run: |
+          git checkout develop
+          git pull
+          echo "Checking out the required TF and ansible scripts- per run"
+          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
+          ls -larth
+          ls -larth ~/selfserve
+          rm -rf ~/selfserve/scripts/config
+          mv config ~/selfserve/scripts/
+          ls -larth ~/selfserve/scripts/config
+          export PYTHONUNBUFFERED=TRUE
+          export ANSIBLE_STDOUT_CALLBACK=debug
+          # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+      
       - name: Install yq and jq
         run: |
           # Install jq
@@ -43,21 +59,6 @@ jobs:
           # Install yq (v4.27.3, adjust version as needed)
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
-
-      - name: Env Set-Up
-        run: |
-          git checkout develop
-          git pull
-          echo "Checking out the required TF and ansible scripts- per run"
-          /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }} || { echo "Checkout script failed"; exit 1; }
-          ls -larth
-          ls -larth ~/selfserve
-          rm -rf ~/selfserve/scripts/config || { echo "Failed to remove old config"; exit 1; }
-          mv config ~/selfserve/scripts/ || { echo "Failed to move new config"; exit 1; }
-          ls -larth ~/selfserve/scripts/config
-          export PYTHONUNBUFFERED=TRUE
-          export ANSIBLE_STDOUT_CALLBACK=debug
-          # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }} || { echo "Python deployment script failed"; exit 1; }
 
       - name: Extract Variables from YAML
         id: extract_vars
