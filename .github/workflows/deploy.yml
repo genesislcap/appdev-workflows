@@ -21,6 +21,9 @@ on:
         default: master
         required: false
         type: string
+    secrets:
+      JENKINS_SECURITYTOKEN:
+        required: false
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -47,3 +50,37 @@ jobs:
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
+      
+      - name: Install yq and jq
+        run: |
+          # Install jq
+          sudo yum install -y jq
+
+          # Install yq (v4.27.3, adjust version as needed)
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Extract Variables from YAML
+        id: extract_vars
+        run: |
+          # Convert YAML to JSON and extract variables using jq
+          yq eval -o=json ~/selfserve/scripts/${{ inputs.file_name }} | jq -r '
+            .environment_name as $env_name |
+            .environment_type as $env_type |
+            .product_info.product_name as $product_name |
+            .vms[].genesis_app.user as $user |
+            "environment_name=\($env_name)\nenvironment_type=\($env_type)\nproduct_name=\($product_name)\nuser=\($user)"
+          ' | while IFS= read -r line; do
+            key=$(echo $line | cut -d'=' -f1)
+            value=$(echo $line | cut -d'=' -f2-)
+            echo "${key}=${value}" >> $GITHUB_ENV
+          done
+
+      - name: Trigger Jenkins Job
+        run: |
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
+            --data-urlencode "product=${{ env.product_name }}" \
+            --data-urlencode "environment_level=${{ env.environment_type }}" \
+            --data-urlencode "job_name=product_${{ env.product_name }}_upgrade" \
+            --data-urlencode "base_path=AppDev-CI_CD" \
+            --data-urlencode "genesis_user=${{ env.user }}"
