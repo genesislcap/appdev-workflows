@@ -25,6 +25,13 @@ on:
       version:
         required: false
         type: string
+      FOUNDATION_VERSION:
+        required: false
+        type: string
+      web-path:
+        required: false
+        type: string
+        default: 'client/web'
 
     secrets:
       JFROG_USERNAME:
@@ -43,6 +50,7 @@ on:
         required: false
       GHA_TOKEN:
         required: true
+      
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -74,6 +82,30 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
+
+      - name: Update @genesislcap/foundation dependencies 
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        run: |
+          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          echo "Updated package.json:"
+          cat package.json
+
 
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
