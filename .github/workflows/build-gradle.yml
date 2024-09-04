@@ -101,6 +101,9 @@ on:
       DEPLOYPLUGIN_VERSION:
         required: false
         type: string
+      FOUNDATION_VERSION:
+        required: false
+        type: string
       
 
     secrets:
@@ -349,6 +352,26 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+
+      - name: Update @genesislcap/foundation dependencies to 15.2.3
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/client/web"
+        run: |
+          NEW_VERSION="15.2.3"
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              select(.key | startswith("@genesislcap/foundation-")) | .value = $version
+            ) |
+            .devDependencies |= with_entries(
+              select(.key | startswith("@genesislcap/foundation-")) | .value = $version
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        run: |
+          echo "Updated package.json:"
+          cat package.json
 
       - name: Set up JDK
         uses: actions/setup-java@v2
