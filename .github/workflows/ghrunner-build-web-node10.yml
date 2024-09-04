@@ -124,7 +124,7 @@ jobs:
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
 
       - name: Upload lint artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Lint errors
           path: lint-output.txt

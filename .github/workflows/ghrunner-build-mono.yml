@@ -74,7 +74,7 @@ jobs:
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
 
       - name: Upload lint artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Lint errors
           working-directory: ./client
@@ -170,7 +170,7 @@ jobs:
 
       - name: 'Publish Test Report'
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: 'DependencyCheck-Report'
           path: ${{github.workspace}}/reports
