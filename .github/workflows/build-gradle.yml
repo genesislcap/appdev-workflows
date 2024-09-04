@@ -361,7 +361,7 @@ jobs:
         if: inputs.FOUNDATION_VERSION
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
-          NEW_VERSION="15.2.3"
+          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
           # Update only @genesislcap/foundation dependencies
           jq --arg version "$NEW_VERSION" '
             .dependencies |= with_entries(
