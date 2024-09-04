@@ -85,7 +85,7 @@ jobs:
 
       - name: Update @genesislcap/foundation dependencies 
         if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        working-directory: ./client/web       
         run: |
           NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
           # Update only @genesislcap/foundation dependencies
@@ -101,7 +101,7 @@ jobs:
 
       - name: Print updated package.json
         if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        working-directory: ./client/web
         run: |
           echo "Updated package.json:"
           cat package.json
