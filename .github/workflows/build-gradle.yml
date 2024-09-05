@@ -111,7 +111,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: '/opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/.github/workflows/version.properties'
+        default: '/opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/main-repo/.github/workflows/version.properties'
       
 
     secrets:
@@ -148,6 +148,13 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}     
+
+      - name: Checkout main repository
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
 
       - uses: actions/checkout@v3
         if: inputs.testautomation_build
@@ -194,13 +201,7 @@ jobs:
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
           
-          cd /opt/actions-runner/_work/platform-qa-automation
-          # Print current working directory
-          echo "Current working directory:"
-          pwd
-
-          echo "Listing all files in the working-directory:"
-          ls -la
+          
 
           # Append contents of another file to gradle.properties
           if [ -f "${{ inputs.additional_file }}" ]; then
