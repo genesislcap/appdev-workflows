@@ -194,9 +194,13 @@ jobs:
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
           
+          # Print current working directory
+          echo "Current working directory:"
+          pwd
+          
           echo "Listing all files in the working-directory:"
           ls -la
-          
+
           # Append contents of another file to gradle.properties
           if [ -f "${{ inputs.additional_file }}" ]; then
             cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
