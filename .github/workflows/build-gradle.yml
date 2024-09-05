@@ -153,6 +153,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: genesislcap/platform-qa-automation
+          ref: DCD-1785-2
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
 
