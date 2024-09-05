@@ -194,10 +194,11 @@ jobs:
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
           
+          cd /opt/actions-runner/_work/platform-qa-automation
           # Print current working directory
           echo "Current working directory:"
           pwd
-          
+
           echo "Listing all files in the working-directory:"
           ls -la
 
