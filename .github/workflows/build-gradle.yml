@@ -170,6 +170,7 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
+          ls - l
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           
