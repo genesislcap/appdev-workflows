@@ -33,6 +33,9 @@ on:
       version:
         required: false
         type: string
+      FOUNDATION_VERSION:
+        required: false
+        type: string  
 
     secrets:
       JFROG_USERNAME:
@@ -50,7 +53,7 @@ on:
       SLACK_WEBHOOK:
         required: false
       GHA_TOKEN:
-        required: true
+        required: true          
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -88,6 +91,29 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
+
+      - name: Update @genesislcap/foundation dependencies 
+        if: inputs.FOUNDATION_VERSION
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}      
+        run: |
+          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
+        run: |
+          echo "Updated package.json:"
+          cat package.json
 
       - name: Env Setup
         run:  |

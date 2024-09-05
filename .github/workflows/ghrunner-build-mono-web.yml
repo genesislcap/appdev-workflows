@@ -27,11 +27,7 @@ on:
         type: string
       FOUNDATION_VERSION:
         required: false
-        type: string
-      web-path:
-        required: false
-        type: string
-        default: 'client/web'
+        type: string      
 
     secrets:
       JFROG_USERNAME:
