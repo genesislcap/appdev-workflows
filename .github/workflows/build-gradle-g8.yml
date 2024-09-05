@@ -98,6 +98,10 @@ on:
         required: false
         type: string
         default: 'server'
+      web-path:
+        required: false
+        type: string
+        default: 'client'
       
 
     secrets:
@@ -178,6 +182,30 @@ jobs:
         run: |
           echo "Contents of gradle.properties after modification:"
           cat gradle.properties
+
+      - name: Update @genesislcap/foundation dependencies 
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        run: |
+          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          echo "Updated package.json:"
+          cat package.json
+
 
       - name: Set up JDK
         uses: actions/setup-java@v2
