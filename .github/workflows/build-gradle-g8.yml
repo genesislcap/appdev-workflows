@@ -98,6 +98,9 @@ on:
         required: false
         type: string
         default: 'server'
+      FOUNDATION_VERSION:
+        required: false
+        type: string
       web-path:
         required: false
         type: string
