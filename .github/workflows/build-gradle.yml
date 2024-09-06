@@ -171,6 +171,7 @@ jobs:
           ref: DCD-1785-2
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
+          
 
       - name: Restore gradle.properties and setup
         env:
@@ -319,145 +320,218 @@ jobs:
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
-  # build-web:
-  #   runs-on: [ appdev-selfhosted-al2023 ]
-  #   steps:     
-  #     - name: Checkout code
-  #       if: ${{ !inputs.testautomation_build }}
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: '0'
-  #         ref: ${{ inputs.branch }}     
+  build-web:
+    runs-on: [ appdev-selfhosted-al2023 ]
+    steps:     
+      - name: Checkout code
+        if: ${{ !inputs.testautomation_build }}
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}     
 
-  #     - uses: actions/checkout@v3
-  #       if: inputs.testautomation_build
-  #       with:
-  #         repository: ${{ inputs.testautorepo }}        
-  #         fetch-depth: '0'
-  #         ref: ${{ inputs.testautobranch }}
-  #         token: ${{ env.GHA_TOKEN }}
-
-
-  #     - name: Configure Node
-  #       uses: actions/setup-node@v2
-  #       with:
-  #         node-version: ${{ inputs.node_version }}
-  #         registry-url: https://npm.pkg.github.com/
-  #         scope: '@genesislcap'
-
-  #     - name: 'Create .npmrc'
-  #       shell: bash
-  #       run: |
-  #         npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-  #         echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-  #         echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-
-  #     - name: Update @genesislcap/foundation dependencies 
-  #       if: inputs.FOUNDATION_VERSION
-  #       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
-  #       run: |
-  #         NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
-  #         # Update only @genesislcap/foundation dependencies
-  #         jq --arg version "$NEW_VERSION" '
-  #           .dependencies |= with_entries(
-  #             if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-  #           ) |
-  #           .devDependencies |= with_entries(
-  #             if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-  #           )
-  #         ' package.json > package.json.tmp && mv package.json.tmp package.json
-  #         echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
-
-  #     - name: Print updated package.json
-  #       if: inputs.FOUNDATION_VERSION
-  #       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
-  #       run: |
-  #         echo "Updated package.json:"
-  #         cat package.json
-
-  #     - name: Set up JDK
-  #       uses: actions/setup-java@v2
-  #       with:
-  #         java-version: ${{ inputs.java_version }}
-  #         distribution: 'adopt'
-
-  #     - name: Restore gradle.properties and setup
-  #       working-directory: "${{ inputs.working-directory }}"
-  #       shell: bash
-  #       run: |
-  #         mkdir -p ~/.gradle/
-  #         echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-  #         echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-  #         echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
-
-  #         echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-  #         echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
-  #         sudo chmod +x ./gradlew
-  #         sudo chmod +x ./${{ inputs.server-path }}/gradlew
-
-  #         cat ~/.gradle/gradle.properties >>  ./gradle.properties
-  #         if [ -z "${{ inputs.repo-name }}" ]; then
-  #           echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
-  #         else
-  #           echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
-  #         fi
-  #         RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
-  #         echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-  #         sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+      - uses: actions/checkout@v3
+        if: inputs.testautomation_build
+        with:
+          repository: ${{ inputs.testautorepo }}        
+          fetch-depth: '0'
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ env.GHA_TOKEN }}
 
 
-  #     - name: Check file existence
-  #       id: web_exists
-  #       working-directory: "${{ inputs.working-directory }}"
-  #       run: |
-  #         if test -d client; then
-  #           echo "client_folder_exists=true" >> $GITHUB_OUTPUT
-  #           CLIENT_BUILD_LOCATION="client"
-  #         fi
-  #         if test -d client/web; then
-  #           CLIENT_BUILD_LOCATION="client/web"
-  #         fi
-  #         echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
-  #         CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
-  #         echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
+      - name: Configure Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ inputs.node_version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: '@genesislcap'
 
-  #     - name: Client Build
-  #       if: steps.web_exists.outputs.client_folder_exists == 'true'
-  #       uses: gradle/gradle-build-action@v2
-  #       with:
-  #         arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
-  #         build-root-directory: "${{ inputs.working-directory }}/"
-  #         cache-disabled: true
+      - name: 'Create .npmrc'
+        shell: bash
+        run: |
+          npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+          echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-  #     - name: Upload Client Package
-  #       if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
-  #       working-directory: "${{ inputs.working-directory }}/${{ steps.web_exists.outputs.modified-location }}/build/distributions"
-  #       run: |
-  #         mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
-  #         curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
+      - name: Checkout main repository
+        if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: DCD-1785-2
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
 
-  #     - name: Notify failure on Slack
-  #       uses: bryannice/gitactions-slack-notification@2.0.0
-  #       if: failure() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
-  #       env:
-  #         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-  #         SLACK_TITLE: ❌ Web build for ${{ inputs.product_name }} failed
-  #         SLACK_MESSAGE: The web build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-  #         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+      # Step to extract FOUNDATION_VERSION from additional_file
+      - name: Read FOUNDATION_VERSION from additional file
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}"
+        id: extract_version        
+        shell: bash
+        run: |
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            # Extract FOUNDATION_VERSION from the additional file
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
+              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
+            else
+              echo "FOUNDATION_VERSION not found in additional file"
+              exit 1
+            fi
+          fi
 
-  #     - name: Notify success on Slack
-  #       uses: bryannice/gitactions-slack-notification@2.0.0
-  #       if: success() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
-  #       env:
-  #         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-  #         SLACK_TITLE: ✅ Web build for ${{ inputs.product_name }} passed
-  #         SLACK_MESSAGE: The web build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-  #         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+      - name: Update @genesislcap/foundation dependencies 
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        run: |
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          echo "Updated package.json:"
+          cat package.json
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: 'adopt'
+
+      - name: Checkout main repository
+        if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: DCD-1785-2
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
+
+      - name: Restore gradle.properties and setup
+        env:
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          echo "Listing all files in the working-directory:"
+          pwd
+          ls -la        
+          
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          
+          # Write initial properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+
+          # Set file permissions
+          sudo chmod +x ./gradlew
+          sudo chmod +x ./${{ inputs.server-path }}/gradlew
+          sudo chmod -R +rx ./${{ inputs.server-path }}/
+          
+
+          # Append contents of additional file to gradle.properties based on condition
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
+          fi
+
+          # Print the gradle.properties file for verification
+          echo "Contents of gradle.properties after modification:"
+          cat ~/.gradle/gradle.properties
+          
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
+          
+          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+
+
+      - name: Check file existence
+        id: web_exists
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          if test -d client; then
+            echo "client_folder_exists=true" >> $GITHUB_OUTPUT
+            CLIENT_BUILD_LOCATION="client"
+          fi
+          if test -d client/web; then
+            CLIENT_BUILD_LOCATION="client/web"
+          fi
+          echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
+          CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
+          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
+
+      - name: Client Build
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Upload Client Package
+        if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ steps.web_exists.outputs.modified-location }}/build/distributions"
+        run: |
+          mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Web build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: The web build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK && steps.web_exists.outputs.web_exists
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Web build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: The web build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
