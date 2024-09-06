@@ -178,6 +178,9 @@ jobs:
         shell: bash
         run: |
           echo "Listing all files in the working-directory:"
+          pwd
+          ls -la
+          cd ..
           ls -la
           cd ..
           ls -la
