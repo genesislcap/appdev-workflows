@@ -164,6 +164,7 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
+          path: product-repo
 
       
       - name: Set up JDK
@@ -178,6 +179,12 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
+          echo "Listing all files in the working-directory:"
+          ls -la
+          cd ..
+          ls -la
+          cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation
+          ls -la
           
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
