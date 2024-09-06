@@ -179,8 +179,8 @@ jobs:
         run: |
           echo "Listing all files in the working-directory:"
           pwd
-          ls -la         
-          cd ..
+          ls -la        
+          
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           
