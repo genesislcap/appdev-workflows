@@ -164,6 +164,7 @@ jobs:
           distribution: 'adopt'
 
       - name: Checkout main repository
+        if: inputs.testautomation_build
         uses: actions/checkout@v3
         with:
           repository: genesislcap/platform-qa-automation
@@ -204,13 +205,15 @@ jobs:
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
           
-          
 
-          # Append contents of another file to gradle.properties
-          if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
-            cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
-          else
-            echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+          # Append contents of additional file to gradle.properties based on condition
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
           fi
 
           # Print the gradle.properties file for verification
