@@ -111,7 +111,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: '/opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/main-repo/.github/workflows/version.properties'
+        default: '${{ inputs.working-directory }}/main-repo/.github/workflows/version.properties'
       
 
     secrets:
@@ -179,16 +179,7 @@ jobs:
         run: |
           echo "Listing all files in the working-directory:"
           pwd
-          ls -la
-          cd ..
-          ls -la
-          cd ..
-          ls -la
-
-          cd main-repo
-          ls -la
-          cd .github/workflows
-          ls -la
+          ls -la         
 
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
