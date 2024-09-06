@@ -111,7 +111,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: '${{ inputs.working-directory }}/main-repo/.github/workflows/version.properties'
+        default: 'main-repo/.github/workflows/version.properties'
       
 
     secrets:
@@ -207,7 +207,7 @@ jobs:
           
 
           # Append contents of another file to gradle.properties
-          if [ -f "${{ inputs.additional_file }}" ]; then
+          if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
             cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
           else
             echo "Additional file not found: ${{ inputs.additional_file }}" >&2
