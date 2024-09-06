@@ -179,6 +179,9 @@ jobs:
         run: |
           echo "Listing all files in the working-directory:"
           ls -la
+          cd ..
+          ls -la
+
           cd main-repo
           ls -la
           cd .github/workflows
