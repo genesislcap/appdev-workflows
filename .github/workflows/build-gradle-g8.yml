@@ -238,7 +238,7 @@ jobs:
           echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
 
       - name: Print updated package.json
-        if: inputs.FOUNDATION_VERSION
+        if: inputs.testautomation_build
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
         run: |
           echo "Updated package.json:"
