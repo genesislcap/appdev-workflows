@@ -33,9 +33,10 @@ on:
       version:
         required: false
         type: string
-      FOUNDATION_VERSION:
+      working-directory:
+        type: string
+        default: .
         required: false
-        type: string  
 
     secrets:
       JFROG_USERNAME:
@@ -90,20 +91,41 @@ jobs:
           repository: ${{ inputs.testautorepo }}        
           fetch-depth: '0'
           ref: ${{ inputs.testautobranch }}
-          token: ${{ env.GHA_TOKEN }}
+          token: ${{ env.GHA_TOKEN }}      
 
-      - name: Print working directory
+      - name: Checkout main repository
+        if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: DCD-1785-2
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
+
+      # Step to extract FOUNDATION_VERSION from additional_file
+      - name: Read FOUNDATION_VERSION from additional file
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}"
+        id: extract_version        
+        shell: bash
         run: |
-          echo "Current working directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            # Extract FOUNDATION_VERSION from the additional file
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
+              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
+            else
+              echo "FOUNDATION_VERSION not found in additional file"
+              exit 1
+            fi
+          fi
 
       - name: Update @genesislcap/foundation dependencies 
-        if: inputs.FOUNDATION_VERSION
-        working-directory: packages/apps/${{ env.PRODUCT_NAME }}      
+        if: inputs.testautomation_build
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}   
         run: |
-          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
           # Update only @genesislcap/foundation dependencies
           jq --arg version "$NEW_VERSION" '
             .dependencies |= with_entries(
@@ -117,7 +139,7 @@ jobs:
 
       - name: Print updated package.json
         if: inputs.FOUNDATION_VERSION
-        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}    
         run: |
           echo "Updated package.json:"
           cat package.json
