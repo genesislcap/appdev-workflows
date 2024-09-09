@@ -40,10 +40,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string
-      GENESIS_VERSION:
-        required: false
-        type: string
+        type: string      
       defaultEnv:
         required: false
         type: string
@@ -153,7 +150,7 @@ jobs:
     - name: Upload Allure Report
       uses: actions/upload-artifact@v2
       with:
-        name: allure-report
+        name: allure-report-${{ github.run_number }}
         path: allure-history
 
     - name: Deploy report to Github Pages

@@ -161,7 +161,7 @@ jobs:
       - name: Upload lint artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Lint errors
+          name: Lint errors- ${{ inputs.product_name }}
           path: lint-output.txt
 
       - name: Env Set-Up
