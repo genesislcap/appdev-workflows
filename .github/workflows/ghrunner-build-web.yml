@@ -37,6 +37,10 @@ on:
         type: string
         default: .
         required: false
+      additional_file:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/version.properties'  
 
     secrets:
       JFROG_USERNAME:
