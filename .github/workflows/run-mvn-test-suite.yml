@@ -44,6 +44,12 @@ on:
       defaultEnv:
         required: false
         type: string
+      tamdefaultEnv:
+        required: false
+        type: string
+      config-path:
+        required: false
+        type: string
 
 
     secrets:
@@ -80,13 +86,6 @@ jobs:
         ref: ${{ inputs.testautobranch }}
         token: ${{ env.GHA_TOKEN }}
 
-    - name: Print config.properties
-      if: inputs.defaultEnv
-      working-directory: "${{ inputs.test-root-path }}"
-      run: |
-        echo "Conpages-build-deploymenttents of config.properties after modification:"
-        cat config.properties
-
     - name: Set defaultEnv value in config.properties
       if: inputs.defaultEnv
       working-directory: "${{ inputs.test-root-path }}"
@@ -95,10 +94,25 @@ jobs:
           sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
         fi
           
-          
     - name: Print config.properties
       if: inputs.defaultEnv
       working-directory: "${{ inputs.test-root-path }}"
+      run: |
+        echo "Contents of config.properties after modification:"
+        cat config.properties
+    
+    - name: Set tamdefaultEnv value in config.properties
+      if: inputs.tamdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
+          sed -i 's|^defaultHost=.*|adefaultHost=${{ inputs.tamdefaultEnv }}|' config.properties
+        fi
+          
+          
+    - name: Print config.properties
+      if: inputs.tamdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
       run: |
         echo "Contents of config.properties after modification:"
         cat config.properties
