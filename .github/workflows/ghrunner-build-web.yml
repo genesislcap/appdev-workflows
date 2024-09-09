@@ -128,6 +128,7 @@ jobs:
         if: inputs.testautomation_build        
         working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}
         run: |
+          ls -la
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
           # Update only @genesislcap/foundation dependencies
           jq --arg version "$NEW_VERSION" '
