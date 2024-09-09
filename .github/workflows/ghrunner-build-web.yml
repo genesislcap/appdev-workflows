@@ -126,7 +126,7 @@ jobs:
           fi
       - name: Update @genesislcap/foundation dependencies 
         if: inputs.testautomation_build        
-        working-directory: ""${{ inputs.working-directory }}"/packages/apps/${{ env.PRODUCT_NAME }}"  
+        working-directory: "${{ inputs.working-directory }}"
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
           # Update only @genesislcap/foundation dependencies
