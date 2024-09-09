@@ -70,30 +70,30 @@ on:
       testautobranch:
         required: false
         type: string
-      GENESIS_VERSION:
-        required: false
-        type: string
-      AUTH_VERSION:
-        required: false
-        type: string
-      GENESIS_NOTIFY:
-        required: false
-        type: string
-      NOTIFY_VERSION:
-        required: false
-        type: string
-      FIX_VERSION:
-        required: false
-        type: string
-      FIlESERVER_VERSION:
-        required: false
-        type: string
-      EXPORT_VERSION:
-        required: false
-        type: string
-      DEPLOYPLUGIN_VERSION:
-        required: false
-        type: string
+      # GENESIS_VERSION:
+      #   required: false
+      #   type: string
+      # AUTH_VERSION:
+      #   required: false
+      #   type: string
+      # GENESIS_NOTIFY:
+      #   required: false
+      #   type: string
+      # NOTIFY_VERSION:
+      #   required: false
+      #   type: string
+      # FIX_VERSION:
+      #   required: false
+      #   type: string
+      # FIlESERVER_VERSION:
+      #   required: false
+      #   type: string
+      # EXPORT_VERSION:
+      #   required: false
+      #   type: string
+      # DEPLOYPLUGIN_VERSION:
+      #   required: false
+      #   type: string
       server-path:
         required: false
         type: string
@@ -105,6 +105,10 @@ on:
         required: false
         type: string
         default: 'client'
+      additional_file:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/version.properties'
       
 
     secrets:
@@ -150,66 +154,6 @@ jobs:
           ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
-      - name: Set genesisVersion in gradle.properties
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-        run: |
-          if [ -n "${{ inputs.GENESIS_VERSION }}" ]; then
-            sed -i 's/^genesisVersion=.*/genesisVersion=${{ inputs.GENESIS_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.AUTH_VERSION }}" ]; then
-            sed -i 's/^authVersion=.*/authVersion=${{ inputs.AUTH_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.GENESIS_NOTIFY }}" ]; then
-            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.GENESIS_NOTIFY }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.NOTIFY_VERSION }}" ]; then
-            sed -i 's/^genesisNotify=.*/genesisNotify=${{ inputs.NOTIFY_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.FIX_VERSION }}" ]; then
-            sed -i 's/^fixVersion=.*/fixVersion=${{ inputs.FIX_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.FIlESERVER_VERSION }}" ]; then
-            sed -i 's/^fileserverVersion=.*/fileserverVersion=${{ inputs.FIlESERVER_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.EXPORT_VERSION }}" ]; then
-            sed -i 's/^exportVersion=.*/exportVersion=${{ inputs.EXPORT_VERSION }}/' gradle.properties
-          fi
-          if [ -n "${{ inputs.DEPLOYPLUGIN_VERSION }}" ]; then
-            sed -i 's/^deployPluginVersion=.*/deployPluginVersion=${{ inputs.DEPLOYPLUGIN_VERSION }}/' gradle.properties
-          fi
-          
-      - name: Print gradle.properties
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-        run: |
-          echo "Contents of gradle.properties after modification:"
-          cat gradle.properties
-
-      - name: Update @genesislcap/foundation dependencies 
-        if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
-        run: |
-          NEW_VERSION="${{ inputs.FOUNDATION_VERSION }}"
-          # Update only @genesislcap/foundation dependencies
-          jq --arg version "$NEW_VERSION" '
-            .dependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            ) |
-            .devDependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
-
-      - name: Print updated package.json
-        if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
-        run: |
-          echo "Updated package.json:"
-          cat package.json
-
-
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -222,6 +166,15 @@ jobs:
           node-version: ${{ inputs.node_version }}
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
+
+      - name: Checkout main repository
+        if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: DCD-1785-2
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
 
       - name: Restore gradle.properties and setup
         env:
@@ -247,6 +200,21 @@ jobs:
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/gradlew
 
+          # Append contents of additional file to gradle.properties based on condition
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
+          fi
+
+          # Print the gradle.properties file for verification
+          echo "Contents of gradle.properties after modification:"
+          cat ~/.gradle/gradle.properties
+
+
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
             echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
@@ -256,6 +224,48 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
+
+       # Step to extract FOUNDATION_VERSION from additional_file
+      - name: Read FOUNDATION_VERSION from additional file
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}"
+        id: extract_version        
+        shell: bash
+        run: |
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            # Extract FOUNDATION_VERSION from the additional file
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
+              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
+            else
+              echo "FOUNDATION_VERSION not found in additional file"
+              exit 1
+            fi
+          fi
+
+      - name: Update @genesislcap/foundation dependencies 
+        if: inputs.testautomation_build
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        run: |
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: inputs.FOUNDATION_VERSION
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          echo "Updated package.json:"
+          cat package.json
 
       - name: 'Create .npmrc'
         shell: bash

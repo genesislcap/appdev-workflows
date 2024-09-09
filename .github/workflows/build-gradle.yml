@@ -76,34 +76,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string
-      # GENESIS_VERSION:
-      #   required: false
-      #   type: string
-      # AUTH_VERSION:
-      #   required: false
-      #   type: string
-      # GENESIS_NOTIFY:
-      #   required: false
-      #   type: string
-      # NOTIFY_VERSION:
-      #   required: false
-      #   type: string
-      # FIX_VERSION:
-      #   required: false
-      #   type: string
-      # FIlESERVER_VERSION:
-      #   required: false
-      #   type: string
-      # EXPORT_VERSION:
-      #   required: false
-      #   type: string
-      # DEPLOYPLUGIN_VERSION:
-      #   required: false
-      #   type: string
-      FOUNDATION_VERSION:
-        required: false
-        type: string
+        type: string     
       web-path:
         required: false
         type: string
@@ -111,8 +84,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'
-      
+        default: 'main-repo/.github/workflows/version.properties'      
 
     secrets:
       GRADLE_PROPERTIES:
