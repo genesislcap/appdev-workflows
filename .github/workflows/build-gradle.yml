@@ -341,49 +341,7 @@ jobs:
           ref: DCD-1785-2
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
-
-      # Step to extract FOUNDATION_VERSION from additional_file
-      - name: Read FOUNDATION_VERSION from additional file
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}"
-        id: extract_version        
-        shell: bash
-        run: |
-          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-            # Extract FOUNDATION_VERSION from the additional file
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-            else
-              echo "FOUNDATION_VERSION not found in additional file"
-              exit 1
-            fi
-          fi
-
-      - name: Update @genesislcap/foundation dependencies 
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
-        run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Update only @genesislcap/foundation dependencies
-          jq --arg version "$NEW_VERSION" '
-            .dependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            ) |
-            .devDependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
-
-      - name: Print updated package.json
-        if: inputs.FOUNDATION_VERSION
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
-        run: |
-          echo "Updated package.json:"
-          cat package.json
-
+      
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -445,6 +403,49 @@ jobs:
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
           CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
           echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
+
+      # Step to extract FOUNDATION_VERSION from additional_file
+      - name: Read FOUNDATION_VERSION from additional file
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}"
+        id: extract_version        
+        shell: bash
+        run: |
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            # Extract FOUNDATION_VERSION from the additional file
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
+              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
+            else
+              echo "FOUNDATION_VERSION not found in additional file"
+              exit 1
+            fi
+          fi
+
+      - name: Update @genesislcap/foundation dependencies 
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        run: |
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
+          # Update only @genesislcap/foundation dependencies
+          jq --arg version "$NEW_VERSION" '
+            .dependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            ) |
+            .devDependencies |= with_entries(
+              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            )
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+
+      - name: Print updated package.json
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          echo "Updated package.json:"
+          cat package.json
+      
 
       - name: Client Build
         if: steps.web_exists.outputs.client_folder_exists == 'true'
