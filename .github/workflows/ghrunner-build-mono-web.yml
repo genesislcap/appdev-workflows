@@ -28,7 +28,11 @@ on:
       working-directory:
         type: string
         default: .
-        required: false     
+        required: false   
+      additional_file:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/version.properties'   
 
     secrets:
       JFROG_USERNAME:
