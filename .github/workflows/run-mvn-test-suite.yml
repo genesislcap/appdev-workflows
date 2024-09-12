@@ -106,7 +106,7 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
       run: |
         if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
-          sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.tamdefaultEnv }}|' config.properties
+          sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
         fi
           
           
