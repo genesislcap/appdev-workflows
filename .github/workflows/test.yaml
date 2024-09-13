@@ -1,0 +1,122 @@
+name: gradle-Build-workflow
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      branch:
+        required: false
+        type: string
+      product_name:
+        required: false
+        type: string
+
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JFROG_NPM_AUTH_TOKEN:
+        required: true
+      GPR_READ_TOKEN:
+        required: true
+      GRADLE_PROPERTIES:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
+
+env:
+  REPO_NAME: ${{ inputs.repo_name }}
+
+jobs:
+
+  build:
+    name: Steps to build mono repo artifact and upload it to jfrog
+    runs-on: appdev-selfhosted-al2023
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Bootstrap
+        working-directory: ./client
+        run: npm run bootstrap
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+      - name: Build
+        working-directory: ./client/web
+        run: npm run build
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+
+
+      - name: Run ESLint
+        working-directory: ./client
+        run: npm run lint > lint-output.txt || echo "Linting completed with errors"
+
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lint errors
+          path: lint-output.txt
+
+      - name: Env Set-Up
+        run:  |
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
+
+      - name: Env Setup for nightly build
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
+        run:  |
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+
+
+      - name: Package and Publish
+        run:  |
+              echo "Package:"
+              date
+              sudo yum install zip unzip
+              echo $(pwd)
+              ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
+              cd client/web/dist
+              zip -r ${{ env.OUTPUT }} *
+              pwd
+              echo ${{ env.OUTPUT }}
+              ls | grep zip
+              curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.PRODUCT_NAME }}/web/${{ env.OUTPUT }}" -T ${{ env.OUTPUT }} -v
+
+      - name: Notify failure on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Web build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+
+      - name: Notify success on Slack
+        uses: bryannice/gitactions-slack-notification@2.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Web build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Web build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
