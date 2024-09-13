@@ -20,28 +20,6 @@ on:
         type: boolean
         default: true
 
-      testautomation_build:
-        required: false
-        default: false
-        type: boolean
-      testautorepo:
-        required: false
-        type: string
-      testautobranch:
-        required: false
-        type: string
-      version:
-        required: false
-        type: string
-      working-directory:
-        type: string
-        default: .
-        required: false
-      additional_file:
-        required: false
-        type: string
-        default: 'main-repo/.github/workflows/version.properties'  
-
     secrets:
       JFROG_USERNAME:
         required: true
@@ -57,24 +35,19 @@ on:
         required: false
       SLACK_WEBHOOK:
         required: false
-      GHA_TOKEN:
-        required: true          
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    name: Web build
+    name: Steps to build the artifact and upload it to jfrog
     env:
       JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
       JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
       JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
       JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
-      GHA_TOKEN: ${{secrets.GHA_TOKEN}}
-
     runs-on: appdev-selfhosted-al2023
 
     strategy:
@@ -82,27 +55,16 @@ jobs:
         node-version: [20.x]
 
     steps:
-      - name: Checkout code
-        if: ${{ !inputs.testautomation_build }}
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}     
-
-      - uses: actions/checkout@v3
-        if: inputs.testautomation_build
-        with:
-          repository: ${{ inputs.testautorepo }}        
-          fetch-depth: '0'
-          ref: ${{ inputs.testautobranch }}
-          token: ${{ env.GHA_TOKEN }} 
 
       - name: Env Setup
         run:  |
               echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
               echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
               echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.version }}.zip" >> $GITHUB_ENV
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
 
       - name: Env Setup for nightly build
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
@@ -113,57 +75,6 @@ jobs:
         if: ${{ inputs.product_name }}
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-
-      - name: Checkout main repository
-        if: inputs.testautomation_build
-        uses: actions/checkout@v3
-        with:
-          repository: genesislcap/platform-qa-automation
-          ref: DCD-1785-2
-          token: ${{ secrets.GHA_TOKEN }}
-          path: main-repo
-
-      # Step to extract FOUNDATION_VERSION from additional_file
-      - name: Read FOUNDATION_VERSION from additional file
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}"
-        id: extract_version        
-        shell: bash
-        run: |
-          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-            # Extract FOUNDATION_VERSION from the additional file
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-            else
-              echo "FOUNDATION_VERSION not found in additional file"
-              exit 1
-            fi
-          fi
-      - name: Update @genesislcap/foundation dependencies 
-        if: inputs.testautomation_build        
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}
-        run: |
-          ls -la
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Update only @genesislcap/foundation dependencies
-          jq --arg version "$NEW_VERSION" '
-            .dependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            ) |
-            .devDependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
-
-      - name: Print updated package.json
-        if: inputs.testautomation_build
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}  
-        run: |
-          echo "Updated package.json:"
-          cat package.json
 
       - name: Sonar Setup
         run:  |
@@ -176,8 +87,6 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
 
       - name: Artifactory Setup
         run: |
@@ -197,7 +106,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Build
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}  
+        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build
 
       - name: Lint Check
@@ -211,7 +120,7 @@ jobs:
       - name: Upload lint artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Lint errors-${{ env.PRODUCT_NAME }}
+          name: Lint errors
           path: lint-output.txt
 
       - name: Package and Publish
