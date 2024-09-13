@@ -1,8 +1,4 @@
-# This is a workflow to being called from appdev-devops repo in genesiscicd
-#  NPM web build workflow v0.0.1
-
-name: Web Deploy
-
+name: gradle-Build-workflow
 on:
   workflow_call:
     inputs:
@@ -15,10 +11,6 @@ on:
       product_name:
         required: false
         type: string
-      upload:
-        required: false
-        type: boolean
-        default: true
 
     secrets:
       JFROG_USERNAME:
@@ -31,91 +23,48 @@ on:
         required: true
       GPR_READ_TOKEN:
         required: true
-      JENKINSGENESIS_SONAR:
-        required: false
+      GRADLE_PROPERTIES:
+        required: true
       SLACK_WEBHOOK:
         required: false
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+
   build:
-    name: Steps to build the artifact and upload it to jfrog
-    env:
-      JFROG_USERNAME: ${{secrets.JFROG_USERNAME}}
-      JFROG_EMAIL: ${{secrets.JFROG_EMAIL}}
-      JFROG_PASSWORD: ${{secrets.JFROG_PASSWORD}}
-      JFROG_NPM_AUTH_TOKEN: ${{secrets.JFROG_NPM_AUTH_TOKEN}}
+    name: Steps to build mono repo artifact and upload it to jfrog
     runs-on: appdev-selfhosted-al2023
 
     strategy:
       matrix:
         node-version: [20.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
-
-      - name: Env Setup
-        run:  |
-              echo "PRODUCT_BASE=$(pwd)" >> $GITHUB_ENV
-              echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
-              echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV #NOTE: only works with SSH repo urls + will cause issues with bny_investments
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags).zip" >> $GITHUB_ENV
-
-      - name: Env Setup for nightly build
-        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' ||  inputs.branch == 'master' }}
-        run:  |
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
-
-      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
-        if: ${{ inputs.product_name }}
-        run: |
-              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
-
-      - name: Sonar Setup
-        run:  |
-              echo "Sonar Setup:"
-              date
-              echo "sonar.projectKey="${{ env.REPO_NAME }} > sonar-project.properties
-              echo "sonar.sources="${{ env.PRODUCT_BASE }}"/src" >> sonar-project.properties
 
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Artifactory Setup
-        run: |
-              echo "Artifactory:"
-              date
-              npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-              npm config set //genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth true
-              npm config list
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-
       - name: Bootstrap
         working-directory: ./client
-        run: |
-           npm config ls -l
-           npm run bootstrap
+        run: npm run bootstrap
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Build
-        working-directory: packages/apps/${{ env.PRODUCT_NAME }}
+        working-directory: ./client/web
         run: npm run build
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-      - name: Lint Check
-        run: |
-          echo "LINT_CHECK=$(grep -Fxq "lint" package.json; echo $?)" >> $GITHUB_ENV
 
       - name: Run ESLint
-        if: ${{env.LINT_CHECK==1 }}
+        working-directory: ./client
         run: npm run lint > lint-output.txt || echo "Linting completed with errors"
 
       - name: Upload lint artifact
@@ -124,15 +73,30 @@ jobs:
           name: Lint errors
           path: lint-output.txt
 
+      - name: Env Set-Up
+        run:  |
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
+
+      - name: Env Setup for nightly build
+        if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
+        run:  |
+              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.branch }}.zip" >> $GITHUB_ENV
+
+      - name: Env Setup for PRODUCT_NAME for repos not following a conventions
+        if: ${{ inputs.product_name }}
+        run: |
+              echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
+
+
       - name: Package and Publish
-        if: inputs.upload
         run:  |
               echo "Package:"
               date
               sudo yum install zip unzip
               echo $(pwd)
               ln -s packages/apps/${{ env.PRODUCT_NAME }}/src/ src
-              cd packages/apps/${{ env.PRODUCT_NAME }}/dist
+              cd client/web/dist
               zip -r ${{ env.OUTPUT }} *
               pwd
               echo ${{ env.OUTPUT }}
