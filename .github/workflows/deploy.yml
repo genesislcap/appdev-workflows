@@ -1,14 +1,14 @@
-name:  Deploy Self serve envs
+name: Deploy Self Serve Envs
 
 on:
   workflow_call:
     inputs:
       action:
-        description: 'To deploy infra or destroy infra'
+        description: 'To deploy or destroy infrastructure'
         required: true
         type: string
       file_name:
-        description: 'Comma separated list of file yaml name'
+        description: 'Comma separated list of YAML file names'
         required: false
         type: string
       tf_branch:
@@ -18,14 +18,10 @@ on:
         type: string
       ansible_branch:
         description: 'Branch name for services_ansible repo'
+        required: false
         default: master
-        required: false
         type: string
-    secrets:
-      JENKINS_SECURITYTOKEN:
-        required: false
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to create resources in cddev account
@@ -40,7 +36,7 @@ jobs:
         run: |
           git checkout develop
           git pull
-          echo "Checking out the required TF and ansible scripts- per run"
+          echo "Checking out the required TF and Ansible scripts"
           /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
           ls -larth
           ls -larth ~/selfserve
@@ -49,35 +45,44 @@ jobs:
           ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
+          # Uncomment the following line to execute the Python script
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
-      
-      - name: Install yq and jq
+
+      - name: Install PyYAML
         run: |
-          # Install jq
-          sudo yum install -y jq
+          python -m pip install --upgrade pip
+          pip install pyyaml
 
-          # Install yq (v4.27.3, adjust version as needed)
-          sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
-
-      - name: Extract Variables from JSON
+      - name: Extract Variables from YAML
         id: extract_vars
         run: |
-          # Extract values from the JSON file
-          product_name=$(jq -r '.product_name' ~/selfserve/scripts/${{ inputs.file_name }})
-          environment_type=$(jq -r '.environment_type' ~/selfserve/scripts/${{ inputs.file_name }})
-          user=$(jq -r '.user' ~/selfserve/scripts/${{ inputs.file_name }})
+          python3 - <<EOF
+          import yaml
+          import os
 
-          # Output the extracted values as GitHub Actions environment variables
-          echo "product_name=${product_name}" >> $GITHUB_ENV
-          echo "environment_type=${environment_type}" >> $GITHUB_ENV
-          echo "user=${user}" >> $GITHUB_ENV
+          file_name = "${{ inputs.file_name }}"
+
+          # Load the YAML file
+          with open(file_name, 'r') as file:
+              data = yaml.safe_load(file)
+
+          # Extract the required variables
+          product_name = data.get('product_info', {}).get('product_name', 'unknown')
+          environment_type = data.get('environment_type', 'unknown')
+          user = data.get('vms', {}).get(data.get('environment_name', ''), {}).get('genesis_app', {}).get('user', 'unknown')
+
+          # Print environment variables for GitHub Actions
+          with open(os.getenv('GITHUB_ENV'), 'a') as env_file:
+              env_file.write(f"PRODUCT_NAME={product_name}\n")
+              env_file.write(f"ENVIRONMENT_TYPE={environment_type}\n")
+              env_file.write(f"USER={user}\n")
+          EOF
 
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
-            --data-urlencode "product=${{ env.product_name }}" \
-            --data-urlencode "environment_level=${{ env.environment_type }}" \
-            --data-urlencode "job_name=product_${{ env.product_name }}_upgrade" \
+            --data-urlencode "product=${{ env.PRODUCT_NAME }}" \
+            --data-urlencode "environment_level=${{ env.ENVIRONMENT_TYPE }}" \
+            --data-urlencode "job_name=product_${{ env.PRODUCT_NAME }}_upgrade" \
             --data-urlencode "base_path=AppDev-CI_CD" \
-            --data-urlencode "genesis_user=${{ env.user }}"
+            --data-urlencode "genesis_user=${{ env.USER }}"
