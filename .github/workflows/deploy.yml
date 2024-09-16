@@ -61,10 +61,10 @@ jobs:
         id: extract_vars
         run: |
 
-          file_name=~/selfserve/scripts/${{ inputs.file_name }}
-          product_name=$(yq e '.product_name' ${{ inputs.file_name }})
-          environment_name=$(yq e '.environment_name' ${{ inputs.file_name }})
-          user=$(yq e '.user' ${{ inputs.file_name }})
+          file_path=~/selfserve/scripts/${{ inputs.file_name }}
+          product_name=$(yq eval '.product_info.product_name' "$file_path")
+          environment_type=$(yq eval '.environment_type' "$file_path")
+          user=$(yq eval '.vms[.environment_name].genesis_app.user' "$file_path")
           echo "product_name=${product_name}" >> $GITHUB_ENV
           echo "environment_name=${environment_name}" >> $GITHUB_ENV
           echo "user=${user}" >> $GITHUB_ENV
