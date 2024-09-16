@@ -63,7 +63,7 @@ jobs:
           python3 - <<EOF
           import yaml
           import os
-          ffile_name = "${{ inputs.file_name }}"
+          file_name = "${{ inputs.file_name }}"
           file_path = os.path.expanduser('~/selfserve/scripts/') + file_name
 
           # Load the YAML file
