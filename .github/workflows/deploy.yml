@@ -63,11 +63,11 @@ jobs:
           python3 - <<EOF
           import yaml
           import os
-
-          file_name = "${{ inputs.file_name }}"
+          ffile_name = "${{ inputs.file_name }}"
+          file_path = os.path.expanduser('~/selfserve/scripts/') + file_name
 
           # Load the YAML file
-          with open(file_name, 'r') as file:
+          with open(file_path, 'r') as file:
               data = yaml.safe_load(file)
 
           # Extract the required variables
