@@ -1,14 +1,14 @@
-name:  Deploy Self serve envs
+name: Deploy Self Serve Envs
 
 on:
   workflow_call:
     inputs:
       action:
-        description: 'To deploy infra or destroy infra'
+        description: 'To deploy or destroy infrastructure'
         required: true
         type: string
       file_name:
-        description: 'Comma separated list of file yaml name'
+        description: 'Comma separated list of YAML file names'
         required: false
         type: string
       tf_branch:
@@ -18,14 +18,13 @@ on:
         type: string
       ansible_branch:
         description: 'Branch name for services_ansible repo'
-        default: master
         required: false
+        default: master
         type: string
     secrets:
       JENKINS_SECURITYTOKEN:
-        required: false
+        required: true
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     name: Steps to create resources in cddev account
@@ -40,7 +39,7 @@ jobs:
         run: |
           git checkout develop
           git pull
-          echo "Checking out the required TF and ansible scripts- per run"
+          echo "Checking out the required TF and Ansible scripts"
           /var/lib/cloud/scripts/per-instance/checkout-selfserve.sh ${{ inputs.tf_branch }} ${{ inputs.ansible_branch }}
           ls -larth
           ls -larth ~/selfserve
@@ -49,38 +48,26 @@ jobs:
           ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
           export ANSIBLE_STDOUT_CALLBACK=debug
+          Uncomment the following line to execute the Python script
           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
-      
-      - name: Install yq and jq
-        run: |
-          # Install jq
-          sudo yum install -y jq
 
-          # Install yq (v4.27.3, adjust version as needed)
+      - name: Install yq
+        run: |         
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
-
-      - name: Extract Variables from YAML
-        id: extract_vars
-        run: |
-          # Convert YAML to JSON and extract variables using jq
-          yq eval -o=json ~/selfserve/scripts/${{ inputs.file_name }} | jq -r '
-            .environment_name as $env_name |
-            .environment_type as $env_type |
-            .product_info.product_name as $product_name |
-            .vms[].genesis_app.user as $user |
-            "environment_name=\($env_name)\nenvironment_type=\($env_type)\nproduct_name=\($product_name)\nuser=\($user)"
-          ' | while IFS= read -r line; do
-            key=$(echo $line | cut -d'=' -f1)
-            value=$(echo $line | cut -d'=' -f2-)
-            echo "${key}=${value}" >> $GITHUB_ENV
-          done
+          sudo chmod +x /usr/bin/yq      
 
       - name: Trigger Jenkins Job
         run: |
+          # Extract values directly in the curl command
+          file_path=~/selfserve/scripts/${{ inputs.file_name }}
+          product_name=$(yq eval '.product_info.product_name' "$file_path")
+          environment_type=$(yq eval '.environment_type' "$file_path")
+          user=$(yq eval '.vms[.environment_name].genesis_app.user' "$file_path")
+
+          # Trigger Jenkins job with extracted variables
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
-            --data-urlencode "product=${{ env.product_name }}" \
-            --data-urlencode "environment_level=${{ env.environment_type }}" \
-            --data-urlencode "job_name=product_${{ env.product_name }}_upgrade" \
+            --data-urlencode "product=${product_name}" \
+            --data-urlencode "environment_level=${environment_type}" \
+            --data-urlencode "job_name=product_${product_name}_upgrade" \
             --data-urlencode "base_path=AppDev-CI_CD" \
-            --data-urlencode "genesis_user=${{ env.user }}"
+            --data-urlencode "genesis_user=${user}"
