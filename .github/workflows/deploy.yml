@@ -51,10 +51,11 @@ jobs:
           # Uncomment the following line to execute the Python script
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
-      - name: Install PyYAML
+      - name: Install Python 3 and PyYAML
         run: |
-          python -m pip install --upgrade pip
-          pip install pyyaml
+          sudo dnf install -y python3
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
 
       - name: Extract Variables from YAML
         id: extract_vars
