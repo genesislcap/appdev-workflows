@@ -51,36 +51,23 @@ jobs:
           # Uncomment the following line to execute the Python script
           # python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
-      - name: Install Python 3 and PyYAML
+      - name: Install yq
         run: |
-          sudo dnf install -y python3
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pyyaml
+          curl -LO https://github.com/mikefarah/yq/releases/download/v4.15.2/yq_linux_amd64
+          chmod +x yq_linux_amd64
+          mv yq_linux_amd64 /usr/local/bin/yq
 
       - name: Extract Variables from YAML
         id: extract_vars
         run: |
-          python3 - <<EOF
-          import yaml
-          import os
-          file_name = "${{ inputs.file_name }}"
-          file_path = os.path.expanduser('~/selfserve/scripts/') + file_name
 
-          # Load the YAML file
-          with open(file_path, 'r') as file:
-              data = yaml.safe_load(file)
-
-          # Extract the required variables
-          product_name = data.get('product_info', {}).get('product_name', 'unknown')
-          environment_type = data.get('environment_type', 'unknown')
-          user = data.get('vms', {}).get(data.get('environment_name', ''), {}).get('genesis_app', {}).get('user', 'unknown')
-
-          # Print environment variables for GitHub Actions
-          with open(os.getenv('GITHUB_ENV'), 'a') as env_file:
-              env_file.write(f"PRODUCT_NAME={product_name}\n")
-              env_file.write(f"ENVIRONMENT_TYPE={environment_type}\n")
-              env_file.write(f"USER={user}\n")
-          EOF
+          file_name=~/selfserve/scripts/${{ inputs.file_name }}
+          product_name=$(yq e '.product_name' ${{ inputs.file_name }})
+          environment_name=$(yq e '.environment_name' ${{ inputs.file_name }})
+          user=$(yq e '.user' ${{ inputs.file_name }})
+          echo "product_name=${product_name}" >> $GITHUB_ENV
+          echo "environment_name=${environment_name}" >> $GITHUB_ENV
+          echo "user=${user}" >> $GITHUB_ENV
 
       - name: Trigger Jenkins Job
         run: |
