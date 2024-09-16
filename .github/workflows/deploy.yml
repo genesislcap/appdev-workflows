@@ -21,6 +21,9 @@ on:
         required: false
         default: master
         type: string
+    secrets:
+      JENKINS_SECURITYTOKEN:
+        required: true
 
 jobs:
   build:
