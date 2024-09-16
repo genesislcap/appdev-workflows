@@ -53,9 +53,9 @@ jobs:
 
       - name: Install yq
         run: |
-          curl -LO https://github.com/mikefarah/yq/releases/download/v4.15.2/yq_linux_amd64
-          chmod +x yq_linux_amd64
-          mv yq_linux_amd64 /usr/local/bin/yq
+          # Install yq (v4.27.3, adjust version as needed)
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
 
       - name: Extract Variables from YAML
         id: extract_vars
