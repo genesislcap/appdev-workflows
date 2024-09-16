@@ -55,32 +55,12 @@ jobs:
         run: |
           # Install yq (v4.27.3, adjust version as needed)
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
-
-      - name: Debug YAML File Path
-        run: |
-          file_path=~/selfserve/scripts/${{ inputs.file_name }}
-          echo "YAML file path: $file_path"
-          cat "$file_path"  # Print the contents of the YAML file to ensure it's correct
+          sudo chmod +x /usr/bin/yq      
 
       - name: Extract Variables from YAML using yq
         id: extract_vars
         run: |
           file_path=~/selfserve/scripts/${{ inputs.file_name }}
-
-          # Debug yq commands
-          echo "Extracting values from YAML file..."
-
-          # Test yq commands
-          echo "Product Name:"
-          yq eval '.product_info.product_name' "$file_path"
-
-          echo "Environment Type:"
-          yq eval '.environment_type' "$file_path"
-
-          echo "User:"
-          yq eval '.vms[.environment_name].genesis_app.user' "$file_path"
-
           # Extract values using yq
           product_name=$(yq eval '.product_info.product_name' "$file_path")
           environment_type=$(yq eval '.environment_type' "$file_path")
