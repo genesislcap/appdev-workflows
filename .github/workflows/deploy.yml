@@ -23,7 +23,7 @@ on:
         type: string
     secrets:
       JENKINS_SECURITYTOKEN:
-        required: true
+        required: false
 
 jobs:
   build:
