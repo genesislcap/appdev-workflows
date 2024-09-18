@@ -64,7 +64,7 @@ jobs:
           if [[ $(yq eval '.vms | length' "$file_path") -eq 1 ]]; then
             user=$(yq eval '.vms[].genesis_app.user' "$file_path")			
           else
-            user=$(yq eval '.vms[.environment_name].genesis_app.user' "$file_path")
+            user=$(yq eval '.vms[0].genesis_app.user' "$file_path")
           fi
 
 
