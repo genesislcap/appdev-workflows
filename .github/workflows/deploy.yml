@@ -47,8 +47,7 @@ jobs:
           mv config ~/selfserve/scripts/
           ls -larth ~/selfserve/scripts/config
           export PYTHONUNBUFFERED=TRUE
-          export ANSIBLE_STDOUT_CALLBACK=debug
-          Uncomment the following line to execute the Python script
+          export ANSIBLE_STDOUT_CALLBACK=debug          
           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
       - name: Install yq
