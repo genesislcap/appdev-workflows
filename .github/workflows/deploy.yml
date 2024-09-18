@@ -61,11 +61,8 @@ jobs:
           file_path=~/selfserve/scripts/${{ inputs.file_name }}
           product_name=$(yq eval '.product_info.product_name' "$file_path")
           environment_type=$(yq eval '.environment_type' "$file_path")
-          if [[ $(yq eval '.vms | length' "$file_path") -eq 1 ]]; then
-            user=$(yq eval '.vms[].genesis_app.user' "$file_path")
-          else
-            user=$(yq eval '.vms[.environment_name].genesis_app.user' "$file_path")
-          fi
+          user=$(yq eval '.vms | keys | .[0] as $k | .[$k].genesis_app.user' "$file_path")
+
 
           # Trigger Jenkins job with extracted variables
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
