@@ -58,7 +58,7 @@ jobs:
       - name: Trigger Jenkins Job
         run: |
           # Set the base path where the YAML files are located
-          BASE_PATH=~/selfserve/scripts/config
+          BASE_PATH=~/selfserve/scripts
 
           # Split the file names into an array
           IFS=',' read -ra files <<< "${{ inputs.file_name }}"
