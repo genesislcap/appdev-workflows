@@ -57,10 +57,22 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
+          # Set the base path where the YAML files are located
+          BASE_PATH=~/selfserve/scripts/config
+
           # Split the file names into an array
           IFS=',' read -ra files <<< "${{ inputs.file_name }}"
 
-          for file_path in "${files[@]}"; do
+          for file_name in "${files[@]}"; do
+            # Construct the full path
+            file_path="${BASE_PATH}/${file_name}"
+
+            # Check if the file exists
+            if [[ ! -f "$file_path" ]]; then
+              echo "Error: $file_path does not exist."
+              exit 1
+            fi
+
             # Extract values from each YAML file
             product_name=$(yq eval '.product_info.product_name' "$file_path")
             environment_type=$(yq eval '.environment_type' "$file_path")
