@@ -56,17 +56,26 @@ jobs:
           sudo chmod +x /usr/bin/yq      
 
       - name: Trigger Jenkins Job
-        run: |
-          # Extract values directly in the curl command
-          file_path=~/selfserve/scripts/${{ inputs.file_name }}
-          product_name=$(yq eval '.product_info.product_name' "$file_path")
-          environment_type=$(yq eval '.environment_type' "$file_path")
-          user=$(yq eval '.vms[.environment_name].genesis_app.user' "$file_path")
+        run: |          
+          BASE_PATH=~/selfserve/scripts          
+          IFS=',' read -ra files <<< "${{ inputs.file_name }}"
 
-          # Trigger Jenkins job with extracted variables
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
-            --data-urlencode "product=${product_name}" \
-            --data-urlencode "environment_level=${environment_type}" \
-            --data-urlencode "job_name=product_${product_name}_upgrade" \
-            --data-urlencode "base_path=AppDev-CI_CD" \
-            --data-urlencode "genesis_user=${user}"
+          for file_name in "${files[@]}"; do           
+            file_path="${BASE_PATH}/${file_name}"
+            
+            if [[ ! -f "$file_path" ]]; then
+              echo "Error: $file_path does not exist."
+              exit 1
+            fi
+            
+            product_name=$(yq eval '.product_info.product_name' "$file_path")
+            environment_type=$(yq eval '.environment_type' "$file_path")
+            user=$(yq eval '.vms | to_entries | .[0].value.genesis_app.user' "$file_path")
+            
+            curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/pipelines/create_new_v2_pipelines" \
+              --data-urlencode "product=${product_name}" \
+              --data-urlencode "environment_level=${environment_type}" \
+              --data-urlencode "job_name=product_${product_name}_upgrade" \
+              --data-urlencode "base_path=AppDev-CI_CD" \
+              --data-urlencode "genesis_user=${user}"
+          done
