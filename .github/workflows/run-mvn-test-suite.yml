@@ -131,7 +131,7 @@ jobs:
           MVN_OPTIONS="$MVN_OPTIONS -P ${{ inputs.profile }}"
         fi
         cd ${{ inputs.test-root-path }}
-        command="mvn clean test $MVN_OPTIONS -Dbrowser=${{ inputs.browser }}"
+        command="mvn clean test -X $MVN_OPTIONS -Dbrowser=${{ inputs.browser }}"
 
         if $command | grep -q "There are test failures"; then
           exit 1
