@@ -106,17 +106,17 @@ jobs:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
-      - name: Configure Node  ${{ inputs.node-version }}
+      - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ inputs.node-version }}
+          node-version: ${{ inputs.node_version }}
 
-      - name: Configure Node  ${{ inputs.node-version }} if using JFROG npm packages
+      - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ inputs.node-version }}
+          node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
         env:
