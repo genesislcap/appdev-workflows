@@ -59,6 +59,15 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+      REGISTRY_URL:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
+      SCOPE:
+        type: string
+        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
+        required: false
+
 
     secrets:
       GRADLE_PROPERTIES:
@@ -75,6 +84,7 @@ on:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
+        
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -96,10 +106,21 @@ jobs:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
-      - name: Configure Node
+      - name: Configure Node  ${{ inputs.node-version }}
+        if: ${{ !inputs.REGISTRY_URL  }}
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ inputs.node_version }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Configure Node  ${{ inputs.node-version }} if using JFROG npm packages
+        if: ${{ inputs.REGISTRY_URL }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.REGISTRY_URL }}
+          scope: ${{ inputs.SCOPE }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Restore gradle.properties and setup
         env:
