@@ -31,7 +31,7 @@ on:
         default: chrome-headless
       java_version:
         required: false
-        default: '11'
+        default: '17'
         type: string
 
     secrets:
