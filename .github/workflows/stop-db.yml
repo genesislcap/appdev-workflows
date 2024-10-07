@@ -6,6 +6,9 @@ on:
       hostname:
         required: false
         type: string
+      s3ImagePath:
+        required: false
+        type: string
 
       testautomation_build:
         required: false
@@ -20,7 +23,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    name: Steps to stop postgre db 
+    name: Steps to refresh postgre db 
     runs-on: appdev-small
     environment: master
 
@@ -35,6 +38,7 @@ jobs:
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/instances/Remove_Docker_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
+            --data-urlencode "host_name=${{ inputs.S3IMAGEPATH }}" \
             --data-urlencode "genesis_user=genesis" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" 
