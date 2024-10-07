@@ -38,7 +38,7 @@ jobs:
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/instances/Remove_Docker_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
-            --data-urlencode "host_name=${{ inputs.S3IMAGEPATH }}" \
+            --data-urlencode "host_name=${{ inputs.s3ImagePath }}" \
             --data-urlencode "genesis_user=genesis" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" 
