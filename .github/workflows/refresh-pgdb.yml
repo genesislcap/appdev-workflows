@@ -52,7 +52,7 @@ jobs:
         if: ${{ inputs.testautomation_build }}
         run: |
           JOB_STATUS=""
-          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-DevOps/job/instances/job/Remove_Docker_ExistingInstance/lastBuild/api/json"
+          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/DB_Refresh_ExistingInstance/lastBuild/api/json"
           
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
             RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
