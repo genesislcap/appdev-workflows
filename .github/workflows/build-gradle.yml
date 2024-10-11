@@ -106,7 +106,7 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
@@ -270,7 +270,7 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
