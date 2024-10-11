@@ -36,7 +36,7 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-DevOps/instances/Remove_Docker_ExistingInstance" \
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
             --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
             --data-urlencode "genesis_user=genesis" \
