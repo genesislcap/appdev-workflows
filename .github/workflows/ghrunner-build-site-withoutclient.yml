@@ -168,7 +168,8 @@ jobs:
                #download web
                echo "PWD after module download: $(pwd)"
                cd ..
-               wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/"${{ env.PRODUCT_NAME }}"-web-"${{ env.WEB_VERSION }}".zip
+               WEB_PRODUCT_NAME=$(echo "${{ env.PRODUCT_NAME }}" | cut -d"_" -f2)
+               wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" -P "${{ env.PRODUCT_BASE }}"/web_downloads https://genesisglobal.jfrog.io/artifactory/product/"${{ env.PRODUCT_NAME }}"/web/$WEB_PRODUCT_NAME-web-"${{ env.WEB_VERSION }}".zip
                cd web_downloads
                echo "this is the present directory: $(pwd)"
                echo "List of files in pwd:$(ls -a)"
