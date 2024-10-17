@@ -342,9 +342,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: genesislcap/platform-qa-automation
-          ref: master
+          ref: DCD-1961
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
+          fetch-depth: 0 
+          
+      - name: Print version.properties file
+        if: inputs.testautomation_build
+        run: cat main-repo/.github/workflows/version.properties
       
       - name: Set up JDK
         uses: actions/setup-java@v2
