@@ -9,6 +9,9 @@ on:
       s3ImagePath:
         required: false
         type: string
+      genesis_user:
+        required: false
+        type: string
 
       testautomation_build:
         required: false
@@ -39,7 +42,7 @@ jobs:
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
             --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
-            --data-urlencode "genesis_user=genesis" \
+            --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" 
             
