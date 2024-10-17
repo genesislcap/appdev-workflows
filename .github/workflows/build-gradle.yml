@@ -143,6 +143,7 @@ jobs:
           ref: DCD-1961
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
+          fetch-depth: 0 
           
       - name: Print version.properties file
         if: inputs.testautomation_build
