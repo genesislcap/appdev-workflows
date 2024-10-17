@@ -144,7 +144,10 @@ jobs:
           token: ${{ secrets.GHA_TOKEN }}
           path: main-repo
           
-
+      - name: Print version.properties file
+        if: inputs.testautomation_build
+        run: cat main-repo/.github/workflows/version.properties
+        
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
