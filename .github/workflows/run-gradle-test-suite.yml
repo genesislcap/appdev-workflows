@@ -60,7 +60,7 @@ on:
       GENESIS_USER_PRIVATE_KEY:
         required: false
       GHA_TOKEN:
-        required: true
+        required: false
       
 env:  
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
