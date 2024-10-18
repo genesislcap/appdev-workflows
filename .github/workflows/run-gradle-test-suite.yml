@@ -1,0 +1,191 @@
+# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+name: Run Maven test suite
+
+on:
+  workflow_call:
+    inputs:
+      
+      profile:
+        required: false
+        type: string
+        default: ""
+      options:
+        required: false
+        type: string
+      test-root-path:
+        required: true
+        type: string
+      slack-channel:
+        required: false
+        type: string
+        default: devops-notifications-test
+      notify-on-success:
+        required: false
+        type: boolean
+        default: true
+      browser:
+        required: false
+        type: string
+        default: chrome-headless      
+      branch:
+        required: false
+        type: string
+      
+      testautomation_build:
+        required: false
+        default: false
+        type: boolean
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string      
+      defaultEnv:
+        required: false
+        type: string
+      tamdefaultEnv:
+        required: false
+        type: string
+      config-path:
+        required: false
+        type: string
+
+
+    secrets:
+      PAGES_TOKEN:
+        required: true
+      SLACK_WEBHOOK:
+        required: true
+      GENESIS_USER_PRIVATE_KEY:
+        required: false
+      GHA_TOKEN:
+        required: true
+      
+env:  
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+
+jobs:
+  build-Tests:
+    runs-on: [ appdev-selfhosted-al2023 ]
+    container:
+      image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
+    steps:
+    - name: Checkout code      
+      if: ${{ !inputs.testautomation_build }}
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+        ref: ${{ inputs.branch }}     
+
+    - uses: actions/checkout@v3
+      if: inputs.testautomation_build
+      with:
+        repository: ${{ inputs.testautorepo }}        
+        fetch-depth: '0'
+        ref: ${{ inputs.testautobranch }}
+        token: ${{ env.GHA_TOKEN }}
+
+    - name: Set defaultEnv value in config.properties
+      if: inputs.defaultEnv
+      working-directory: "${{ inputs.test-root-path }}"
+      run: |
+        if [ -n "${{ inputs.defaultEnv }}" ]; then
+          sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
+        fi
+          
+    - name: Print config.properties
+      if: inputs.defaultEnv
+      working-directory: "${{ inputs.test-root-path }}"
+      run: |
+        echo "Contents of config.properties after modification:"
+        cat config.properties
+    
+    - name: Set tamdefaultEnv value in config.properties
+      if: inputs.tamdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
+          sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
+        fi
+          
+          
+    - name: Print config.properties
+      if: inputs.tamdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        echo "Contents of config.properties after modification:"
+        cat config.properties
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    - name: Run Gradle
+      shell: bash
+      run: |
+        export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"
+        GRADLE_OPTIONS="${{ inputs.options }}"
+        if [ -n "${{ inputs.profile }}" ]; then
+          GRADLE_OPTIONS="$GRADLE_OPTIONS -P${{ inputs.profile }}"
+        fi
+        cd ${{ inputs.test-root-path }}
+        command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }}"
+        eval $command | tee gradle.log
+        if grep -q "BUILD FAILED" gradle.log; then
+          exit 1
+        else
+          exit 0
+        fi
+    - name: Install git
+      if: always()
+      shell: bash
+      run: |
+        apt update
+        apt install -y git
+    - name: Get Allure history
+      if: always()
+      uses: actions/checkout@v3
+      continue-on-error: true
+      with:
+        ref: gh-pages
+        path: gh-pages
+    - name: Generate Allure report
+      uses: simple-elf/allure-report-action@master
+      if: always()
+      id: allure-report
+      with:
+        gh_pages: gh-pages
+        allure_results: ${{ inputs.test-root-path }}/target/allure-results
+        allure_history: allure-history
+        subfolder: ${{ inputs.profile }}
+
+    - name: Upload Allure Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-report-${{ github.run_number }}
+        path: allure-history
+
+    - name: Deploy report to Github Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.PAGES_TOKEN }}
+        publish_dir: allure-history
+    - name: Notify failure on Slack
+      uses: bryannice/gitactions-slack-notification@2.0.0
+      if: failure()
+      env:
+        SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: ❌ ${{ github.workflow }} failed
+        SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.profile }}/${{ github.run_number }}
+        SLACK_CHANNEL: ${{ inputs.slack-channel }}
+    - name: Notify success on Slack
+      uses: bryannice/gitactions-slack-notification@2.0.0
+      if: success() && inputs.notify-on-success
+      env:
+        SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: ✅ ${{ github.workflow }} passed
+        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.profile }}/${{ github.run_number }}
+        SLACK_CHANNEL: ${{ inputs.slack-channel }}
