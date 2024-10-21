@@ -136,27 +136,29 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
 
-    #  - name: Run tests
-    #     uses: gradle/gradle-build-action@v2
-    #     with:
-    #       arguments: ${{ env.PROJECT }}:build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true ${{ env.GRADLE_PARAMS }}
-      
-    - name: Run Gradle
-      shell: bash
-      run: |
-        export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"
-        GRADLE_OPTIONS="${{ inputs.options }}"
-        if [ -n "${{ inputs.profile }}" ]; then
-          GRADLE_OPTIONS="$GRADLE_OPTIONS -P${{ inputs.profile }}"
-        fi
-        cd ${{ inputs.test-root-path }}
-        command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }} -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true" 
-        eval $command | tee gradle.log
-        if grep -q "BUILD FAILED" gradle.log; then
-          exit 1
-        else
-          exit 0
-        fi
+    
+    - name: Run tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true 
+          build-root-directory: "${{ inputs.test-root-path }}"
+
+    # - name: Run Gradle
+    #   shell: bash
+    #   run: |
+    #     export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"
+    #     GRADLE_OPTIONS="${{ inputs.options }}"
+    #     if [ -n "${{ inputs.profile }}" ]; then
+    #       GRADLE_OPTIONS="$GRADLE_OPTIONS -P${{ inputs.profile }}"
+    #     fi
+    #     cd ${{ inputs.test-root-path }}
+    #     command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }} -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true" 
+    #     eval $command | tee gradle.log
+    #     if grep -q "BUILD FAILED" gradle.log; then
+    #       exit 1
+    #     else
+    #       exit 0
+    #     fi
     - name: Install git
       if: always()
       shell: bash
