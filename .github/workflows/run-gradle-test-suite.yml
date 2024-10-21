@@ -61,9 +61,18 @@ on:
         required: false
       GHA_TOKEN:
         required: false
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
       
 env:  
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+  genesisArtifactoryUser: ${{secrets.JFROG_USERNAME}}
+  PgenesisArtifactoryPassword: ${{secrets.JFROG_PASSWORD}}
+ 
 
 jobs:
   build-Tests:
@@ -127,6 +136,11 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
 
+    #  - name: Run tests
+    #     uses: gradle/gradle-build-action@v2
+    #     with:
+    #       arguments: ${{ env.PROJECT }}:build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true ${{ env.GRADLE_PARAMS }}
+      
     - name: Run Gradle
       shell: bash
       run: |
@@ -136,7 +150,7 @@ jobs:
           GRADLE_OPTIONS="$GRADLE_OPTIONS -P${{ inputs.profile }}"
         fi
         cd ${{ inputs.test-root-path }}
-        command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }}"
+        command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }} -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true" 
         eval $command | tee gradle.log
         if grep -q "BUILD FAILED" gradle.log; then
           exit 1
