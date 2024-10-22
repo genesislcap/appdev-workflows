@@ -61,17 +61,17 @@ on:
         required: false
       GHA_TOKEN:
         required: false
-      JFROG_USERNAME:
+      genesisArtifactoryUser:
         required: true
       JFROG_EMAIL:
         required: true
-      JFROG_PASSWORD:
+      genesisArtifactoryPassword:
         required: true
       
 env:  
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
-  genesisArtifactoryUser: ${{secrets.JFROG_USERNAME}}
-  PgenesisArtifactoryPassword: ${{secrets.JFROG_PASSWORD}}
+  genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
+  PgenesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
  
 
 jobs:
