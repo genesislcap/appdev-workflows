@@ -188,7 +188,14 @@ jobs:
       #         npm config list
       #   env:
       #     NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-
+      - name: Setup npm registry for @genesislcap
+        run: |
+          echo "Using npmjs.com for @genesislcap scoped packages"
+          npm config set @genesislcap:registry https://registry.npmjs.org/
+          npm config list
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          
       - name: Bootstrap
         run: |
            npm config ls -l
