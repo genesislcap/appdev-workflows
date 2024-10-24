@@ -109,7 +109,7 @@ jobs:
         fi
     - name: Set mxfadefaultHost value in config.properties
       if: inputs.mxfadefaultHost
-      working-directory: "${{ inputs.test-root-path }}"
+      working-directory: "${{ inputs.test-root-path }}/src/test/resources/4-config/"
       run: |
         if [ -n "${{ inputs.mxfadefaultHost }}" ]; then
           sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.mxfadefaultHost }}|' config.properties
