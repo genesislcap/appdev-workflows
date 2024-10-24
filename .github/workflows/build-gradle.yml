@@ -322,31 +322,31 @@ jobs:
           registry-url: https://npm.pkg.github.com/
           scope: '@genesislcap'
 
-      # - name: Setup npm registry for @genesislcap
-      #   run: |
-      #     echo "Using npmjs.com for @genesislcap scoped packages"
-      #     npm config set @genesislcap:registry https://registry.npmjs.org/
-      #     npm config list
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+      - name: Setup npm registry for @genesislcap
+        run: |
+          echo "Using npmjs.com for @genesislcap scoped packages"
+          npm config set @genesislcap:registry https://registry.npmjs.org/
+          npm config list
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: 'Create .npmrc'
         shell: bash
         run: |
           npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-          npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/
+          # npm config set @genesislcap:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/
 
           echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
-          echo "@genesislcap:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/" >> $RUNNER_TEMP/.npmrc
+          # echo "@genesislcap:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/" >> $RUNNER_TEMP/.npmrc
 
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
           
-          # Authentication for npm-remote-cache
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          # # Authentication for npm-remote-cache
+          # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
           
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
