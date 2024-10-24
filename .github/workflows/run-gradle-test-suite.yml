@@ -73,7 +73,7 @@ on:
 env:  
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
-  PgenesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
+  genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
  
 
 jobs:
