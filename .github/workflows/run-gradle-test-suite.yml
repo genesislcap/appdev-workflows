@@ -113,6 +113,8 @@ jobs:
       run: |
         if [ -n "${{ inputs.mxfadefaultHost }}" ]; then
           sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.mxfadefaultHost }}|' config.properties
+          sed -i 's|^baseURI=.*|baseURI=${{ inputs.mxfadefaultHost }}/gwf|' config.properties
+          
         fi
           
     - name: Print config.properties
@@ -147,50 +149,7 @@ jobs:
     - name: Make gradlew executable
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
-
-    # - name: Restore gradle.properties and setup
-    #   env:
-    #     GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-    #   working-directory: "${{ inputs.test-root-path }}"
-    #   shell: bash
-    #   run: |
-    #     echo "Listing all files in the working-directory:"
-    #     pwd
-    #     ls -la        
-          
-    #     mkdir -p ~/.gradle/
-    #     echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          
-    #     # Write initial properties
-    #     echo "genesisArtifactoryUser=${{ secrets.genesisArtifactoryUser }}" > ~/.gradle/gradle.properties
-    #     echo "genesisArtifactoryPassword=${{ secrets.genesisArtifactoryPassword }}" >> ~/.gradle/gradle.properties
-
-    #     echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
-    #     echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
-
-         
-    #     echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-    #     echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
-
-    #     # Set file permissions
-    #     sudo chmod +x ./gradlew
-    #     # sudo chmod +x ./${{ inputs.test-root-path }}/gradlew
-    #     # sudo chmod -R +rx ./${{ inputs.test-root-path }}/
-          
-          
-    # - name: Run Gradle
-    #   shell: bash
-    #   run: |
-    #     export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"       
-       
-    #     cd ${{ inputs.test-root-path }}
-    #     command="./gradlew clean test --stacktrace" 
-    #     eval $command | tee gradle.log
-    #     if grep -q "BUILD FAILED" gradle.log; then
-    #       exit 1
-    #     else
-    #       exit 0
-    #     fi
+    
 
     - name: Run tests
       uses: gradle/gradle-build-action@v2
@@ -198,22 +157,7 @@ jobs:
         arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true 
         build-root-directory: "${{ inputs.test-root-path }}"
 
-    # - name: Run Gradle
-    #   shell: bash
-    #   run: |
-    #     export GENESIS_USER_PRIVATE_KEY="${{ secrets.GENESIS_USER_PRIVATE_KEY }}"
-    #     GRADLE_OPTIONS="${{ inputs.options }}"
-    #     if [ -n "${{ inputs.profile }}" ]; then
-    #       GRADLE_OPTIONS="$GRADLE_OPTIONS -P${{ inputs.profile }}"
-    #     fi
-    #     cd ${{ inputs.test-root-path }}
-    #     command="./gradlew clean test $GRADLE_OPTIONS -Dbrowser=${{ inputs.browser }} -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true" 
-    #     eval $command | tee gradle.log
-    #     if grep -q "BUILD FAILED" gradle.log; then
-    #       exit 1
-    #     else
-    #       exit 0
-    #     fi
+    
     - name: Install git
       if: always()
       shell: bash
@@ -238,6 +182,7 @@ jobs:
         subfolder: ${{ inputs.profile }}
 
     - name: Upload Allure Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: allure-report-${{ github.run_number }}
