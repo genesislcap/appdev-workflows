@@ -150,26 +150,26 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
     
-    - name: Run tests
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: clean test -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true > mvn.log 2>&1
-        build-root-directory: "${{ inputs.test-root-path }}"
-    - name: Check for Test Failures
-      if: ${{ failure() }}
-      run: |
-        if grep -q "FAILURE: Build failed with an exception" "${{ inputs.test-root-path }}/build/reports/tests/test/index.html"; then
-          exit 1
-        else
-          exit 0
-        fi
-
-
     # - name: Run tests
     #   uses: gradle/gradle-build-action@v2
     #   with:
-    #     arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true > mvn.log 2>&1
+    #     arguments: clean test -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true > mvn.log 2>&1
     #     build-root-directory: "${{ inputs.test-root-path }}"
+    # - name: Check for Test Failures
+    #   if: ${{ failure() }}
+    #   run: |
+    #     if grep -q "FAILURE: Build failed with an exception" "${{ inputs.test-root-path }}/build/reports/tests/test/index.html"; then
+    #       exit 1
+    #     else
+    #       exit 0
+    #     fi
+
+
+    - name: Run tests
+      uses: gradle/gradle-build-action@v2
+      with:
+        arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true > mvn.log 2>&1
+        build-root-directory: "${{ inputs.test-root-path }}"
     
     - name: Install git
       if: always()
@@ -190,7 +190,7 @@ jobs:
       id: allure-report
       with:
         gh_pages: gh-pages
-        allure_results: ${{ inputs.test-root-path }}/target/allure-results
+        allure_results: ${{ inputs.test-root-path }}/build/allure-results
         allure_history: allure-history
         subfolder: ${{ inputs.profile }}
 
@@ -213,7 +213,7 @@ jobs:
       env:
         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_TITLE: ❌ ${{ github.workflow }} failed
-        SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.profile }}/${{ github.run_number }}
+        SLACK_MESSAGE: ❌ The nightly release build for ${{ github.workflow }} failed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
         SLACK_CHANNEL: ${{ inputs.slack-channel }}
     - name: Notify success on Slack
       uses: bryannice/gitactions-slack-notification@2.0.0
@@ -221,5 +221,5 @@ jobs:
       env:
         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_TITLE: ✅ ${{ github.workflow }} passed
-        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.profile }}/${{ github.run_number }}
+        SLACK_MESSAGE: ✅ The nightly release build for ${{ github.workflow }} passed https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}
         SLACK_CHANNEL: ${{ inputs.slack-channel }}
