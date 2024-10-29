@@ -154,7 +154,7 @@ jobs:
     - name: Run tests
       uses: gradle/gradle-build-action@v2
       with:
-        arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true --console=plain
+        arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true --console=plain --info
         build-root-directory: "${{ inputs.test-root-path }}"
     
     - name: Install git
