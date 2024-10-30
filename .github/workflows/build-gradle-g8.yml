@@ -137,12 +137,18 @@ jobs:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
-      - name: Configure Node
+      - name: Configure Node  ${{ inputs.node_version }}
+        if: ${{ !inputs.REGISTRY_URL  }}
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: '@genesislcap'
+
+      # - name: Configure Node
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: ${{ inputs.node_version }}
+      #     registry-url: https://npm.pkg.github.com/
+      #     scope: '@genesislcap'
       
       - name: Setup npm registry for @genesislcap
         run: |
