@@ -47,6 +47,9 @@ on:
       tamdefaultEnv:
         required: false
         type: string
+      axesdefaultEnv:
+        required: false
+        type: string
       config-path:
         required: false
         type: string
@@ -107,11 +110,25 @@ jobs:
       run: |
         if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
           sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
-        fi
-          
+        fi   
           
     - name: Print config.properties
       if: inputs.tamdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        echo "Contents of config.properties after modification:"
+        cat config.properties
+
+    - name: Set axesdefaultEnv value in config.properties
+      if: inputs.axesdefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        if [ -n "${{ inputs.axesdefaultEnv }}" ]; then
+          sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.axesdefaultEnv }}|' config.properties
+          # sed -i 's|^axes-dev-database-url=.*|axes-dev-database-url=jdbc:postgresql://qa-neptune-pltaxesqa1.cddev.genesis.global:5432/dev_axes|' config.properties
+        fi
+    - name: Print config.properties
+      if: inputs.axesdefaultEnv
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
       run: |
         echo "Contents of config.properties after modification:"
