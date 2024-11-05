@@ -450,22 +450,16 @@ jobs:
               exit 1
             fi
           fi
-
-      # - name: Update @genesislcap/foundation dependencies 
-      #   if: steps.web_exists.outputs.client_folder_exists == 'true'
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
-      #   run: |
-      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-      #     # Update only @genesislcap/foundation dependencies
-      #     jq --arg version "$NEW_VERSION" '
-      #       .dependencies |= with_entries(
-      #         if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-      #       ) |
-      #       .devDependencies |= with_entries(
-      #         if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-      #       )
-      #     ' package.json > package.json.tmp && mv package.json.tmp package.json
-      #     echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
+      - name: Check for package-lock.json and remove if exists
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Removing existing package-lock.json..."
+            rm package-lock.json
+          else
+            echo "No package-lock.json found."
+          fi
       - name: Update @genesislcap dependencies 
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
