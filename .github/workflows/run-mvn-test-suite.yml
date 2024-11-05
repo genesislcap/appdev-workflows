@@ -50,6 +50,9 @@ on:
       axesdefaultEnv:
         required: false
         type: string
+      pbidefaultEnv:
+        required: false
+        type: string
       config-path:
         required: false
         type: string
@@ -133,6 +136,16 @@ jobs:
       run: |
         echo "Contents of config.properties after modification:"
         cat config.properties
+
+    - name: Set pbidefaultEnv value in config.properties
+      if: inputs.pbidefaultEnv
+      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
+      run: |
+        if [ -n "${{ inputs.pbidefaultEnv }}" ]; then
+          sed -i 's|^defaultAPIHost=.*|defaultHost=${{ inputs.pbidefaultEnv }}|' config.properties          
+        fi
+        cat config.properties
+    
 
     - name: Set up JDK 11
       uses: actions/setup-java@v3
