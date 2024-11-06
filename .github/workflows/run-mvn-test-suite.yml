@@ -142,7 +142,7 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
       run: |
         if [ -n "${{ inputs.pbidefaultEnv }}" ]; then
-          sed -i 's|^defaultAPIHost=.*|defaultHost=${{ inputs.pbidefaultEnv }}/gwf/|' config.properties          
+          sed -i 's|^defaultAPIHost=.*|defaultHost=${{ inputs.pbidefaultEnv }}gwf/|' config.properties          
         fi
         cat config.properties
     
