@@ -242,10 +242,7 @@ jobs:
         if: inputs.testautomation_build
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
         run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Print the original package.json for debugging before modification
-          echo "Original package.json:"
-          cat package.json
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
           # Update @genesislcap dependencies across all objects in the package.json
           jq --arg version "$NEW_VERSION" '
             walk(
@@ -256,17 +253,12 @@ jobs:
               else . end
             )
           ' package.json > package.json.tmp
-          # Print the modified package.json for verification
-          echo "Modified package.json (in tmp file):"
-          cat package.json.tmp
+          
           # Move tmp file to overwrite the original package.json
           mv package.json.tmp package.json
           # Print the final updated package.json
           echo "Final updated package.json:"
           cat package.json
-
-
-
      
       - name: Server Build
         uses: gradle/gradle-build-action@v2
