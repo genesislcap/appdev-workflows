@@ -243,7 +243,10 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Update any dependencies starting with @genesislcap across the entire package.json file
+          # Print the package.json for debugging before modification
+          echo "Original package.json:"
+          cat package.json
+          # Update all @genesislcap dependencies generically
           jq --arg version "$NEW_VERSION" '
             . |= with_entries(
               if (type == "object" and .value | type == "object") then 
@@ -252,16 +255,16 @@ jobs:
                 ) 
               else . end
             )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated all @genesislcap dependencies to version $NEW_VERSION."
-
-
-      - name: Print updated package.json
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
-        run: |
-          echo "Updated package.json:"
+          ' package.json > package.json.tmp
+          # Print the modified JSON for verification
+          echo "Modified package.json (in tmp file):"
+          cat package.json.tmp
+          # Move tmp file to overwrite the original package.json
+          mv package.json.tmp package.json
+          # Print the final package.json for confirmation
+          echo "Final updated package.json:"
           cat package.json
+
 
      
       - name: Server Build
