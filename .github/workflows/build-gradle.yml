@@ -464,24 +464,22 @@ jobs:
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Update any dependencies starting with @genesislcap across the entire package.json file
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+          # Update @genesislcap dependencies across all objects in the package.json
           jq --arg version "$NEW_VERSION" '
-            . |= with_entries(
-              if (type == "object") then 
-                .value |= with_entries(
+            walk(
+              if type == "object" then
+                with_entries(
                   if (.key | startswith("@genesislcap")) then .value = $version else . end
-                ) 
+                )
               else . end
             )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated all @genesislcap dependencies to version $NEW_VERSION."
-
-      - name: Print updated package.json
-        if: steps.web_exists.outputs.client_folder_exists == 'true'
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
-        run: |
-          echo "Updated package.json:"
+          ' package.json > package.json.tmp
+          
+          # Move tmp file to overwrite the original package.json
+          mv package.json.tmp package.json
+          # Print the final updated package.json
+          echo "Final updated package.json:"
           cat package.json
       
 
