@@ -243,27 +243,28 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Print the package.json for debugging before modification
+          # Print the original package.json for debugging before modification
           echo "Original package.json:"
           cat package.json
-          # Update all @genesislcap dependencies generically
+          # Update @genesislcap dependencies across all objects in the package.json
           jq --arg version "$NEW_VERSION" '
-            . |= with_entries(
-              if (type == "object" and .value | type == "object") then 
-                .value |= with_entries(
+            walk(
+              if type == "object" then
+                with_entries(
                   if (.key | startswith("@genesislcap")) then .value = $version else . end
-                ) 
+                )
               else . end
             )
           ' package.json > package.json.tmp
-          # Print the modified JSON for verification
+          # Print the modified package.json for verification
           echo "Modified package.json (in tmp file):"
           cat package.json.tmp
           # Move tmp file to overwrite the original package.json
           mv package.json.tmp package.json
-          # Print the final package.json for confirmation
+          # Print the final updated package.json
           echo "Final updated package.json:"
           cat package.json
+
 
 
      
