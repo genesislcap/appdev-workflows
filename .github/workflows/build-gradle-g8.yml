@@ -238,15 +238,15 @@ jobs:
             echo "No package-lock.json found."
           fi
 
-      - name: Update @genesislcap dependencies 
+      - name: Update @genesislcap dependencies
         if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
           # Update any dependencies starting with @genesislcap across the entire package.json file
           jq --arg version "$NEW_VERSION" '
             . |= with_entries(
-              if (type == "object") then 
+              if (type == "object" and .value | type == "object") then 
                 .value |= with_entries(
                   if (.key | startswith("@genesislcap")) then .value = $version else . end
                 ) 
@@ -254,6 +254,7 @@ jobs:
             )
           ' package.json > package.json.tmp && mv package.json.tmp package.json
           echo "Updated all @genesislcap dependencies to version $NEW_VERSION."
+
 
       - name: Print updated package.json
         if: inputs.testautomation_build
