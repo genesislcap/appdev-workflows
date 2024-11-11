@@ -142,6 +142,7 @@ if [ -d "/home/$genesis_user/run/runtime" ]; then
 else
     echo "Looks like a new machine, first time deployment.. setting a blank runtime under root_dir"
     mkdir -p "/$root_dir/$genesis_user/runtime"
+    ln -s "/$root_dir/$genesis_user/runtime/" "/$root_dir/$genesis_user/server/$server_dir/run/runtime" || exit 1
 fi
 
 echo "Unlink previous run and link it to the run dir of the current installation" 2>&1 | tee -a "$LOG"
@@ -154,7 +155,6 @@ if [ -d "/home/$genesis_user/run" ]; then
 fi
 
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
-ln -s "/$root_dir/$genesis_user/runtime/" "/$root_dir/$genesis_user/server/$server_dir/run/runtime" || exit 1
 chown -R "$genesis_user:$genesis_grp" "/home/$genesis_user/run" || exit 1
 
 #Copy web if exists
