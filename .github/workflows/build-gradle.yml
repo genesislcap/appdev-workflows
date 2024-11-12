@@ -467,27 +467,27 @@ jobs:
           else
             echo "No package-lock.json found."
           fi
-      - name: Update @genesislcap dependencies 
-        if: steps.web_exists.outputs.client_folder_exists == 'true'
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
-        run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
-          # Update @genesislcap dependencies across all objects in the package.json
-          jq --arg version "$NEW_VERSION" '
-            walk(
-              if type == "object" then
-                with_entries(
-                  if (.key | startswith("@genesislcap")) then .value = $version else . end
-                )
-              else . end
-            )
-          ' package.json > package.json.tmp
+      # - name: Update @genesislcap dependencies 
+      #   if: steps.web_exists.outputs.client_folder_exists == 'true'
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+      #   run: |
+      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+      #     # Update @genesislcap dependencies across all objects in the package.json
+      #     jq --arg version "$NEW_VERSION" '
+      #       walk(
+      #         if type == "object" then
+      #           with_entries(
+      #             if (.key | startswith("@genesislcap")) then .value = $version else . end
+      #           )
+      #         else . end
+      #       )
+      #     ' package.json > package.json.tmp
           
-          # Move tmp file to overwrite the original package.json
-          mv package.json.tmp package.json
-          # Print the final updated package.json
-          echo "Final updated package.json:"
-          cat package.json
+      #     # Move tmp file to overwrite the original package.json
+      #     mv package.json.tmp package.json
+      #     # Print the final updated package.json
+      #     echo "Final updated package.json:"
+      #     cat package.json
       
 
       - name: Client Build
