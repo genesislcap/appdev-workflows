@@ -108,7 +108,7 @@ jobs:
           sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
         fi
     - name: Set mxfadefaultHost value in config.properties
-      if: inputs.mxfadefaultHost
+      if: inputs.defaultHost
       working-directory: "${{ inputs.test-root-path }}/src/test/resources/4-config/"
       run: |
         if [ -n "${{ inputs.mxfadefaultHost }}" ]; then
