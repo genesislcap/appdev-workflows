@@ -47,7 +47,7 @@ on:
       tamdefaultEnv:
         required: false
         type: string
-      mxfadefaultHost:
+      defaultHost:
         required: false
         type: string
       config-path:
@@ -107,13 +107,13 @@ jobs:
         if [ -n "${{ inputs.defaultEnv }}" ]; then
           sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
         fi
-    - name: Set mxfadefaultHost value in config.properties
+    - name: Set defaultHost value in config.properties
       if: inputs.defaultHost
       working-directory: "${{ inputs.test-root-path }}/src/test/resources/4-config/"
       run: |
-        if [ -n "${{ inputs.mxfadefaultHost }}" ]; then
-          sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.mxfadefaultHost }}|' config.properties
-          sed -i 's|^baseURI=.*|baseURI=${{ inputs.mxfadefaultHost }}gwf|' config.properties
+        if [ -n "${{ inputs.defaultHost }}" ]; then
+          sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.defaultHost }}|' config.properties
+          sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
           
         fi
           
