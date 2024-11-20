@@ -536,43 +536,50 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
       
-      - name: Update package.json with values from additional file
-        if: steps.web_exists.outputs.client_folder_exists == 'true'
-        working-directory: "${{ inputs.working-directory }}"
+      - name: Update @genesislcap versions in package.json
         shell: bash
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
-          # Check if additional_file exists
-          if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
-            echo "Processing additional_file: ${{ inputs.additional_file }}"
-            
-            # Read each line from the additional_file and update package.json
-            while IFS='=' read -r key value; do
-              key=$(echo "$key" | xargs) # Trim whitespace
-              value=$(echo "$value" | xargs) # Trim whitespace
-              
-              # Skip lines that are empty or start with #
-              if [ -n "$key" ] && [[ ! "$key" =~ ^# ]]; then
-                echo "Updating $key in package.json with value $value"
+          # Define paths for the input file and package.json
+          INPUT_FILE="main-repo/.github/workflows/version.properties"
+          PACKAGE_JSON="package.json"
 
-                # Use jq to update or add the key in the package.json
-                jq --arg key "$key" --arg value "$value" '
-                  walk(
-                    if type == "object" then
-                      .[$key] = $value
-                    else . end
-                  )
-                ' package.json > package.json.tmp
-                mv package.json.tmp package.json
-              fi
-            done < "${{ inputs.working-directory }}/${{ inputs.additional_file }}"
-            
-            # Print updated package.json for verification
-            echo "Updated package.json:"
-            cat package.json
-          else
-            echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+          # Check if files exist
+          if [[ ! -f "$INPUT_FILE" ]]; then
+            echo "Error: $INPUT_FILE not found!"
             exit 1
           fi
+          if [[ ! -f "$PACKAGE_JSON" ]]; then
+            echo "Error: $PACKAGE_JSON not found!"
+            exit 1
+          fi
+
+          # Read version.properties and update any matching dependency version in package.json
+          while IFS='=' read -r key value; do
+            key=$(echo "$key" | xargs)  # Trim whitespace from the key
+            value=$(echo "$value" | xargs)  # Trim whitespace from the value
+
+            # Skip invalid lines (comments, empty lines)
+            if [[ -z "$key" || "$key" =~ ^# ]]; then
+              continue
+            fi
+
+            # Update version dynamically for any matching key in the JSON
+            jq --arg dep "$key" --arg version "$value" '
+              walk(
+                if type == "object" and has($dep) then
+                  .[$dep] = $version
+                else
+                  .
+                end
+              )
+            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+          done < "$INPUT_FILE"
+
+          # Print the updated package.json
+          echo "Updated package.json:"
+          cat "$PACKAGE_JSON"
+
 
       - name: Client Build
         if: steps.web_exists.outputs.client_folder_exists == 'true'
