@@ -538,11 +538,19 @@ jobs:
       
       - name: Update @genesislcap versions in package.json
         shell: bash
-        working-directory: "main-repo/.github/workflows"        
+        working-directory: "./"   
         run: |
+
+          SOURCE_FILE="main-repo/.github/workflows/version.properties"
+          TARGET_DIR="${{ inputs.working-directory }}/${{ inputs.web-path }}"
+          
+          # Copy version.properties to the target directory
+          cp "$SOURCE_FILE" "$TARGET_DIR/"
+
           # Define paths for the input file and package.json
-          INPUT_FILE="./version.properties"
-          PACKAGE_JSON="../package.json"  # Adjust to the relative path of package.json
+          PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
+          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.web-path }}/version.properties"
+          
 
           # Check if files exist
           if [[ ! -f "$INPUT_FILE" ]]; then
