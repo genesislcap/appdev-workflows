@@ -267,7 +267,65 @@ jobs:
           # Print the final updated package.json
           echo "Final updated package.json:"
           cat package.json
-     
+          
+      - name: Update @genesislcap versions in package.json
+        
+        shell: bash
+        working-directory: "./"
+        run: |
+          # Define variables         
+          SOURCE_FILE="${{ inputs.additional_file }}"
+          TARGET_DIR="${{ inputs.working-directory }}/${{ inputs.web-path }}"
+          PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
+          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+
+          # Ensure jq is installed
+          if ! command -v jq &>/dev/null; then
+            echo "Error: jq is not installed. Please install jq to proceed."
+            exit 1
+          fi
+
+          # Check if required files exist
+          if [[ ! -f "$INPUT_FILE" ]]; then
+            echo "Error: $INPUT_FILE not found!"
+            exit 1
+          fi
+          if [[ ! -f "$PACKAGE_JSON" ]]; then
+            echo "Error: $PACKAGE_JSON not found!"
+            exit 1
+          fi
+
+          # Read and update dependencies from version.properties
+          while IFS= read -r line; do
+            # Skip empty lines or comments
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+            # Process JSON-like entries
+            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+              key="${BASH_REMATCH[1]}"
+              value="${BASH_REMATCH[2]}"
+            else
+              # Process key=value pairs
+              key=$(echo "$line" | cut -d'=' -f1 | xargs)
+              value=$(echo "$line" | cut -d'=' -f2 | xargs)
+            fi
+
+            # Update the package.json file
+            jq --arg dep "$key" --arg version "$value" '
+              walk(
+                if type == "object" and has($dep) then
+                  .[$dep] = $version
+                else
+                  .
+                end
+              )
+            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+          done < "$INPUT_FILE"
+
+          # Print the updated package.json
+          echo "Updated package.json:"
+          cat "$PACKAGE_JSON"
+
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
