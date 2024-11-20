@@ -485,6 +485,7 @@ jobs:
                   if (.key | startswith("@genesislcap") and 
                       (.key != "@genesislcap/pbc-auth-ui" and
                       .key != "@genesislcap/pbc-documents-ui" and
+                      .key != "@genesislcap/pbc-notify-ui" and
                       .key != "@genesislcap/pbc-reconciliation-ui" and
                       .key != "@genesislcap/pbc-reporting-ui" and
                       .key != "@genesislcap/foundation-forms")) 
