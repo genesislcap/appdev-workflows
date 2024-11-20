@@ -480,7 +480,7 @@ jobs:
           # Update @genesislcap dependencies, excluding specific packages
           if ! jq --arg version "$NEW_VERSION" '
             walk(
-              if type == "object" then
+              if type == "object" and has("key") then
                 with_entries(
                   if (.key | startswith("@genesislcap") and 
                       (.key != "@genesislcap/pbc-auth-ui" and
@@ -490,7 +490,8 @@ jobs:
                       .key != "@genesislcap/foundation-forms")) 
                   then .value = $version else . end
                 )
-              else . end
+              else .
+              end
             )
           ' package.json > package.json.tmp; then
             echo "Error updating package.json"
