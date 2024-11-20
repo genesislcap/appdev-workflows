@@ -467,27 +467,72 @@ jobs:
           else
             echo "No package-lock.json found."
           fi
-      - name: Update @genesislcap dependencies 
+
+      - name: Update @genesislcap dependencies (excluding specific packages)
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
-          # Update @genesislcap dependencies across all objects in the package.json
-          jq --arg version "$NEW_VERSION" '
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
+
+          # Backup the original package.json
+          cp package.json package.json.bak
+
+          # Update @genesislcap dependencies, excluding specific packages
+          if ! jq --arg version "$NEW_VERSION" '
             walk(
               if type == "object" then
                 with_entries(
-                  if (.key | startswith("@genesislcap")) then .value = $version else . end
+                  if (.key | startswith("@genesislcap") and 
+                      (.key != "@genesislcap/pbc-auth-ui" and
+                      .key != "@genesislcap/pbc-documents-ui" and
+                      .key != "@genesislcap/pbc-reconciliation-ui" and
+                      .key != "@genesislcap/pbc-reporting-ui" and
+                      .key != "@genesislcap/foundation-forms")) 
+                  then .value = $version else . end
                 )
               else . end
             )
-          ' package.json > package.json.tmp
-          
-          # Move tmp file to overwrite the original package.json
+          ' package.json > package.json.tmp; then
+            echo "Error updating package.json"
+            mv package.json.bak package.json
+            exit 1
+          fi
+
+          # Replace the original package.json with the updated version
           mv package.json.tmp package.json
+
+          # Validate the updated JSON
+          if ! jq empty package.json; then
+            echo "Invalid JSON detected. Restoring original file."
+            mv package.json.bak package.json
+            exit 1
+          fi
+
           # Print the final updated package.json
           echo "Final updated package.json:"
           cat package.json
+    
+      # - name: Update @genesislcap dependencies 
+      #   if: steps.web_exists.outputs.client_folder_exists == 'true'
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+      #   run: |
+      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+      #     # Update @genesislcap dependencies across all objects in the package.json
+      #     jq --arg version "$NEW_VERSION" '
+      #       walk(
+      #         if type == "object" then
+      #           with_entries(
+      #             if (.key | startswith("@genesislcap")) then .value = $version else . end
+      #           )
+      #         else . end
+      #       )
+      #     ' package.json > package.json.tmp
+          
+      #     # Move tmp file to overwrite the original package.json
+      #     mv package.json.tmp package.json
+      #     # Print the final updated package.json
+      #     echo "Final updated package.json:"
+      #     cat package.json
       
 
       - name: Client Build
