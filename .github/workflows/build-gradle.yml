@@ -537,8 +537,8 @@ jobs:
           cat package.json
       
       - name: Update package.json with values from additional file
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
           # Check if additional_file exists
