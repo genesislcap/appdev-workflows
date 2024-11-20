@@ -537,15 +537,23 @@ jobs:
           cat package.json
       
       - name: Update @genesislcap versions in package.json
+        
         shell: bash
-        working-directory: "./"   
+        working-directory: "./"
         run: |
-
+          # Define variables
+          SOURCE_FILE="${{ inputs.additional_file }}"
+          TARGET_DIR="${{ inputs.working-directory }}/${{ inputs.web-path }}"
           PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
           INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
-          
 
-          # Check if files exist
+          # Ensure jq is installed
+          if ! command -v jq &>/dev/null; then
+            echo "Error: jq is not installed. Please install jq to proceed."
+            exit 1
+          fi
+
+          # Check if required files exist
           if [[ ! -f "$INPUT_FILE" ]]; then
             echo "Error: $INPUT_FILE not found!"
             exit 1
@@ -555,17 +563,26 @@ jobs:
             exit 1
           fi
 
-          # Read version.properties and update any matching dependency version in package.json
+          # Create a backup of package.json
+          cp "$PACKAGE_JSON" "${PACKAGE_JSON}.bak"
+          echo "Backup created: ${PACKAGE_JSON}.bak"
+
+          # Copy version.properties to the target directory
+          cp "$SOURCE_FILE" "$TARGET_DIR/"
+
+          # Read version.properties and update matching dependency versions in package.json
           while IFS='=' read -r key value; do
-            key=$(echo "$key" | xargs)  # Trim whitespace from the key
-            value=$(echo "$value" | xargs)  # Trim whitespace from the value
+            key=$(echo "$key" | xargs)  # Trim whitespace
+            value=$(echo "$value" | xargs)  # Trim whitespace
 
             # Skip invalid lines (comments, empty lines)
             if [[ -z "$key" || "$key" =~ ^# ]]; then
               continue
             fi
 
-            # Update version dynamically for any matching key in the JSON
+            echo "Updating dependency '$key' to version '$value'..."
+            
+            # Update version in package.json dynamically
             jq --arg dep "$key" --arg version "$value" '
               walk(
                 if type == "object" and has($dep) then
@@ -580,6 +597,7 @@ jobs:
           # Print the updated package.json
           echo "Updated package.json:"
           cat "$PACKAGE_JSON"
+
 
 
       - name: Client Build
