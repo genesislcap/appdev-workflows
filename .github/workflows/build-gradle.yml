@@ -541,7 +541,7 @@ jobs:
         shell: bash
         working-directory: "./"
         run: |
-          # Define variables
+          # Define variables         
           SOURCE_FILE="${{ inputs.additional_file }}"
           TARGET_DIR="${{ inputs.working-directory }}/${{ inputs.web-path }}"
           PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
@@ -563,26 +563,22 @@ jobs:
             exit 1
           fi
 
-          # Create a backup of package.json
-          cp "$PACKAGE_JSON" "${PACKAGE_JSON}.bak"
-          echo "Backup created: ${PACKAGE_JSON}.bak"
+          # Read and update dependencies from version.properties
+          while IFS= read -r line; do
+            # Skip empty lines or comments
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-          # Copy version.properties to the target directory
-          cp "$SOURCE_FILE" "$TARGET_DIR/"
-
-          # Read version.properties and update matching dependency versions in package.json
-          while IFS='=' read -r key value; do
-            key=$(echo "$key" | xargs)  # Trim whitespace
-            value=$(echo "$value" | xargs)  # Trim whitespace
-
-            # Skip invalid lines (comments, empty lines)
-            if [[ -z "$key" || "$key" =~ ^# ]]; then
-              continue
+            # Process JSON-like entries
+            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+              key="${BASH_REMATCH[1]}"
+              value="${BASH_REMATCH[2]}"
+            else
+              # Process key=value pairs
+              key=$(echo "$line" | cut -d'=' -f1 | xargs)
+              value=$(echo "$line" | cut -d'=' -f2 | xargs)
             fi
 
-            echo "Updating dependency '$key' to version '$value'..."
-            
-            # Update version in package.json dynamically
+            # Update the package.json file
             jq --arg dep "$key" --arg version "$value" '
               walk(
                 if type == "object" and has($dep) then
