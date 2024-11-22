@@ -51,11 +51,13 @@ jobs:
           python3 ~/selfserve/scripts/deployEnv.py ${{ inputs.action }} ${{ inputs.file_name }}
 
       - name: Install yq
+        if: ${{ inputs.action == 'fullProvision' }}
         run: |         
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq      
 
       - name: Trigger Jenkins Job
+        if: ${{ inputs.action == 'fullProvision' }}
         run: |          
           BASE_PATH=~/selfserve/scripts          
           IFS=',' read -ra files <<< "${{ inputs.file_name }}"
