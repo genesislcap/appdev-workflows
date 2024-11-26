@@ -48,7 +48,7 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
-            --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"" 
+            --data-urlencode "startserverdatetime=${{ inputs.GENESIS_STARTSERVERDATETIME }}"" 
             
 
       - name: Install jq
