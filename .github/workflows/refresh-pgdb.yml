@@ -17,7 +17,7 @@ on:
         required: false
         default: false
         type: boolean
-      GENESIS_STARTSERVERDATETIME:
+      startserverdatetime:
         required: false
         type: string
 
@@ -40,8 +40,8 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: Print GENESIS_STARTSERVERDATETIME
-        run: echo "GENESIS_STARTSERVERDATETIME: ${{ inputs.GENESIS_STARTSERVERDATETIME }}"
+      - name: Print startserverdatetime
+        run: echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
 
 
       - name: Trigger Jenkins Job
@@ -52,7 +52,7 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
-            --data-urlencode "startserverdatetime=${{ inputs.GENESIS_STARTSERVERDATETIME }}"
+            --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"
             
 
       - name: Install jq
