@@ -40,6 +40,10 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Print GENESIS_STARTSERVERDATETIME
+        run: echo "GENESIS_STARTSERVERDATETIME: ${{ inputs.GENESIS_STARTSERVERDATETIME }}"
+
+
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
@@ -48,7 +52,7 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
-            --data-urlencode "startserverdatetime=${{ inputs.GENESIS_STARTSERVERDATETIME }}"" 
+            --data-urlencode "startserverdatetime=${{ inputs.GENESIS_STARTSERVERDATETIME }}"
             
 
       - name: Install jq
