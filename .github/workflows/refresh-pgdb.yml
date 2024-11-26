@@ -17,6 +17,9 @@ on:
         required: false
         default: false
         type: boolean
+      GENESIS_STARTSERVERDATETIME:
+        required: false
+        type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
@@ -44,7 +47,8 @@ jobs:
             --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
-            --data-urlencode "extra_variables=" 
+            --data-urlencode "extra_variables=" \
+            --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"" 
             
 
       - name: Install jq
