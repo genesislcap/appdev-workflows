@@ -537,7 +537,7 @@ jobs:
           cat package.json
       
       - name: Update @genesislcap versions in package.json
-        
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
         shell: bash
         working-directory: "./"
         run: |
