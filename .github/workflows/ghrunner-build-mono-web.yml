@@ -136,7 +136,7 @@ jobs:
           cat package.json
       
       - name: Update @genesislcap versions in package.json
-        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        if: inputs.testautomation_build  
         shell: bash
         working-directory: "./"
         run: |
