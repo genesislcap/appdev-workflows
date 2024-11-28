@@ -167,7 +167,7 @@ jobs:
       
       - name: Update @genesislcap dependencies 
         if: inputs.testautomation_build  
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }} 
+        working-directory: "${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}" 
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
           # Update @genesislcap dependencies across all objects in the package.json
