@@ -113,28 +113,69 @@ jobs:
             fi
           fi
 
-      - name: Update @genesislcap/foundation dependencies 
-        if: inputs.testautomation_build
+      - name: Update @genesislcap dependencies 
+        if: inputs.testautomation_build  
         working-directory: ./client/web 
         run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-          # Update only @genesislcap/foundation dependencies
+          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+          # Update @genesislcap dependencies across all objects in the package.json
           jq --arg version "$NEW_VERSION" '
-            .dependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
-            ) |
-            .devDependencies |= with_entries(
-              if (.key | startswith("@genesislcap/foundation-")) then .value = $version else . end
+            walk(
+              if type == "object" then
+                with_entries(
+                  if (.key | startswith("@genesislcap")) then .value = $version else . end
+                )
+              else . end
             )
-          ' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "Updated @genesislcap/foundation-* dependencies to version $NEW_VERSION."
-
-      - name: Print updated package.json
-        if: inputs.testautomation_build
-        working-directory: ./client/web 
-        run: |
-          echo "Updated package.json:"
+          ' package.json > package.json.tmp
+          
+          # Move tmp file to overwrite the original package.json
+          mv package.json.tmp package.json
+          # Print the final updated package.json
+          echo "Final updated package.json:"
           cat package.json
+      
+      - name: Update @genesislcap versions in package.json
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        shell: bash
+        working-directory: "./"
+        run: |
+          
+          PACKAGE_JSON="./client/web /package.json"
+          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
+
+          # Read and update dependencies from version.properties
+          while IFS= read -r line; do
+            # Skip empty lines or comments
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+            # Process JSON-like entries
+            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+              key="${BASH_REMATCH[1]}"
+              value="${BASH_REMATCH[2]}"
+            else
+              # Process key=value pairs
+              key=$(echo "$line" | cut -d'=' -f1 | xargs)
+              value=$(echo "$line" | cut -d'=' -f2 | xargs)
+            fi
+
+            # Update the package.json file
+            jq --arg dep "$key" --arg version "$value" '
+              walk(
+                if type == "object" and has($dep) then
+                  .[$dep] = $version
+                else
+                  .
+                end
+              )
+            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+          done < "$INPUT_FILE"
+
+          # Print the updated package.json
+          echo "Updated package.json:"
+          cat "$PACKAGE_JSON"
+
+     
 
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
