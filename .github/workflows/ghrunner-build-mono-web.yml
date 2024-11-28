@@ -141,7 +141,7 @@ jobs:
         working-directory: "./"
         run: |
           
-          PACKAGE_JSON="./client/web /package.json"
+          PACKAGE_JSON="${{ inputs.working-directory }}/client/web /package.json"
           INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
 
           # Read and update dependencies from version.properties
