@@ -170,6 +170,7 @@ jobs:
         with:
           name: test-reports
           path: "${{ inputs.working-directory }}/test-results"
+        if: always()
 
       - name: Docker Build Image
         if: inputs.build_docker
