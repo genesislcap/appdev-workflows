@@ -144,6 +144,7 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+          sed -E -i "s/version=.+/version=${RELEASE_VERSION}/g" ${{ inputs.server-path }}/gradle.properties
 
       - name: Server Build
         uses: gradle/gradle-build-action@v2
