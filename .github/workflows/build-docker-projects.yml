@@ -149,7 +149,7 @@ jobs:
           echo "COMPLETED2"
 
           Set file permissions
-          sudo chmod +x ./gradlew
+          # sudo chmod +x ./gradlew
           # sudo chmod +x ./${{ inputs.server-path }}/gradlew
           # sudo chmod -R +rx ./${{ inputs.server-path }}/
           
