@@ -134,10 +134,16 @@ jobs:
       - name: Restore gradle.properties and setup        
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
-        run: |          
+        run: |    
+          echo "Listing all files in the working-directory:"
+          pwd
+          ls -la        
+          
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV      
 
-          # Set file permissions
-          # sudo chmod +x ./gradlew
+          Set file permissions
+          sudo chmod +x ./gradlew
           # sudo chmod +x ./${{ inputs.server-path }}/gradlew
           # sudo chmod -R +rx ./${{ inputs.server-path }}/
           
