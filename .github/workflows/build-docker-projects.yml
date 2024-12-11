@@ -8,6 +8,7 @@ on:
         required: false
         description: Project to build (leave blank to build all)
       custom-gradle-properties:
+        type: string
         required: false
         description: Optional Gradle params
       concurrency-profile:
