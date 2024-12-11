@@ -146,6 +146,13 @@ jobs:
       uploaded-test-artifacts: ${{ steps.check_artifact_exists.outputs.exists && inputs.concurrency-profile == 'stable' }} 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        # if: inputs.testautomation_build
+        with:
+          repository: genesislcap/platform-howto
+          fetch-depth: '0'
+          ref: consolidated-branch
+          token: ${{ env.GHA_TOKEN }} 
 
       - name: Set up Node
         uses: actions/setup-node@v3
@@ -321,6 +328,13 @@ jobs:
     if: needs.build.outputs.uploaded-test-artifacts == 'true'
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        # if: inputs.testautomation_build
+        with:
+          repository: genesislcap/platform-howto
+          fetch-depth: '0'
+          ref: consolidated-branch
+          token: ${{ env.GHA_TOKEN }} 
 
       - name: Download test results
         uses: actions/download-artifact@v3
