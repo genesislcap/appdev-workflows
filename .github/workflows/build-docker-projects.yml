@@ -140,7 +140,13 @@ jobs:
           ls -la        
           
           mkdir -p ~/.gradle/
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV      
+          echo "COMPLETED0"
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "COMPLETED1"
+          # Write initial properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "COMPLETED2"
 
           Set file permissions
           sudo chmod +x ./gradlew
