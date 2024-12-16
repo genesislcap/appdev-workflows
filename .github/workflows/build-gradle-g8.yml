@@ -143,13 +143,6 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      # - name: Configure Node
-      #   uses: actions/setup-node@v2
-      #   with:
-      #     node-version: ${{ inputs.node_version }}
-      #     registry-url: https://npm.pkg.github.com/
-      #     scope: '@genesislcap'
-
       - name: Setup npm registry for @genesislcap
         run: |
           echo "Using npmjs.com for @genesislcap scoped packages"

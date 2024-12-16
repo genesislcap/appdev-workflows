@@ -155,14 +155,10 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          echo "Listing all files in the working-directory:"
-          pwd
-          ls -la        
           
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           
-          # Write initial properties
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
@@ -177,13 +173,10 @@ jobs:
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
 
-          # Set file permissions
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
           
-
-          # Append contents of additional file to gradle.properties based on condition
           if [ "${{ inputs.testautomation_build }}" == "true" ]; then
             echo "Appending contents of additional file to gradle.properties"
             if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
@@ -192,8 +185,6 @@ jobs:
               echo "Additional file not found: ${{ inputs.additional_file }}" >&2
             fi
           fi
-
-          # Print the gradle.properties file for verification
           echo "Contents of gradle.properties after modification:"
           cat ~/.gradle/gradle.properties
           
