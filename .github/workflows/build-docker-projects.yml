@@ -1,0 +1,433 @@
+name: Build Project
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        required: false
+        description: Project to build (leave blank to build all)
+      custom-gradle-properties:
+        type: string
+        required: false
+        description: Optional Gradle params
+      concurrency-profile:
+        required: false
+        type: string
+        default: stable
+        description: Key to allow job to runs in paralell overnight
+      working-directory:
+        type: string
+        default: .
+        required: false
+      additional_file:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/version.properties'  
+
+    secrets:
+      GRADLE_PROPERTIES:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      GPR_READ_TOKEN:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
+      JFROG_NPM_AUTH_TOKEN:
+        required: false
+      GHA_TOKEN:
+        required: true
+
+  pull_request:
+    branches:
+      - master
+
+  
+env:  
+  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.concurrency-profile || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  detect-paths:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.detect-paths.outputs.projects }}
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      SELECTED_PROJECT: ${{ inputs.project }}
+      GH_TOKEN: ${{ secrets.GHA_TOKEN }}
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        # if: inputs.testautomation_build
+        with:
+          repository: genesislcap/platform-howto
+          fetch-depth: '0'
+          ref: consolidated-branch
+          token: ${{ env.GHA_TOKEN }}   
+
+      - name: Checkout main repository
+        # if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
+          fetch-depth: 0 
+
+      - name: Setup jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      
+      - name: Detect changed projects
+        id: detect-paths
+        run: |
+          function unique_json_array {
+            echo -e "$1" | cut -d'/' -f2 | sort | uniq  | jq -R -s -c 'split("\n") | map(select(length > 0))'
+          }
+
+          echo -e "Event: ${EVENT_NAME}"
+
+          all_projects=$(find . -type f -name "build.gradle.kts" -maxdepth 2 -mindepth 2 -exec dirname {} \;)
+          echo -e "All projects:\n${all_projects}"
+
+          all_projects_arr=$(unique_json_array "$all_projects")
+          echo -e "All projects array:\n${all_projects_arr}"
+
+          # Manually or batch triggered
+          if [[ "workflow_dispatch" == "$EVENT_NAME" ]] ; then
+
+            if [[ -n "$SELECTED_PROJECT" ]] ; then
+
+              echo "projects=[\"${SELECTED_PROJECT}\"]" >> $GITHUB_OUTPUT
+
+            else
+              
+              echo "projects=${all_projects_arr}" >> $GITHUB_OUTPUT
+
+            fi
+
+          # Pull Request, find the changed paths
+          else 
+            changed_folders=$(gh api /repos/genesislcap/platform-howto/pulls/$PR_NUMBER/files --paginate | jq -r '.[].filename | split("/")[0]')
+            echo -e "Changed folders:\n${changed_folders}"
+            
+            changed_folders_arr=$(unique_json_array "$changed_folders")
+            echo -e "Changed folders array:\n${changed_folders_arr}"
+            
+            changed_projects=$(jq -R -s -c -n --argjson all_projects "$all_projects_arr" --argjson changed_folders "$changed_folders_arr" '$all_projects | map(select(. as $x | $changed_folders | index($x)))')
+            echo -e "Changed projects:\n${changed_projects}"
+            
+            echo "projects=${changed_projects}" >> $GITHUB_OUTPUT
+
+          fi
+
+      - name: Restore gradle.properties and setup        
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |    
+          echo "Listing all files in the working-directory:"
+          pwd
+          ls -la        
+          
+          mkdir -p ~/.gradle/
+          echo "COMPLETED0"
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "COMPLETED1"
+          # Write initial properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "COMPLETED2"
+
+          # Set file permissions
+          # sudo chmod +x ./gradlew
+          # sudo chmod +x ./${{ inputs.server-path }}/gradlew
+          # sudo chmod -R +rx ./${{ inputs.server-path }}/
+          
+
+          # Append contents of additional file to gradle.properties based on condition
+          # if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
+          # fi
+
+          # Print the gradle.properties file for verification
+          echo "Contents of gradle.properties after modification:"
+          cat ~/.gradle/gradle.properties
+          
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          
+          # if [ -z "${{ inputs.repo-name }}" ]; then
+          #   echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          # else
+          #   echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          # fi
+          
+          # RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          # echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          # sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+
+      - name: Job summary
+        run: |
+          echo -e "# 🔨 Build information" >> $GITHUB_STEP_SUMMARY
+          echo -e "Triggering event is: \`${EVENT_NAME}\`" >> $GITHUB_STEP_SUMMARY
+          echo -e "Projects to build: " >> $GITHUB_STEP_SUMMARY
+          echo -e "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo -e "${PROJECTS}" | jq >> $GITHUB_STEP_SUMMARY
+          echo -e "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo -e "Custom gradle properties: " >> $GITHUB_STEP_SUMMARY
+          echo -e "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo -e "${GRADLE_PROPS}" >> $GITHUB_STEP_SUMMARY
+          echo -e "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        env:
+          PROJECTS: ${{ steps.detect-paths.outputs.projects }}
+          GRADLE_PROPS: ${{ inputs.custom-gradle-properties || '[Empty]' }}
+
+  build:
+    needs: detect-paths
+    runs-on: [ self-hosted, selfhosted-services ]
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.detect-paths.outputs.projects) }}
+      fail-fast: false
+    env:
+      genesisArtifactoryUser: ${{ secrets.JFROG_USERNAME }}
+      genesisArtifactoryPassword: ${{ secrets.JFROG_PASSWORD }}
+      GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+      PROJECT: ${{ matrix.project }}
+      GRADLE_PARAMS: ${{ inputs.custom-gradle-properties }}
+      APP_VERSION: 1.0.0-SNAPSHOT
+    outputs:
+      uploaded-test-artifacts: ${{ steps.check_artifact_exists.outputs.exists && inputs.concurrency-profile == 'stable' }} 
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        # if: inputs.testautomation_build
+        with:
+          repository: genesislcap/platform-howto
+          fetch-depth: '0'
+          ref: consolidated-branch
+          token: ${{ env.GHA_TOKEN }} 
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Login to Genesis Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: genesisglobal-docker-remote.jfrog.io
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
+      
+      - name: Setup Playwright dependencies
+        run: |
+          sudo apt-get install --yes libatk1.0-0 libatk-bridge2.0-0 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxcursor1 libgtk-3-0 libcairo-gobject2 libgdk-pixbuf-2.0-0 libx11-xcb1 libxcursor1 libgtk-3-0 libcairo-gobject2 libgdk-pixbuf-2.0-0
+  
+      - name: Find app name
+        id: find-app-build-type
+        run: |
+          # sensible to customization
+          project_name=$(grep rootProject server/settings.gradle.kts | cut -d'=' -f2 | sed -n 's/.genesisproduct-\(.*\)"/\1/p' | tr -d ' ')
+          
+          echo "APP_PROJECT=${project_name}-app" >> $GITHUB_ENV
+          echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
+        working-directory: ${{ matrix.project }}
+
+      - name: Build Docker image (server)
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: ${{env.PROJECT}}:assemble ${{ env.PROJECT }}:server:${{ env.APP_PROJECT }}:buildImage -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true ${{ env.GRADLE_PARAMS }}
+
+      - name: Build Docker image (client)
+        run: |
+          cp -r ../../${PROJECT}/client/dist .
+          docker build -t genesis/${APP_NAME}-ui:${APP_VERSION} .
+        working-directory: docker/client
+        env:
+          APP_NAME: ${{ env.PRODUCT_NAME }}
+
+      - uses: KengoTODA/actions-setup-docker-compose@v1.2.2
+        with:
+          version: '1.29.2'
+
+      - name: Login to Jfrog
+        uses: docker/login-action@v3
+        with:
+          registry: genesisglobal-docker-remote.jfrog.io
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
+
+      - name: Run Docker Compose
+        uses: hoverkraft-tech/compose-action@v1.4.1
+        with:
+          compose-file: docker/docker-compose.local.yaml
+        env:
+          APP_NAME: ${{ env.PRODUCT_NAME }}
+        
+      - name: Run healthcheck
+        working-directory: docker
+        run: ./health-check.bash
+
+      - name: Run tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: ${{ env.PROJECT }}:build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true ${{ env.GRADLE_PARAMS }}
+      
+      - name: Dump jacoco execution
+        run: |
+          docker cp jmxterm-1.0.2-uber.jar app:/app/run
+          docker cp jacoco_dump.txt app:/app/run
+          docker exec --workdir /app/run app java -jar jmxterm-1.0.2-uber.jar -l localhost:19910 -n -i jacoco_dump.txt || true
+        working-directory: docker
+      
+      - name: Publish Gradle plugin Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            ./${{ env.PROJECT }}/server/**/build/test-results/**/*.xml
+          fail_on: nothing
+          report_suite_logs: any        
+      
+      - name: Upload test results
+        id: upload-test-results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.PROJECT}}-test-results
+          path: ${{ env.PROJECT }}/server/*/build/reports/**/*
+
+      - uses: xSAVIKx/artifact-exists-action@v0
+        id: check_artifact_exists
+        with:
+          name: ${{env.PROJECT}}-test-results
+
+      - name: Copy Logs
+        if: always()
+        run: |
+          mkdir docker-logs
+          docker cp app:/app/run/runtime/logs docker-logs
+          ls -R docker-logs
+      
+      - name: Check if Sonar is configured
+        run: |
+          if [[ -f "sonar-project.properties" ]]; then
+            echo "SONAR_CONFIGURED=true" >> $GITHUB_ENV
+          fi
+        working-directory: ${{ matrix.project }}
+
+      - name: Process coverage files
+        if: env.SONAR_CONFIGURED
+        run: |
+          if [[ -f "docker-logs/logs/jacoco.exec" ]] ; then
+            
+            # copying the script cache
+            docker cp app:/app/run/runtime/scriptcache .
+            ls scriptcache
+            
+            java -jar docker/jacococli.jar report docker-logs/logs/jacoco.exec \
+                --classfiles ./scriptcache \
+                --sourcefiles ./$PROJECT/server/*/src/main/genesis/scripts \
+                --xml jacoco.xml
+
+            cp jacoco.xml $PROJECT/build
+            cp jacoco.xml docker-logs/logs
+
+            echo -e "## Code coverage" >> $GITHUB_STEP_SUMMARY
+            echo -e "Code coverage is configured, generated \`jacoco.xml\`."
+
+          fi
+      
+      - name: SonarCloud Scan
+        if: env.SONAR_CONFIGURED
+        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        env: 
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          projectBaseDir: ./${{ matrix.project }}
+      
+      - name: Upload Logs and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{env.PROJECT}}-docker-logs
+          path: |
+            docker-logs/logs/*.log
+            docker-logs/logs/*.err
+            docker-logs/logs/*.exec
+            docker-logs/logs/*.xml
+          if-no-files-found: warn
+
+  publish-test-results:
+    needs: [detect-paths, build ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.detect-paths.outputs.projects) }}
+      fail-fast: false
+      max-parallel: 1
+    env:
+      PROJECT: ${{ matrix.project }}
+      GH_TOKEN: ${{ secrets.GHA_TOKEN }}
+    concurrency:
+      group: deploy-gh-pages
+      cancel-in-progress: false
+    if: needs.build.outputs.uploaded-test-artifacts == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        # if: inputs.testautomation_build
+        with:
+          repository: genesislcap/platform-howto
+          fetch-depth: '0'
+          ref: consolidated-branch
+          token: ${{ env.GHA_TOKEN }} 
+
+      - name: Download test results
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{env.PROJECT}}-test-results
+          path: test-results
+      
+      - name: Copy report
+        run: |
+          mkdir allure-report
+          ls -lR test-results
+          cp -r test-results/*/build/reports/allure-report/allureReport/* allure-report 2>/dev/null || echo "No allure test results found"
+
+      - name: Publish reports to GitHub Pages
+        id: gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+          publish_dir: allure-report
+          destination_dir: ${{ env.PROJECT }}/test-results
+      
+      - name: Print summary
+        run: |
+          BASE_URL=$(gh api "repos/$GITHUB_REPOSITORY/pages"  --jq .html_url)
+          REPORTS_URL=$BASE_URL$PROJECT/test-results
+          echo $REPORTS_URL
+          echo -e "# Reports" >>  $GITHUB_STEP_SUMMARY
+          echo -e "Test results for project $PROJECT can be found [here]($REPORTS_URL). " >>  $GITHUB_STEP_SUMMARY
