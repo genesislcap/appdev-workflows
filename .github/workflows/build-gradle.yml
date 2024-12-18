@@ -433,7 +433,7 @@ jobs:
 
       # Step to extract FOUNDATION_VERSION from additional_file
       - name: Read FOUNDATION_VERSION from additional file
-        if: inputs.testautomation_build and steps.web_exists.outputs.client_folder_exists == 'true'
+        if: inputs.testautomation_build && steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}"
         id: extract_version        
         shell: bash
@@ -450,7 +450,7 @@ jobs:
             fi
           fi
       - name: Check for package-lock.json and remove if exists
-        if: inputs.testautomation_build and steps.web_exists.outputs.client_folder_exists == 'true'
+        if: inputs.testautomation_build && steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
         run: |
           if [ -f package-lock.json ]; then
@@ -462,7 +462,7 @@ jobs:
 
      
       - name: Update @genesislcap dependencies 
-        if: inputs.testautomation_build and steps.web_exists.outputs.client_folder_exists == 'true'
+        if: inputs.testautomation_build && steps.web_exists.outputs.client_folder_exists == 'true'
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
         run: |
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
@@ -484,7 +484,7 @@ jobs:
           cat package.json
       
       - name: Update @genesislcap versions in package.json
-        if: inputs.testautomation_build and steps.web_exists.outputs.client_folder_exists == 'true'
+        if: inputs.testautomation_build && steps.web_exists.outputs.client_folder_exists == 'true'
         shell: bash
         working-directory: "./"
         run: |
