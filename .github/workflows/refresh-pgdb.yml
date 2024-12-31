@@ -12,6 +12,9 @@ on:
       genesis_user:
         required: false
         type: string
+      app_user:
+        required: false
+        type: string
 
       testautomation_build:
         required: false
@@ -46,6 +49,7 @@ jobs:
           echo "s3ImagePath: ${{ inputs.s3ImagePath }}"
           echo "genesis_user: ${{ inputs.genesis_user }}"
           echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
+          echo "app_user: ${{ inputs.app_user }}"
 
       - name: Trigger Jenkins Job
         run: |
@@ -55,7 +59,8 @@ jobs:
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
-            --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"
+            --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}" \
+            --data-urlencode "app_user=${{ inputs.app_user }}" 
             
 
       - name: Install jq
