@@ -1,0 +1,104 @@
+name: Send SSM comamnd to instances
+description: Sends an SSM comamnd to the AWS instances based on the Environmnet tag
+
+inputs:
+  command:
+    required: true
+  environment:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Set the version
+      shell: bash
+      run: |
+        # Variables
+        ENVIRONMENT_TAG="${{ inputs.environment }}"
+        COMMAND="${{ inputs.command }}"
+
+        # Step 1: Get instance IDs with the specified Environment tag
+        INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+        # Check if instances were found
+        if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
+            exit 1
+        fi
+
+        echo "Found instances: $INSTANCE_IDS"
+
+        # Step 2: Send the command via SSM
+        COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=instanceIds,Values=$(echo $INSTANCE_IDS | tr ' ' ',')" \
+            --parameters "commands=[$COMMAND]" \
+            --comment "Running custom command on instances with Environment tag value '$ENVIRONMENT_TAG'" \
+            --query "Command.CommandId" \
+            --output text)
+
+        if [ -z "$COMMAND_ID" ]; then
+            echo "Failed to send SSM command."
+            exit 2
+        fi
+
+        echo "Command sent. Command ID: $COMMAND_ID"
+
+        # Step 3: Wait for the command to complete and check status
+        echo "Waiting for command to complete..."
+
+        # Poll command status
+        while true; do
+            STATUSES=$(aws ssm list-command-invocations \
+                --command-id "$COMMAND_ID" \
+                --details \
+                --query "CommandInvocations[].Status" \
+                --output text)
+
+            if echo "$STATUSES" | grep -q "InProgress"; then
+                echo "Command still running..."
+                sleep 5
+            else
+                break
+            fi
+        done
+
+        # Step 4: Check the final status of each instance
+        FAILED=0
+        echo "Final statuses for instances:"
+        for INSTANCE_ID in $INSTANCE_IDS; do
+            STATUS=$(aws ssm list-command-invocations \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query "CommandInvocations[0].Status" \
+                --output text)
+
+            echo "Instance $INSTANCE_ID: $STATUS"
+
+            if [ "$STATUS" != "Success" ]; then
+                FAILED=1
+            fi
+        done
+
+        if [ $FAILED -ne 0 ]; then
+            echo "One or more instances failed to execute the command."
+            exit 3
+        fi
+
+        echo "Command executed successfully on all instances."
