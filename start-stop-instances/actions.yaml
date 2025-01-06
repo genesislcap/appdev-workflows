@@ -1,0 +1,82 @@
+name: Send SSM comamnd to instances
+description: Sends an SSM comamnd to the AWS instances based on the Environmnet tag
+
+inputs:
+  command:
+    required: true
+  environment:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Set the version
+      shell: bash
+      run: |
+        # Variables
+        ENVIRONMENT_TAG="${{ inputs.environment }}"
+        COMMAND="${{ inputs.command }}"
+        COMMAND_LOWER=$(echo "$COMMAND" | tr '[:upper:]' '[:lower:]')
+
+        # Step 1: Get instance IDs with the specified Environment tag
+        INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+        # Check if instances were found
+        if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
+            exit 1
+        fi
+
+        echo "Found instances: $INSTANCE_IDS"
+
+        # Step 2: Start or Stop the instance
+        if [ $COMMAND_LOWER == "start" ]; then
+            aws ec2 start-instances --instance-ids $INSTANCE_IDS
+        elif [ $COMMAND_LOWER == "stop" ]; then
+            aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+        fi
+
+        
+        # Step 3: Wait for the instances to be $COMMAND
+        echo "Waiting for command to complete..."
+
+        # Step 4: Check the final status of each instance
+        FAILED=0
+        echo "Final statuses for instances:"
+        for INSTANCE_ID in $INSTANCE_IDS; do
+            STATUS=$(aws ec2 describe-instances \
+                     --instance-ids  $INSTANCE_ID \
+                     --query 'Reservations[*].Instances[*].[InstanceId,State.Name]' \
+                     --output text)
+
+            echo "Instance $INSTANCE_ID: $STATUS"
+
+            if [ $COMMAND_LOWER == "start" && "$STATUS" != "running" ]; then
+                FAILED=1
+            elif [ $COMMAND_LOWER == "stop" && "$STATUS" != "stopped" ]; then
+                FAILED=1
+            fi
+        done
+
+        if [ $FAILED -ne 0 ]; then
+            echo "One or more instances failed to $COMMAND_LOWER."
+            exit 3
+        fi
+
+        echo "Command executed successfully."
