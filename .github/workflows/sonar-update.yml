@@ -45,11 +45,8 @@ jobs:
 
       - name: Print Input Values
         run: |
-          echo "hostname: ${{ inputs.hostname }}"
-          echo "s3ImagePath: ${{ inputs.s3ImagePath }}"
-          echo "genesis_user: ${{ inputs.genesis_user }}"
-          echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
-          echo "app_user: ${{ inputs.app_user }}"
+          echo "hostname: ${{ inputs.hostname }}"         
+          echo "genesis_user: ${{ inputs.genesis_user }}"          
 
       - name: Trigger Jenkins Job
         run: |
