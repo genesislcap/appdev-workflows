@@ -52,7 +52,7 @@ jobs:
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \            
-            --data-urlencode "genesis_user=${{ inputs.GENESIS_USER }}" 
+            --data-urlencode "app_user=${{ inputs.GENESIS_USER }}" 
             # --data-urlencode "account=genesisglobalcddev" 
            
             
