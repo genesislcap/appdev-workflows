@@ -73,9 +73,9 @@ runs:
 
             echo "Instance $INSTANCE_ID: $STATUS"
 
-            if [[ $COMMAND_LOWER == "start" && "$STATUS" != "running" ]]; then
+            if [[ $COMMAND_LOWER == "start" && ! "$STATUS" =~ "running" ]]; then
                 FAILED=1
-            elif [[ $COMMAND_LOWER == "stop" && "$STATUS" != "stopped" ]]; then
+            elif [[ $COMMAND_LOWER == "stop" && ! "$STATUS" =~ "stopped" ]]; then
                 FAILED=1
             fi
         done
