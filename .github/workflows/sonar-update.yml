@@ -6,7 +6,7 @@ on:
       hostname:
         required: false
         type: string 
-      app_user:
+      appuser:
         required: false
         type: string
 
@@ -37,13 +37,13 @@ jobs:
       - name: Print Input Values
         run: |
           echo "hostname: ${{ inputs.hostname }}"         
-          echo "app_user: ${{ inputs.app_user }}"          
+          echo "appuser: ${{ inputs.appuser }}"          
 
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \            
-            --data-urlencode "app_user=${{ inputs.app_user }}" 
+            --data-urlencode "appuser=${{ inputs.appuser }}" 
             # --data-urlencode "account=genesisglobalcddev" 
            
             
