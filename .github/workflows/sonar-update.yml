@@ -41,10 +41,9 @@ jobs:
 
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
-            # --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \           
-            --data-urlencode "appuser=${{ inputs.appuser }}" \
-            --data-urlencode "account=genesisglobalcddev1" 
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \                  
+            --data-urlencode "appuser=${{ inputs.appuser }}" 
+            # --data-urlencode "account=genesisglobalcddev1" 
             
 
       - name: Install jq        
