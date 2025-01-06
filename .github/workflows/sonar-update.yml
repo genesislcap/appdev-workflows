@@ -5,13 +5,7 @@ on:
     inputs:     
       hostname:
         required: false
-        type: string
-      s3ImagePath:
-        required: false
-        type: string
-      genesis_user:
-        required: false
-        type: string
+        type: string 
       app_user:
         required: false
         type: string
@@ -19,10 +13,7 @@ on:
       testautomation_build:
         required: false
         default: false
-        type: boolean
-      startserverdatetime:
-        required: false
-        type: string
+        type: boolean      
 
     secrets:
       JENKINS_SECURITYTOKEN:
@@ -46,13 +37,13 @@ jobs:
       - name: Print Input Values
         run: |
           echo "hostname: ${{ inputs.hostname }}"         
-          echo "genesis_user: ${{ inputs.genesis_user }}"          
+          echo "app_user: ${{ inputs.app_user }}"          
 
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \            
-            --data-urlencode "app_user=${{ inputs.GENESIS_USER }}" 
+            --data-urlencode "app_user=${{ inputs.app_user }}" 
             # --data-urlencode "account=genesisglobalcddev" 
            
             
