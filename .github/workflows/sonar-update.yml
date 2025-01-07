@@ -12,7 +12,7 @@ on:
       genesis_user:
         required: false
         type: string
-      app_user:
+      appuser:
         required: false
         type: string
 
