@@ -5,15 +5,24 @@ on:
     inputs:     
       hostname:
         required: false
-        type: string 
-      appuser:
+        type: string
+      s3ImagePath:
+        required: false
+        type: string
+      genesis_user:
+        required: false
+        type: string
+      app_user:
         required: false
         type: string
 
       testautomation_build:
         required: false
         default: false
-        type: boolean      
+        type: boolean
+      startserverdatetime:
+        required: false
+        type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
@@ -37,13 +46,16 @@ jobs:
       - name: Print Input Values
         run: |
           echo "hostname: ${{ inputs.hostname }}"         
-          echo "appuser: ${{ inputs.appuser }}"          
+          echo "genesis_user: ${{ inputs.genesis_user }}"          
 
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \                  
-            --data-urlencode "appuser=${{ inputs.appuser }}" 
-            # --data-urlencode "account=genesisglobalcddev1" 
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
+            --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \            
+            # --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
+            # --data-urlencode "account=genesisglobalcddev" 
+            # --data-urlencode "extra_variables=" 
+            
             
 
       - name: Install jq        
