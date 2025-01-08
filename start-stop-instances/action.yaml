@@ -36,7 +36,6 @@ runs:
             exit 1
         fi
 
-
         # Step 1: Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" \
@@ -51,38 +50,49 @@ runs:
 
         echo "Found instances: $INSTANCE_IDS"
 
-        # Step 2: Start or Stop the instance
-        if [ $COMMAND_LOWER == "start" ]; then
+        # Step 2: Start or Stop the instances
+        if [ "$COMMAND_LOWER" == "start" ]; then
             aws ec2 start-instances --instance-ids $INSTANCE_IDS
-        elif [ $COMMAND_LOWER == "stop" ]; then
+            DESIRED_STATE="running"
+        elif [ "$COMMAND_LOWER" == "stop" ]; then
             aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+            DESIRED_STATE="stopped"
         fi
 
-        
-        # Step 3: Wait for the instances to be $COMMAND
-        echo "Waiting for command to complete..."
+        # Step 3: Wait for the instances to reach the desired state
+        TIMEOUT=60  # Timeout in seconds
+        END_TIME=$(( $(date +%s) + $TIMEOUT ))
 
-        # Step 4: Check the final status of each instance
-        FAILED=0
-        echo "Final statuses for instances:"
-        for INSTANCE_ID in $INSTANCE_IDS; do
-            STATUS=$(aws ec2 describe-instances \
-                     --instance-ids  $INSTANCE_ID \
-                     --query 'Reservations[*].Instances[*].[InstanceId,State.Name]' \
-                     --output text)
+        while :; do
+            ALL_IN_DESIRED_STATE=true
 
-            echo "Instance $INSTANCE_ID: $STATUS"
+            for INSTANCE_ID in $INSTANCE_IDS; do
+                CURRENT_STATE=$(aws ec2 describe-instances \
+                    --instance-ids $INSTANCE_ID \
+                    --query "Reservations[].Instances[].State.Name" \
+                    --output text)
 
-            if [[ $COMMAND_LOWER == "start" && ! "$STATUS" =~ "pending" && ! "$STATUS" =~ "running" ]]; then
-                FAILED=1
-            elif [[ $COMMAND_LOWER == "stop" && ! "$STATUS" =~ "stopping" && ! "$STATUS" =~ "stopped" ]]; then
-                FAILED=1
+                echo "Instance $INSTANCE_ID is currently in state: $CURRENT_STATE"
+
+                if [ "$CURRENT_STATE" != "$DESIRED_STATE" ]; then
+                    ALL_IN_DESIRED_STATE=false
+                fi
+            done
+
+            if $ALL_IN_DESIRED_STATE; then
+                echo "All instances are in the desired state: $DESIRED_STATE."
+                break
             fi
+
+            if [ $(date +%s) -ge $END_TIME ]; then
+                echo "Timeout reached while waiting for instances to reach the desired state: $DESIRED_STATE."
+                exit 2
+            fi
+
+            echo "Waiting for instances to reach the desired state..."
+            sleep 5
+
         done
 
-        if [ $FAILED -ne 0 ]; then
-            echo "One or more instances failed to $COMMAND_LOWER."
-            exit 3
-        fi
-
-        echo "Command executed successfully."
+        # Step 4: Final status output
+        echo "Command executed successfully. All instances are in state: $DESIRED_STATE."
