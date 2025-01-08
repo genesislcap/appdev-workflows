@@ -4,6 +4,9 @@ description: Sends an SSM comamnd to the AWS instances based on the Environmnet 
 inputs:
   command:
     required: true
+  run_on_all:
+    required: false
+    defualt: true
   environment:
     required: true
   aws-access-key-id:
@@ -27,6 +30,7 @@ runs:
       shell: bash
       run: |
         # Variables
+        RUN_ON_ALL="${{ inputs.run_on_all }}"  # Set to true to run on all instances, false to run on the first instance only
         ENVIRONMENT_TAG="${{ inputs.environment }}"
         COMMAND="${{ inputs.command }}"
 
@@ -42,7 +46,13 @@ runs:
             exit 1
         fi
 
-        echo "Found instances: $INSTANCE_IDS"
+        # If RUN_ON_ALL is false, only use the first instance
+        if [ "$RUN_ON_ALL" = false ]; then
+            INSTANCE_IDS=$(echo $INSTANCE_IDS | awk '{print $1}')
+            echo "RUN_ON_ALL is false. Targeting only the first instance: $INSTANCE_IDS"
+        else
+            echo "Found instances: $INSTANCE_IDS"
+        fi
 
         # Step 2: Send the command via SSM
         COMMAND_ID=$(aws ssm send-command \

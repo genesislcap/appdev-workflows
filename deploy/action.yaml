@@ -25,7 +25,7 @@ runs:
     - uses: actions/checkout@v4
 
     - name: Stop Genesis
-      uses: genesislcap/appdev-workflows/ssm-command@docker
+      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
       with:
         command: "cd /data/docker-compose && docker compose down || exit 0"
         environment: ${{ inputs.environment }}
@@ -34,7 +34,7 @@ runs:
         aws-region: ${{ inputs.aws-region }}
 
     - name: Sync config files
-      uses: genesislcap/appdev-workflows/sync-files@docker
+      uses: genesislcap/appdev-workflows/sync-files@docker-dev
       with:
         local-path: ${{ inputs.config-path }}
         remote-path: "/data/docker-compose"
@@ -43,8 +43,25 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - name: Run remap
+      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          populate_secrets &&
+          GENESIS_VERSION=${{ inputs.version }}
+          APP_NAME=${{ inputs.app_name }}
+          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
+          docker compose run -e GENESIS_DB_INSTALL=true genesis_app
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
     - name: Start Genesis
-      uses: genesislcap/appdev-workflows/ssm-command@docker
+      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
       with:
         command:
           source /root/.bashrc &&
