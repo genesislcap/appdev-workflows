@@ -149,8 +149,7 @@ runs:
       if: steps.web_exists.outputs.client_folder_exists == 'true'
       shell: bash
       working-directory: "./"
-      run: |
-          
+      run: |          
         PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
         INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
 
