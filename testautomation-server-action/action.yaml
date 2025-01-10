@@ -1,0 +1,64 @@
+name: Qaautomation execution of stages
+
+inputs:
+  testautomation_build:
+    required: false
+    default: false
+    type: boolean
+  testautorepo:
+    required: false
+    type: string
+  testautobranch:
+    required: false
+    type: string     
+  web-path:
+    required: false
+    type: string
+    default: 'client/web'
+  additional_file:
+    required: false
+    type: string
+    default: 'main-repo/.github/workflows/version.properties'
+  
+runs:
+  using: "composite"
+  steps:   
+
+    - uses: actions/checkout@v3
+      if: inputs.testautomation_build
+      with:
+        repository: ${{ inputs.testautorepo }}        
+        fetch-depth: '0'
+        ref: ${{ inputs.testautobranch }}
+        token: ${{ env.GHA_TOKEN }}   
+
+    - name: Checkout main repository
+      if: inputs.testautomation_build
+      uses: actions/checkout@v3
+      with:
+        repository: genesislcap/platform-qa-automation
+        ref: ${{ github.ref }}
+        token: ${{ secrets.GHA_TOKEN }}
+        path: main-repo
+        fetch-depth: 0  
+
+    - name: Print version.properties file
+      if: inputs.testautomation_build
+      run: cat main-repo/.github/workflows/version.properties
+
+    - name: Restore gradle.properties and setup
+      env:
+        GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
+          fi
+          echo "Contents of gradle.properties after modification:"
+          cat ~/.gradle/gradle.properties
