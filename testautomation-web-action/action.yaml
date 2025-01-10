@@ -32,8 +32,6 @@ inputs:
   GHA_TOKEN:
     required: true
 
-env:  
-  GHA_TOKEN: ${{inputs.GHA_TOKEN}} 
 runs:
   using: "composite"
   steps:   
@@ -44,7 +42,7 @@ runs:
         repository: ${{ inputs.testautorepo }}        
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
-        token: ${{ env.GHA_TOKEN }}   
+        token: ${{ inputs.GHA_TOKEN }}   
 
     - name: Checkout main repository
       if: inputs.testautomation_build
@@ -52,7 +50,7 @@ runs:
       with:
         repository: genesislcap/platform-qa-automation
         ref: ${{ github.ref }}
-        token: ${{ secrets.GHA_TOKEN }}
+        token: ${{ inputs.GHA_TOKEN }}
         path: main-repo
         fetch-depth: 0  
 
