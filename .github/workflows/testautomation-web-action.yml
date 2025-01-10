@@ -28,6 +28,10 @@ inputs:
     required: false
     type: string
     default: 'server'
+
+secrets:
+  GHA_TOKEN:
+    required: true
   
 runs:
   using: "composite"
@@ -56,10 +60,10 @@ runs:
       run: cat main-repo/.github/workflows/version.properties
 
     - name: Restore gradle.properties and setup
-      env:        
-        working-directory: "${{ inputs.working-directory }}"
-        shell: bash
-        run: |
+             
+      working-directory: "${{ inputs.working-directory }}"
+      shell: bash
+      run: |
           if [ "${{ inputs.testautomation_build }}" == "true" ]; then
             echo "Appending contents of additional file to gradle.properties"
             if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
