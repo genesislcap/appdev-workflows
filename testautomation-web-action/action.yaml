@@ -28,10 +28,12 @@ inputs:
     required: false
     type: string
     default: 'server'
-secrets:
+
   GHA_TOKEN:
     required: true
-  
+
+env:  
+  GHA_TOKEN: ${{inputs.GHA_TOKEN}} 
 runs:
   using: "composite"
   steps:   

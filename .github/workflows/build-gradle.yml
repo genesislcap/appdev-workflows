@@ -130,8 +130,7 @@ jobs:
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
           additional_file: ${{ inputs.additional_file }} 
-          repo_type: "server"
-        secrets:
+          repo_type: "server"        
           GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
       - uses: actions/checkout@v3
