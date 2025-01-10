@@ -28,6 +28,9 @@ inputs:
     required: false
     type: string
     default: 'server'
+secrets:
+  GHA_TOKEN:
+    required: true
   
 runs:
   using: "composite"
