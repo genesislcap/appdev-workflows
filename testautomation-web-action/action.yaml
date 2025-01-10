@@ -79,6 +79,7 @@ runs:
       if: inputs.repo_type == 'web'
       id: web_exists
       working-directory: "${{ inputs.working-directory }}"
+      shell: bash
       run: |
         if test -d client; then
           echo "client_folder_exists=true" >> $GITHUB_OUTPUT
@@ -111,6 +112,7 @@ runs:
     - name: Check for package-lock.json and remove if exists
       if: steps.web_exists.outputs.client_folder_exists == 'true'
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+      shell: bash
       run: |
         if [ -f package-lock.json ]; then
           echo "Removing existing package-lock.json..."
@@ -122,7 +124,8 @@ runs:
      
     - name: Update @genesislcap dependencies 
       if: steps.web_exists.outputs.client_folder_exists == 'true'
-      working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+      working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+      shell: bash      
       run: |
         NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
         # Update @genesislcap dependencies across all objects in the package.json
