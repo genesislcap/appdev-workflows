@@ -115,7 +115,7 @@ jobs:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - name: Checkout code      
-        # if: ${{ !inputs.testautomation_build }}
+        if: ${{ !inputs.testautomation_build }}
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
@@ -129,7 +129,19 @@ jobs:
       #     repository: ${{ inputs.testautorepo }}        
       #     fetch-depth: '0'
       #     ref: ${{ inputs.testautobranch }}
-      #     token: ${{ env.GHA_TOKEN }}          
+      #     token: ${{ env.GHA_TOKEN }}       
+
+      - name: testautomation_build steps 
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }} 
+          repo_type: "server"        
+          GHA_TOKEN: ${{secrets.GHA_TOKEN}}   
       
       - name: Set up JDK
         uses: actions/setup-java@v2
@@ -201,18 +213,9 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
-      - name: testautomation_build steps 
-        if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
-        with:
-          web-path: ${{ inputs.web-path }}
-          testautomation_build: ${{ inputs.testautomation_build }}
-          testautorepo: ${{ inputs.testautorepo }}
-          testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "server"        
-          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
-          
+      
+      
+
       - name: Server Build        
         uses: gradle/gradle-build-action@v2
         with:
