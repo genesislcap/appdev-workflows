@@ -57,38 +57,39 @@ runs:
     - name: Print version.properties file
       if: inputs.testautomation_build
       run: cat main-repo/.github/workflows/version.properties
+      shell: bash
 
     - name: Restore gradle.properties and setup
       env:        
         working-directory: "${{ inputs.working-directory }}"
-        shell: bash
-        run: |
-          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-            echo "Appending contents of additional file to gradle.properties"
-            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
-              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
-            else
-              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
-            fi
+      shell: bash
+      run: |
+        if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+          echo "Appending contents of additional file to gradle.properties"
+          if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+            cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+          else
+            echo "Additional file not found: ${{ inputs.additional_file }}" >&2
           fi
-          echo "Contents of gradle.properties after modification:"
-          cat ~/.gradle/gradle.properties
+        fi
+        echo "Contents of gradle.properties after modification:"
+        cat ~/.gradle/gradle.properties
 
     - name: Check file existence
       if: inputs.repo_type == 'web'
       id: web_exists
       working-directory: "${{ inputs.working-directory }}"
       run: |
-          if test -d client; then
-            echo "client_folder_exists=true" >> $GITHUB_OUTPUT
-            CLIENT_BUILD_LOCATION="client"
-          fi
-          if test -d client/web; then
-            CLIENT_BUILD_LOCATION="client/web"
-          fi
-          echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
-          CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
-          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
+        if test -d client; then
+          echo "client_folder_exists=true" >> $GITHUB_OUTPUT
+          CLIENT_BUILD_LOCATION="client"
+        fi
+        if test -d client/web; then
+          CLIENT_BUILD_LOCATION="client/web"
+        fi
+        echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
+        CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
+        echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
 
     - name: Read FOUNDATION_VERSION from additional file
       if: steps.web_exists.outputs.client_folder_exists == 'true'
@@ -96,50 +97,50 @@ runs:
       id: extract_version        
       shell: bash
       run: |
-          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-            # Extract FOUNDATION_VERSION from the additional file
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-            else
-              echo "FOUNDATION_VERSION not found in additional file"
-              exit 1
-            fi
+        if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+          # Extract FOUNDATION_VERSION from the additional file
+          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
+            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+            echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
+            echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
+          else
+            echo "FOUNDATION_VERSION not found in additional file"
+            exit 1
           fi
+        fi
     - name: Check for package-lock.json and remove if exists
       if: steps.web_exists.outputs.client_folder_exists == 'true'
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
       run: |
-          if [ -f package-lock.json ]; then
-            echo "Removing existing package-lock.json..."
-            rm package-lock.json
-          else
-            echo "No package-lock.json found."
-          fi
+        if [ -f package-lock.json ]; then
+          echo "Removing existing package-lock.json..."
+          rm package-lock.json
+        else
+          echo "No package-lock.json found."
+        fi
 
      
     - name: Update @genesislcap dependencies 
       if: steps.web_exists.outputs.client_folder_exists == 'true'
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
       run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
-          # Update @genesislcap dependencies across all objects in the package.json
-          jq --arg version "$NEW_VERSION" '
-            walk(
-              if type == "object" then
-                with_entries(
-                  if (.key | startswith("@genesislcap")) then .value = $version else . end
-                )
-              else . end
-            )
-          ' package.json > package.json.tmp
+        NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+        # Update @genesislcap dependencies across all objects in the package.json
+        jq --arg version "$NEW_VERSION" '
+          walk(
+            if type == "object" then
+              with_entries(
+                if (.key | startswith("@genesislcap")) then .value = $version else . end
+              )
+            else . end
+          )
+        ' package.json > package.json.tmp
           
-          # Move tmp file to overwrite the original package.json
+        # Move tmp file to overwrite the original package.json
           mv package.json.tmp package.json
-          # Print the final updated package.json
-          echo "Final updated package.json:"
-          cat package.json
+        # Print the final updated package.json
+        echo "Final updated package.json:"
+        cat package.json
       
     - name: Update @genesislcap versions in package.json
       if: steps.web_exists.outputs.client_folder_exists == 'true'
@@ -147,36 +148,36 @@ runs:
       working-directory: "./"
       run: |
           
-          PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
+        PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
+        INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
 
-          # Read and update dependencies from version.properties
-          while IFS= read -r line; do
-            # Skip empty lines or comments
-            [[ -z "$line" || "$line" =~ ^# ]] && continue
+        # Read and update dependencies from version.properties
+        while IFS= read -r line; do
+          # Skip empty lines or comments
+          [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-            # Process JSON-like entries
-            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-              key="${BASH_REMATCH[1]}"
-              value="${BASH_REMATCH[2]}"
-            else
-              # Process key=value pairs
-              key=$(echo "$line" | cut -d'=' -f1 | xargs)
-              value=$(echo "$line" | cut -d'=' -f2 | xargs)
-            fi
+          # Process JSON-like entries
+          if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+          else
+            # Process key=value pairs
+            key=$(echo "$line" | cut -d'=' -f1 | xargs)
+            value=$(echo "$line" | cut -d'=' -f2 | xargs)
+          fi
 
-            # Update the package.json file
-            jq --arg dep "$key" --arg version "$value" '
-              walk(
-                if type == "object" and has($dep) then
-                  .[$dep] = $version
-                else
-                  .
-                end
-              )
-            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-          done < "$INPUT_FILE"
+          # Update the package.json file
+          jq --arg dep "$key" --arg version "$value" '
+            walk(
+              if type == "object" and has($dep) then
+                .[$dep] = $version
+              else
+                .
+              end
+            )
+          ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+        done < "$INPUT_FILE"
 
-          # Print the updated package.json
-          echo "Updated package.json:"
-          cat "$PACKAGE_JSON"
+        # Print the updated package.json
+        echo "Updated package.json:"
+        cat "$PACKAGE_JSON"
