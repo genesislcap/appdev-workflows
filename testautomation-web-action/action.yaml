@@ -129,7 +129,8 @@ runs:
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
       shell: bash      
       run: |
-        NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+        NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"    
+        echo "${{ inputs.working-directory }}/${{ inputs.web-path }}"       
         # Update @genesislcap dependencies across all objects in the package.json
         jq --arg version "$NEW_VERSION" '
           walk(
