@@ -76,23 +76,23 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}     
 
-      - uses: actions/checkout@v3
-        if: inputs.testautomation_build
-        with:
-          repository: ${{ inputs.testautorepo }}        
-          fetch-depth: '0'
-          ref: ${{ inputs.testautobranch }}
-          token: ${{ env.GHA_TOKEN }}
+      # - uses: actions/checkout@v3
+      #   if: inputs.testautomation_build
+      #   with:
+      #     repository: ${{ inputs.testautorepo }}        
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.testautobranch }}
+      #     token: ${{ env.GHA_TOKEN }}
 
       
-      - name: Checkout main repository
-        if: inputs.testautomation_build
-        uses: actions/checkout@v3
-        with:
-          repository: genesislcap/platform-qa-automation
-          ref: ${{ github.ref }}
-          token: ${{ secrets.GHA_TOKEN }}
-          path: main-repo
+      # - name: Checkout main repository
+      #   if: inputs.testautomation_build
+      #   uses: actions/checkout@v3
+      #   with:
+      #     repository: genesislcap/platform-qa-automation
+      #     ref: ${{ github.ref }}
+      #     token: ${{ secrets.GHA_TOKEN }}
+      #     path: main-repo
 
       # Step to extract FOUNDATION_VERSION from additional_file
       - name: Read FOUNDATION_VERSION from additional file
