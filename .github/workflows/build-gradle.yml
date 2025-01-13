@@ -114,8 +114,7 @@ jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code      
-        if: ${{ !inputs.testautomation_build }}
+      - name: Checkout code  
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
@@ -307,8 +306,7 @@ jobs:
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:     
-      - name: Checkout code
-        if: ${{ !inputs.testautomation_build }}
+      - name: Checkout code        
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
