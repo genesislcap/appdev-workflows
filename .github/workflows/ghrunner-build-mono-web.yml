@@ -11,28 +11,6 @@ on:
       product_name:
         required: false
         type: string
-      
-      testautomation_build:
-        required: false
-        default: false
-        type: boolean
-      testautorepo:
-        required: false
-        type: string
-      testautobranch:
-        required: false
-        type: string
-      version:
-        required: false
-        type: string 
-      working-directory:
-        type: string
-        default: .
-        required: false   
-      additional_file:
-        required: false
-        type: string
-        default: 'main-repo/.github/workflows/version.properties'   
 
     secrets:
       JFROG_USERNAME:
@@ -49,17 +27,14 @@ on:
         required: true
       SLACK_WEBHOOK:
         required: false
-      GHA_TOKEN:
-        required: true
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
-  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
 jobs:
 
   build:
-    name: Web build
+    name: Steps to build mono repo artifact and upload it to jfrog
     runs-on: appdev-selfhosted-al2023
 
     strategy:
@@ -68,111 +43,7 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-      - name: Checkout code
-        if: ${{ !inputs.testautomation_build }}
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: '0'
-          ref: ${{ inputs.branch }}     
-
-      - uses: actions/checkout@v3
-        if: inputs.testautomation_build
-        with:
-          repository: ${{ inputs.testautorepo }}        
-          fetch-depth: '0'
-          ref: ${{ inputs.testautobranch }}
-          token: ${{ env.GHA_TOKEN }}
-
-      
-      - name: Checkout main repository
-        if: inputs.testautomation_build
-        uses: actions/checkout@v3
-        with:
-          repository: genesislcap/platform-qa-automation
-          ref: ${{ github.ref }}
-          token: ${{ secrets.GHA_TOKEN }}
-          path: main-repo
-
-      # Step to extract FOUNDATION_VERSION from additional_file
-      - name: Read FOUNDATION_VERSION from additional file
-        if: inputs.testautomation_build
-        working-directory: "${{ inputs.working-directory }}"
-        id: extract_version        
-        shell: bash
-        run: |
-          if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-            # Extract FOUNDATION_VERSION from the additional file
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-              echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-              echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-            else
-              echo "FOUNDATION_VERSION not found in additional file"
-              exit 1
-            fi
-          fi
-
-      - name: Update @genesislcap dependencies 
-        if: inputs.testautomation_build  
-        working-directory: ./client/web 
-        run: |
-          NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
-          # Update @genesislcap dependencies across all objects in the package.json
-          jq --arg version "$NEW_VERSION" '
-            walk(
-              if type == "object" then
-                with_entries(
-                  if (.key | startswith("@genesislcap")) then .value = $version else . end
-                )
-              else . end
-            )
-          ' package.json > package.json.tmp
-          
-          # Move tmp file to overwrite the original package.json
-          mv package.json.tmp package.json
-          # Print the final updated package.json
-          echo "Final updated package.json:"
-          cat package.json
-      
-      - name: Update @genesislcap versions in package.json
-        if: inputs.testautomation_build  
-        shell: bash
-        working-directory: "./"
-        run: |
-          
-          PACKAGE_JSON="${{ inputs.working-directory }}/client/web/package.json"
-          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
-
-          # Read and update dependencies from version.properties
-          while IFS= read -r line; do
-            # Skip empty lines or comments
-            [[ -z "$line" || "$line" =~ ^# ]] && continue
-
-            # Process JSON-like entries
-            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-              key="${BASH_REMATCH[1]}"
-              value="${BASH_REMATCH[2]}"
-            else
-              # Process key=value pairs
-              key=$(echo "$line" | cut -d'=' -f1 | xargs)
-              value=$(echo "$line" | cut -d'=' -f2 | xargs)
-            fi
-
-            # Update the package.json file
-            jq --arg dep "$key" --arg version "$value" '
-              walk(
-                if type == "object" and has($dep) then
-                  .[$dep] = $version
-                else
-                  .
-                end
-              )
-            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-          done < "$INPUT_FILE"
-
-          # Print the updated package.json
-          echo "Updated package.json:"
-          cat "$PACKAGE_JSON"
+      - uses: actions/checkout@v2
 
       - name: Configure Node ${{ matrix.node-version }}
         uses: actions/setup-node@v2
@@ -199,17 +70,14 @@ jobs:
       - name: Upload lint artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Lint errors- ${{ inputs.product_name }}
+          name: Lint errors
           path: lint-output.txt
 
       - name: Env Set-Up
         run:  |
-            echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
-            if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-${{ inputs.version }}.zip" >> $GITHUB_ENV
-            else
-              echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
-            fi
+             echo "PRODUCT_NAME=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)" >> $GITHUB_ENV
+             echo "OUTPUT=$(git config --get remote.origin.url | cut -d"." -f2 | cut -d"/" -f3 | cut -d"-" -f1 | cut -d"_" -f2)-web-$(git describe --tags | cut -d"_" -f2).zip" >> $GITHUB_ENV
+
       - name: Env Setup for nightly build
         if: ${{ inputs.branch == 'develop' ||  inputs.branch == 'main' || inputs.branch == 'master' }}
         run:  |
