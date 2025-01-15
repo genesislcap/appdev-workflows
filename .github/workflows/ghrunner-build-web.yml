@@ -62,7 +62,7 @@ on:
       SLACK_WEBHOOK:
         required: false
       GHA_TOKEN:
-        required: true          
+        required: false          
 
 
 env:

@@ -109,7 +109,7 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: false
       GHA_TOKEN:
-        required: true
+        required: false
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
