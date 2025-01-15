@@ -8,6 +8,10 @@ inputs:
     required: true
   config-path:
     required: true
+  migrate_db:
+    required: false
+    type: boolean
+    default: true
   app_name:
     required: true
   ecr_registry:
@@ -43,7 +47,8 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Run remap
+    - name: Run DB Migration
+      if: ${{ inputs.migrate_db }}
       uses: genesislcap/appdev-workflows/ssm-command@docker-dev
       with:
         command:
