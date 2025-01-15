@@ -115,6 +115,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          arguments: test jacocoTestReport sonarqube -Dsonar.token=${{env.SONAR_TOKEN}}
+          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
