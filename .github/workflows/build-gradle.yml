@@ -174,18 +174,19 @@ jobs:
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
           
-          {
-            echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}"
-            echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "systemProp.org.gradle.internal.http.connectionTimeout=180000"
-            echo "systemProp.org.gradle.internal.http.socketTimeout=180000"
-            echo "dockerUrl=genesisglobal-docker-internal.jfrog.io"
-            echo "dockerUsername=${{ secrets.JFROG_USERNAME }}"
-            echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "dockerEmail=platformmanageteam@genesis.global"
-            echo "genesis-home=../.genesis-home"
-            echo "deploy-plugin-mode=local"
-          } >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
 
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
