@@ -8,6 +8,9 @@ inputs:
     required: true
   region:
     required: true
+  working-directory:
+    required: false
+    default: "."
   aws-access-key-id:
     required: true
   aws-secret-access-key:
@@ -44,19 +47,22 @@ runs:
           aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr-registry }}
 
     - name: Set the version
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/build.gradle.kts
 
     - name: Build Image
-      uses: gradle/gradle-build-action@v3
+      uses: gradle/actions/setup-gradle@v3
+      working-directory: ${{ inputs.working-directory }}
       with:
           arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }} -PdockerUrl=${{ inputs.ecr-registry }}
           build-root-directory: server/
           cache-disabled: true
 
     - name: Push Image
-      uses: gradle/gradle-build-action@v3
+      uses: gradle/actions/setup-gradle@v3
+      working-directory: ${{ inputs.working-directory }}
       with:
           arguments: pushImage --no-configuration-cache -PdockerUrl=${{ inputs.ecr-registry }}
           build-root-directory: server/
