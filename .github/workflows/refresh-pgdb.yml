@@ -1,4 +1,4 @@
-name:  Deploy package
+name:  Refresh  Database  from Archive
 
 on:
   workflow_call:
@@ -6,17 +6,15 @@ on:
       hostname:
         required: false
         type: string
-      s3ImagePath:
+      s3imagepath:
         required: false
         type: string
       genesis_user:
         required: false
         type: string
-
-      testautomation_build:
+      branch:
         required: false
-        default: false
-        type: boolean
+        type: string      
       startserverdatetime:
         required: false
         type: string
@@ -46,22 +44,21 @@ jobs:
           echo "s3ImagePath: ${{ inputs.s3ImagePath }}"
           echo "genesis_user: ${{ inputs.genesis_user }}"
           echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
+
       - name: Trigger Jenkins Job
         run: |
           curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
-            --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
+            --data-urlencode "s3ImagePath=${{ inputs.s3imagepath }}" \
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
             --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"
             
-      - name: Install jq
-        if: ${{ inputs.testautomation_build }}
+      - name: Install jq        
         run: sudo dnf install -y jq 
 
-      - name: Poll Jenkins for Job Status
-        if: ${{ inputs.testautomation_build }}
+      - name: wait-for-completion of Jenkins  Job          
         run: |
           JOB_STATUS=""
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/DB_Refresh_ExistingInstance/lastBuild/api/json"

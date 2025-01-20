@@ -77,16 +77,9 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string
-
-      server-path:
-        required: false
-        type: string
-        default: 'server'
-      FOUNDATION_VERSION:
-        required: false
-        type: string
-      web-path:
+        type: string      
+      
+      web_path:
         required: false
         type: string
         default: 'client'
@@ -116,8 +109,7 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
-  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}  
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -150,26 +142,19 @@ jobs:
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-      - name: Setup npm registry for @genesislcap
-        run: |
-          echo "Using npmjs.com for @genesislcap scoped packages"
-          npm config set @genesislcap:registry https://registry.npmjs.org/
-          npm config list
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}      
 
       - name: testautomation_build steps 
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
-          web-path: ${{ inputs.web-path }}
+          web_path: ${{ inputs.web_path }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
           additional_file: ${{ inputs.additional_file }} 
           repo_type: "web"        
-          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+          gha_token: ${{secrets.GHA_TOKEN}}
 
       - name: Restore gradle.properties and setup
         env:
@@ -223,7 +208,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}-PuseDevRepo=true
+          arguments: build --no-build-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
 
