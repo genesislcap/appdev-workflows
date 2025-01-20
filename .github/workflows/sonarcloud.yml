@@ -160,6 +160,7 @@ jobs:
             -Dsonar.organization=genesislcap
             -Dsonar.projectKey=genesislcap_fical
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.java.binaries=/opt/actions-runner/_work/fical/fical/fical/fical/bin
 
 
       - name: Server Build & SonarCloud Analysis
