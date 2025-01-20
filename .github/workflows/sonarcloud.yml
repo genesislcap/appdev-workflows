@@ -130,24 +130,14 @@ jobs:
       - name: Downloads
         # working-directory: rpm/downloads
         run: |
+          mkdir -p fical
+          cd fical
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz
           ls -al
           tar xf genesis_*.tar.gz
           rm genesis_*.tar.gz
           ls -al
-          
 
-      - name: Download Fical Package from JFrog        
-        run: |
-          echo "Creating fical directory if not exists"
-          mkdir -p fical # Ensure the directory exists
-          echo "Downloading Fical Package"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{ secrets.JFROG_PASSWORD }}" \
-            -O "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz"
-          echo "Unzipping the Fical Package"
-          tar -xzvf genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -C fical
-          ls -l fical  # List the files to verify
-      
       # - name: Download Fical Package with Authentication
       #   run: |
       #     wget --user="${{ secrets.JFROG_USERNAME }}" --password="${{ secrets.JFROG_PASSWORD }}" \
