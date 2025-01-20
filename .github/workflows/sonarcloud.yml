@@ -137,6 +137,7 @@ jobs:
           tar xf genesis_*.tar.gz
           rm genesis_*.tar.gz
           ls -al
+          
 
 
       - name: Generate JaCoCo XML Report (Manual)
@@ -147,6 +148,7 @@ jobs:
               --classfiles ./ \
               --xml jacocoTestReport.xml
           ls -al
+          pwd
 
 
       - name: Upload JaCoCo Coverage Report
