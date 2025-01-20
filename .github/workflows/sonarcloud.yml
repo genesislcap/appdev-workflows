@@ -130,15 +130,24 @@ jobs:
       - name: Ensure fical Directory Exists
         run: |
           mkdir -p fical  
-      - name: Download Fical Package with Authentication
+
+      - name: Download Fical Package from JFrog
+        working-directory: "${{ inputs.working-directory }}/fical"
         run: |
-          wget --user="${{ secrets.JFROG_USERNAME }}" --password="${{ secrets.JFROG_API_KEY }}" \
-            https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
-          tar -xzvf fical/genesis_fical_package.tar.gz -C fical
-          ls -l fical
+          echo "Downloading Fical Package"
+          curl -u ${{ secrets.JFROG_USERNAME }}:"${{ secrets.JFROG_PASSWORD }}" \
+            -O "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz"
+
+      # - name: Download Fical Package with Authentication
+      #   run: |
+      #     wget --user="${{ secrets.JFROG_USERNAME }}" --password="${{ secrets.JFROG_PASSWORD }}" \
+      #       https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
+      #     tar -xzvf fical/genesis_fical_package.tar.gz -C fical
+      #     ls -l fical
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
+          ls -l
           java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
               --classfiles ./build/classes/java/main \
               --xml ./build/reports/jacoco/test/jacocoTestReport.xml
