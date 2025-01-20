@@ -134,7 +134,9 @@ jobs:
           echo "Downloading Fical Package"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{ secrets.JFROG_PASSWORD }}" \
             -O "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz"
-          ls -l
+          echo "Unzipping the Fical Package"
+          tar -xzvf genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -C fical
+          ls -l fical  # List the files to verify
       
       # - name: Download Fical Package with Authentication
       #   run: |
