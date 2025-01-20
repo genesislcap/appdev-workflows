@@ -110,13 +110,6 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      
-      # - name: Run Tests & Generate Coverage Report
-      #   working-directory: "${{ inputs.server-path }}"
-      #   run: |
-      #     chmod +x gradlew
-      #     ./gradlew clean test jacocoTestReport
-
       - name: Download JaCoCo CLI
         run: |
           mkdir -p jacoco
@@ -127,8 +120,7 @@ jobs:
           echo "Extracted files:"
           ls -l jacoco
 
-      - name: Downloads
-        # working-directory: rpm/downloads
+      - name: Downloads        
         run: |
           mkdir -p fical
           cd fical
@@ -164,7 +156,17 @@ jobs:
         with:
           projectBaseDir: ./${{ inputs.server-path }}
 
-      
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        env: 
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          projectBaseDir: ./${{ inputs.server-path }}
+          args: >
+            -Dsonar.organization=genesislcap
+            -Dsonar.projectKey=genesislcap_fical
+            -Dsonar.host.url=https://sonarcloud.io
+
 
       - name: Server Build & SonarCloud Analysis
         uses: gradle/gradle-build-action@v2
