@@ -149,7 +149,11 @@ jobs:
           name: jacoco-report
           path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.html
 
-      
+      - name: Debug Class Files Location
+        run: |
+          echo "Checking compiled class files..."
+          find . -type f -name "*.class"
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2.1.1
         env: 
