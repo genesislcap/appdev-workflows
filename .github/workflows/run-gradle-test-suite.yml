@@ -115,7 +115,12 @@ jobs:
           -PdefaultHost=${{ inputs.defaultHost }}
           -PbaseURI=${{ inputs.defaultHost }}gwf
         build-root-directory: "${{ inputs.test-root-path }}"    
-
+    - name: Install git
+      if: always()
+      shell: bash
+      run: |
+        apt update
+        apt install -y git
     - name: Get Allure history
       if: always()
       uses: actions/checkout@v3
