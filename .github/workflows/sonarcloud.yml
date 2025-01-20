@@ -138,28 +138,15 @@ jobs:
           rm genesis_*.tar.gz
           ls -al
 
-      # - name: Download Fical Package with Authentication
-      #   run: |
-      #     wget --user="${{ secrets.JFROG_USERNAME }}" --password="${{ secrets.JFROG_PASSWORD }}" \
-      #       https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
-      #     tar -xzvf fical/genesis_fical_package.tar.gz -C fical
-      #     ls -l fical
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
+          cd fical/fical/bin/
           ls -l
           java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
-              --classfiles ./build/classes/java/main \
-              --xml ./build/reports/jacoco/test/jacocoTestReport.xml
+              --classfiles ./ \
+              --xml ficalreport.xml
 
-
-
-
-      # - name: Generate JaCoCo XML Report (Manual)
-      #   run: |
-      #     java -jar ./jacoco-0.8.12/lib/jacococli.jar report $(find . -name "jacoco.exec") \
-      #         --classfiles ./build/classes/java/main \
-      #         --xml ./build/reports/jacoco/test/jacocoTestReport.xml
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
