@@ -149,13 +149,7 @@ jobs:
           name: jacoco-report
           path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.html
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2.1.1
-        env: 
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          projectBaseDir: ./${{ inputs.server-path }}
-
+      
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2.1.1
         env: 
