@@ -110,13 +110,7 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      - name: Download JaCoCo CLI
-        run: |
-          wget https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
-          unzip jacoco-0.8.12.zip
-          mkdir -p jacoco/lib
-          mv jacoco-0.8.12/lib/jacoco-cli.jar jacoco/lib/jacococli.jar
-
+      
 
       
 
@@ -126,9 +120,17 @@ jobs:
           chmod +x gradlew
           ./gradlew clean test jacocoTestReport
 
+      - name: Download JaCoCo CLI
+        run: |
+          wget https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
+          unzip jacoco-0.8.12.zip
+          # mkdir -p jacoco/lib
+          # mv jacoco-0.8.12/lib/jacoco-cli.jar jacoco/lib/jacococli.jar
+
+
       - name: Generate JaCoCo XML Report (Manual)
         run: |
-          java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
+          java -jar ./jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
               --classfiles ./build/classes/java/main \
               --xml ./build/reports/jacoco/test/jacocoTestReport.xml
 
