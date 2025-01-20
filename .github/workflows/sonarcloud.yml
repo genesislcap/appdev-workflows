@@ -128,18 +128,8 @@ jobs:
           unzip jacoco/jacoco.zip -d jacoco || (echo "Unzip failed!" && exit 1)
 
           echo "Extracted files:"
-          ls -R jacoco
-
-          # Find the extracted folder dynamically
-          JACOCO_DIR=$(find jacoco -maxdepth 1 -type d -name "jacoco-*")
-          
-          if [ -z "$JACOCO_DIR" ]; then
-            echo "JaCoCo extraction failed!"
-            exit 1
-          fi
-          
-          mv "$JACOCO_DIR"/* jacoco/
-          rm -rf "$JACOCO_DIR" jacoco/jacoco.zip
+          ls -l jacoco
+         
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
