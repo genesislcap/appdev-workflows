@@ -110,11 +110,36 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      - name: Server Build
+      - name: Download JaCoCo 0.8.12
+        run: |
+          wget https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
+          unzip jacoco-0.8.12.zip
+
+      - name: Run Tests & Generate Coverage Report
+        run: |
+          chmod +x gradlew
+          ./gradlew clean test jacocoTestReport
+
+      - name: Upload Coverage Report for Debugging
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: build/reports/jacoco/test/jacocoTestReport.xml
+
+      - name: Server Build & SonarCloud Analysis
         uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
+          arguments: > 
+            test jacocoTestReport sonarqube 
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
+
+      - name: SonarCloud Quality Gate
+        run: |
+          sleep 30  # Wait for SonarCloud processing
+          curl -u "${{ secrets.JENKINSGENESIS_SONAR }}:" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${{ inputs.repo-name }}" | jq
