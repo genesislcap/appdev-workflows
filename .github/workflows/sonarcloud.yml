@@ -155,7 +155,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: jacoco-report
-          path: jacocoTestReport.xml
+          path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.xml
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2.1.1
