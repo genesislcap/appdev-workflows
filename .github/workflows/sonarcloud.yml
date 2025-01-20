@@ -115,16 +115,34 @@ jobs:
           wget https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
           unzip jacoco-0.8.12.zip
 
+      
+
       - name: Run Tests & Generate Coverage Report
+        working-directory: "${{ inputs.server-path }}"
         run: |
           chmod +x gradlew
           ./gradlew clean test jacocoTestReport
 
-      - name: Upload Coverage Report for Debugging
-        uses: actions/upload-artifact@v4
+      - name: Generate JaCoCo XML Report (Manual)
+        run: |
+          java -jar ./jacoco/lib/jacococli.jar report ./build/jacoco/test.exec \
+            --classfiles ./run/${{ github.actor }}/bin \
+            --xml ./build/reports/jacoco/jacocoTestReport.xml
+
+      - name: Upload JaCoCo Coverage Report
+        uses: actions/upload-artifact@v3
         with:
           name: jacoco-report
-          path: build/reports/jacoco/test/jacocoTestReport.xml
+          path: ./build/reports/jacoco/test/jacocoTestReport.xml
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        env: 
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          projectBaseDir: ./${{ inputs.server-path }}
+
+      
 
       - name: Server Build & SonarCloud Analysis
         uses: gradle/gradle-build-action@v2
