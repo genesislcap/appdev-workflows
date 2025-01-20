@@ -130,9 +130,10 @@ jobs:
       - name: Ensure fical Directory Exists
         run: |
           mkdir -p fical  
-      - name: Download Fical Package
+      - name: Download Fical Package with Authentication
         run: |
-          wget https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
+          wget --user="${{ secrets.JFROG_USERNAME }}" --password="${{ secrets.JFROG_API_KEY }}" \
+            https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
           tar -xzvf fical/genesis_fical_package.tar.gz -C fical
           ls -l fical
 
