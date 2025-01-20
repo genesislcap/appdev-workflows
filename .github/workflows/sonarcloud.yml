@@ -115,7 +115,8 @@ jobs:
           wget https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
           unzip jacoco-0.8.12.zip
           mkdir -p jacoco/lib
-          mv jacoco-0.8.12/lib/jacococli.jar jacoco/lib/jacococli.jar
+          mv jacoco-0.8.12/lib/jacoco-cli.jar jacoco/lib/jacococli.jar
+
 
       
 
