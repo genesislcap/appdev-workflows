@@ -111,9 +111,6 @@ jobs:
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
       
-
-      
-
       # - name: Run Tests & Generate Coverage Report
       #   working-directory: "${{ inputs.server-path }}"
       #   run: |
@@ -130,7 +127,12 @@ jobs:
           echo "Extracted files:"
           ls -l jacoco
          
-
+      - name: Download Fical Package
+        run: |
+          wget https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz -O fical/genesis_fical_package.tar.gz
+          tar -xzvf fical/genesis_fical_package.tar.gz -C fical
+          ls -l fical
+          
       - name: Generate JaCoCo XML Report (Manual)
         run: |
           java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
