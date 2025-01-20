@@ -131,7 +131,7 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/fical"
         run: |
           echo "Creating fical directory if not exists"
-          mkdir -p "${{ inputs.working-directory }}/fical"  # Ensure the directory exists
+          mkdir -p "${{ inputs.working-directory }}/ficaldata"  # Ensure the directory exists
           echo "Downloading Fical Package"
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{ secrets.JFROG_PASSWORD }}" \
             -O "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz"
