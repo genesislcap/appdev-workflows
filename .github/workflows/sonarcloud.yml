@@ -124,15 +124,29 @@ jobs:
         run: |
           mkdir -p jacoco
           wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
-          unzip jacoco/jacoco.zip -d jacoco
-          mv jacoco/jacoco-0.8.12/* jacoco/
-          rm -rf jacoco/jacoco-0.8.12 jacoco/jacoco.zip
+          
+          unzip jacoco/jacoco.zip -d jacoco || (echo "Unzip failed!" && exit 1)
+
+          echo "Extracted files:"
+          ls -R jacoco
+
+          # Find the extracted folder dynamically
+          JACOCO_DIR=$(find jacoco -maxdepth 1 -type d -name "jacoco-*")
+          
+          if [ -z "$JACOCO_DIR" ]; then
+            echo "JaCoCo extraction failed!"
+            exit 1
+          fi
+          
+          mv "$JACOCO_DIR"/* jacoco/
+          rm -rf "$JACOCO_DIR" jacoco/jacoco.zip
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
           java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
               --classfiles ./build/classes/java/main \
               --xml ./build/reports/jacoco/test/jacocoTestReport.xml
+
 
 
 
