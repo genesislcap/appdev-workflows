@@ -142,8 +142,8 @@ jobs:
       - name: Generate JaCoCo XML Report (Manual)
         run: |
           cd fical/fical/bin/
-          ls -l
-          java -jar jacoco/lib/jacococli.jar report $(find . -name "jacoco.exec") \
+          ls -l ../../../jacoco
+          java -jar ../../../jacoco/lib/jacococli.jar report $(find ../../../ -name "jacoco.exec") \
               --classfiles ./ \
               --xml ficalreport.xml
 
