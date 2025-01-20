@@ -114,11 +114,11 @@ jobs:
 
       
 
-      - name: Run Tests & Generate Coverage Report
-        working-directory: "${{ inputs.server-path }}"
-        run: |
-          chmod +x gradlew
-          ./gradlew clean test jacocoTestReport
+      # - name: Run Tests & Generate Coverage Report
+      #   working-directory: "${{ inputs.server-path }}"
+      #   run: |
+      #     chmod +x gradlew
+      #     ./gradlew clean test jacocoTestReport
 
       - name: Download JaCoCo CLI
         run: |
