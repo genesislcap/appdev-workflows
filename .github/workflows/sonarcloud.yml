@@ -154,28 +154,25 @@ jobs:
           echo "Checking compiled class files..."
           find . -type f -name "*.class"
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2.1.1
-        env: 
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          projectBaseDir: ./${{ inputs.server-path }}
-          args: >
-            -Dsonar.organization=genesislcap
-            -Dsonar.projectKey=genesislcap_fical
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.java.binaries=/opt/actions-runner/_work/fical/fical/fical/fical/bin
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@v2.1.1
+      #   env: 
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     projectBaseDir: ./${{ inputs.server-path }}
+      #     args: >
+      #       -Dsonar.organization=genesislcap
+      #       -Dsonar.projectKey=genesislcap_fical
+      #       -Dsonar.host.url=https://sonarcloud.io
+      #       -Dsonar.java.binaries=/opt/actions-runner/_work/fical/fical/fical/fical/bin
 
 
-      - name: Server Build & SonarCloud Analysis
+      - name: Server Build
         uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          arguments: > 
-            test jacocoTestReport sonarqube 
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
+          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
 
