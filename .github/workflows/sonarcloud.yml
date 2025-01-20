@@ -127,6 +127,16 @@ jobs:
           echo "Extracted files:"
           ls -l jacoco
 
+      - name: Downloads
+        # working-directory: rpm/downloads
+        run: |
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz
+          ls -al
+          tar xf genesis_*.tar.gz
+          rm genesis_*.tar.gz
+          ls -al
+          
+
       - name: Download Fical Package from JFrog        
         run: |
           echo "Creating fical directory if not exists"
