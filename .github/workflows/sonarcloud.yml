@@ -146,7 +146,7 @@ jobs:
           ls -l ../../../jacoco
           java -jar ../../../jacoco/lib/jacococli.jar report $(find ../../../ -name "jacoco.exec") \
               --classfiles ./ \
-              --xml jacocoTestReport.xml
+              --html jacocoTestReport.html
           ls -al
           pwd
 
@@ -155,7 +155,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: jacoco-report
-          path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.xml
+          path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.html
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2.1.1
