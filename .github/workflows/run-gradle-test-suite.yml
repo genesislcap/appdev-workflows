@@ -1,10 +1,9 @@
-# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
-name: Run Maven test suite
+name: Run Gradle test suite
 
 on:
   workflow_call:
     inputs:
-      
+
       profile:
         required: false
         type: string
@@ -30,7 +29,7 @@ on:
       branch:
         required: false
         type: string
-      
+
       testautomation_build:
         required: false
         default: false
@@ -40,13 +39,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string      
-      defaultEnv:
-        required: false
-        type: string
-      tamdefaultEnv:
-        required: false
-        type: string
+        type: string       
       defaultHost:
         required: false
         type: string
@@ -72,12 +65,12 @@ on:
         required: true
       genesisArtifactoryPassword:
         required: true
-      
+
 env:  
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
- 
+
 
 jobs:
   build-Tests:
@@ -100,46 +93,6 @@ jobs:
         ref: ${{ inputs.testautobranch }}
         token: ${{ env.GHA_TOKEN }}
 
-    - name: Set defaultEnv value in config.properties
-      if: inputs.defaultEnv
-      working-directory: "${{ inputs.test-root-path }}"
-      run: |
-        if [ -n "${{ inputs.defaultEnv }}" ]; then
-          sed -i 's|^admin-defaultEnv=.*|admin-defaultEnv=${{ inputs.defaultEnv }}|' config.properties
-        fi
-    - name: Set defaultHost value in config.properties
-      if: inputs.defaultHost
-      working-directory: "${{ inputs.test-root-path }}/src/test/resources/4-config/"
-      run: |
-        if [ -n "${{ inputs.defaultHost }}" ]; then
-          sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.defaultHost }}|' config.properties
-          sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
-          
-        fi
-          
-    - name: Print config.properties
-      if: inputs.defaultEnv
-      working-directory: "${{ inputs.test-root-path }}"
-      run: |
-        echo "Contents of config.properties after modification:"
-        cat config.properties
-    
-    - name: Set tamdefaultEnv value in config.properties
-      if: inputs.tamdefaultEnv
-      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
-      run: |
-        if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
-          sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
-        fi
-          
-          
-    - name: Print config.properties
-      if: inputs.tamdefaultEnv
-      working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
-      run: |
-        echo "Contents of config.properties after modification:"
-        cat config.properties
-
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
@@ -149,20 +102,20 @@ jobs:
     - name: Make gradlew executable
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
-    
+
 
     - name: Run tests
       uses: gradle/gradle-build-action@v2
       with:
-        arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true --console=plain --info
-        build-root-directory: "${{ inputs.test-root-path }}"
-    
-    - name: Install git
-      if: always()
-      shell: bash
-      run: |
-        apt update
-        apt install -y git
+        arguments: >
+          build
+          -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }}
+          -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }}
+          -PuseDevRepo=true
+          -PdefaultHost=${{ inputs.defaultHost }}
+          -PbaseURI=${{ inputs.defaultHost }}gwf
+        build-root-directory: "${{ inputs.test-root-path }}"    
+
     - name: Get Allure history
       if: always()
       uses: actions/checkout@v3
