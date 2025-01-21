@@ -1,0 +1,66 @@
+name: Build Genesis Docker Image
+description: Builds a Genesis Docker image
+
+inputs:
+  ecr-registry:
+    required: true
+  version:
+    required: true
+  region:
+    required: true
+  working-directory:
+    required: false
+    default: "."
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+          java-version: 17
+          distribution: 'adopt'
+
+    - name: Configure Node
+      uses: actions/setup-node@v4
+      with:
+          node-version: 20
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+          aws-access-key-id: ${{ inputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+          aws-region: eu-west-2
+
+    - name: Log into ECR
+      shell: bash
+      run: |
+          aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr-registry }}
+
+    - name: Set the version
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: |
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/build.gradle.kts
+
+    - name: Build Image
+      uses: gradle/actions/setup-gradle@v3
+      with:
+          arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }} -PdockerUrl=${{ inputs.ecr-registry }}
+          build-root-directory: ${{ inputs.working-directory }}/server/
+          cache-disabled: true
+
+    - name: Push Image
+      uses: gradle/actions/setup-gradle@v3
+      with:
+          arguments: pushImage --no-configuration-cache -PdockerUrl=${{ inputs.ecr-registry }}
+          build-root-directory: ${{ inputs.working-directory }}/server/

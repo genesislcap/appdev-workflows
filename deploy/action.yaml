@@ -1,0 +1,82 @@
+name: Deploy Genesis
+description: Deploys a specific version of Genesis to a server
+
+inputs:
+  version:
+    required: true
+  environment:
+    required: true
+  config-path:
+    required: true
+  migrate_db:
+    required: false
+    type: boolean
+    default: true
+  app_name:
+    required: true
+  ecr_registry:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Stop Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: "cd /data/docker-compose && docker compose down || exit 0"
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Sync config files
+      uses: genesislcap/appdev-workflows/sync-files@develop
+      with:
+        local-path: ${{ inputs.config-path }}
+        remote-path: "/data/docker-compose"
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Run DB Migration
+      if: ${{ inputs.migrate_db }}
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          populate_secrets &&
+          GENESIS_VERSION=${{ inputs.version }}
+          APP_NAME=${{ inputs.app_name }}
+          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
+          docker compose run -e GENESIS_DB_INSTALL=true genesis_app
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Start Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          populate_secrets &&
+          GENESIS_VERSION=${{ inputs.version }}
+          APP_NAME=${{ inputs.app_name }}
+          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
+          docker compose up -d
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}

@@ -1,0 +1,98 @@
+name: AWS comamnd to start or stop instances
+description: Sends an aws comamnd to get the AWS instances up or down
+
+inputs:
+  command:
+    required: true
+  environment:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Start or Stop instances using the aws cli
+      shell: bash
+      run: |
+        # Variables
+        ENVIRONMENT_TAG="${{ inputs.environment }}"
+        COMMAND="${{ inputs.command }}"
+        COMMAND_LOWER=$(echo "$COMMAND" | tr '[:upper:]' '[:lower:]')
+
+        if [ "$COMMAND_LOWER" != "start" ] && [ "$COMMAND_LOWER" != "stop" ]; then
+            echo "Error: only 'start' or 'stop' are accepted as valid commands."
+            exit 1
+        fi
+
+        # Step 1: Get instance IDs with the specified Environment tag
+        INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+        # Check if instances were found
+        if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
+            exit 1
+        fi
+
+        echo "Found instances: $INSTANCE_IDS"
+
+        # Step 2: Start or Stop the instances
+        if [ "$COMMAND_LOWER" == "start" ]; then
+            aws ec2 start-instances --instance-ids $INSTANCE_IDS
+            DESIRED_STATE="running"
+        elif [ "$COMMAND_LOWER" == "stop" ]; then
+            aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+            DESIRED_STATE="stopped"
+        fi
+
+        # Step 3: Wait for the instances to reach the desired state
+        TIMEOUT=60  # Timeout in seconds
+        END_TIME=$(( $(date +%s) + $TIMEOUT ))
+
+        while :; do
+            ALL_IN_DESIRED_STATE=true
+
+            for INSTANCE_ID in $INSTANCE_IDS; do
+                CURRENT_STATE=$(aws ec2 describe-instances \
+                    --instance-ids $INSTANCE_ID \
+                    --query "Reservations[].Instances[].State.Name" \
+                    --output text)
+
+                echo "Instance $INSTANCE_ID is currently in state: $CURRENT_STATE"
+
+                if [ "$CURRENT_STATE" != "$DESIRED_STATE" ]; then
+                    ALL_IN_DESIRED_STATE=false
+                fi
+            done
+
+            if $ALL_IN_DESIRED_STATE; then
+                echo "All instances are in the desired state: $DESIRED_STATE."
+                break
+            fi
+
+            if [ $(date +%s) -ge $END_TIME ]; then
+                echo "Timeout reached while waiting for instances to reach the desired state: $DESIRED_STATE."
+                exit 2
+            fi
+
+            echo "Waiting for instances to reach the desired state..."
+            sleep 5
+
+        done
+
+        # Step 4: Final status output
+        echo "Command executed successfully. All instances are in state: $DESIRED_STATE."
