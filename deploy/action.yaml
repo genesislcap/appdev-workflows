@@ -29,7 +29,7 @@ runs:
     - uses: actions/checkout@v4
 
     - name: Stop Genesis
-      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
+      uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: "cd /data/docker-compose && docker compose down || exit 0"
         environment: ${{ inputs.environment }}
@@ -38,7 +38,7 @@ runs:
         aws-region: ${{ inputs.aws-region }}
 
     - name: Sync config files
-      uses: genesislcap/appdev-workflows/sync-files@docker-dev
+      uses: genesislcap/appdev-workflows/sync-files@develop
       with:
         local-path: ${{ inputs.config-path }}
         remote-path: "/data/docker-compose"
@@ -49,7 +49,7 @@ runs:
 
     - name: Run DB Migration
       if: ${{ inputs.migrate_db }}
-      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
+      uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command:
           source /root/.bashrc &&
@@ -66,7 +66,7 @@ runs:
         aws-region: ${{ inputs.aws-region }}
 
     - name: Start Genesis
-      uses: genesislcap/appdev-workflows/ssm-command@docker-dev
+      uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command:
           source /root/.bashrc &&
