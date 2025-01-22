@@ -72,7 +72,6 @@ jobs:
   build:
     name: Steps to Deploy package
     runs-on: appdev-small
-    environment: master
     steps:
 
       - uses: actions/checkout@v3

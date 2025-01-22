@@ -2,13 +2,13 @@
 name: Qaautomation execution of stages
 
 inputs:
-  working-directory:
+  working_directory:
     type: string
     default: .
-    required: false 
+    required: false
 
   testautomation_build:
-    required: false
+    required: true
     default: false
     type: boolean
   testautorepo:
@@ -16,7 +16,7 @@ inputs:
     type: string
   testautobranch:
     required: false
-    type: string     
+    type: string
   web_path:
     required: false
     type: string
@@ -34,41 +34,38 @@ inputs:
 
 runs:
   using: "composite"
-  steps:   
+  steps:
 
     - uses: actions/checkout@v3
-      if: inputs.testautomation_build
       with:
-        repository: ${{ inputs.testautorepo }}        
+        repository: ${{ inputs.testautorepo }}
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
-        token: ${{ inputs.gha_token }}   
+        token: ${{ inputs.gha_token }}
 
     - name: Checkout main repository
-      if: inputs.testautomation_build
       uses: actions/checkout@v3
       with:
         repository: genesislcap/platform-qa-automation
         ref: ${{ github.ref }}
         token: ${{ inputs.gha_token }}
         path: main-repo
-        fetch-depth: 0  
+        fetch-depth: 0
 
     - name: Print version.properties file
-      if: inputs.testautomation_build
       run: cat main-repo/.github/workflows/version.properties
       shell: bash
 
     - name: Restore gradle.properties and setup
-      env:        
-        working-directory: "${{ inputs.working-directory }}"
+      env:
+        working-directory: "${{ inputs.working_directory }}"
       shell: bash
       run: |
         mkdir -p ~/.gradle/
         echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
         if [ "${{ inputs.testautomation_build }}" == "true" ]; then
           echo "Appending contents of additional file to gradle.properties"
-          if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+          if [ -f "${{ inputs.working_directory }}/${{ inputs.additional_file }}" ]; then
             cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
           else
             echo "Additional file not found: ${{ inputs.additional_file }}" >&2
@@ -76,17 +73,17 @@ runs:
         fi
         echo "Contents of gradle.properties after modification:"
         cat ~/.gradle/gradle.properties
-    
 
-    - name: Read FOUNDATION_VERSION from additional file      
-      working-directory: "${{ inputs.working-directory }}"
-      id: extract_version        
+
+    - name: Read FOUNDATION_VERSION from additional file
+      working-directory: "${{ inputs.working_directory }}"
+      id: extract_version
       shell: bash
       run: |
         if [ "${{ inputs.testautomation_build }}" == "true" ]; then
           # Extract FOUNDATION_VERSION from the additional file
-          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+          if grep -q "FOUNDATION_VERSION" ${{ inputs.working_directory }}/${{ inputs.additional_file }}; then
+            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working_directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
             echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
             echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
           else
@@ -94,8 +91,8 @@ runs:
             exit 1
           fi
         fi
-    - name: Check for package-lock.json and remove if exists      
-      working-directory: "${{ inputs.working-directory }}/${{ inputs.web_path }}"  
+    - name: Check for package-lock.json and remove if exists
+      working-directory: "${{ inputs.working_directory }}/${{ inputs.web_path }}"
       shell: bash
       run: |
         if [ -f package-lock.json ]; then
@@ -105,13 +102,13 @@ runs:
           echo "No package-lock.json found."
         fi
 
-     
-    - name: Update @genesislcap dependencies       
-      working-directory: "${{ inputs.working-directory }}/${{ inputs.web_path }}"  
-      shell: bash      
+
+    - name: Update @genesislcap dependencies
+      working-directory: "${{ inputs.working_directory }}/${{ inputs.web_path }}"
+      shell: bash
       run: |
-        NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"    
-        echo "${{ inputs.working-directory }}/${{ inputs.web_path }}"       
+        NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
+        echo "${{ inputs.working_directory }}/${{ inputs.web_path }}"
         # Update @genesislcap dependencies across all objects in the package.json
         jq --arg version "$NEW_VERSION" '
           walk(
@@ -122,19 +119,19 @@ runs:
             else . end
           )
         ' package.json > package.json.tmp
-          
+
         # Move tmp file to overwrite the original package.json
           mv package.json.tmp package.json
         # Print the final updated package.json
         echo "Final updated package.json:"
         cat package.json
-      
-    - name: Update @genesislcap versions in package.json      
+
+    - name: Update @genesislcap versions in package.json
       shell: bash
       working-directory: "./"
-      run: |          
-        PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web_path }}/package.json"
-        INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
+      run: |
+        PACKAGE_JSON="${{ inputs.working_directory }}/${{ inputs.web_path }}/package.json"
+        INPUT_FILE="${{ inputs.working_directory }}/${{ inputs.additional_file }}"
 
         # Read and update dependencies from version.properties
         while IFS= read -r line; do

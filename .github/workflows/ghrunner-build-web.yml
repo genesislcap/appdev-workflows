@@ -30,14 +30,14 @@ on:
       testautobranch:
         required: false
         type: string
-      web-path:
+      web_path:
         required: false
         type: string
         default: 'packages/apps'
       version:
         required: false
         type: string
-      working-directory:
+      working_directory:
         type: string
         default: .
         required: false
@@ -118,7 +118,7 @@ jobs:
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
-          web-path: ${{ inputs.web-path }}/${{ env.PRODUCT_NAME }}
+          web_path: ${{ inputs.web_path }}/${{ env.PRODUCT_NAME }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
@@ -156,7 +156,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Build
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}
+        working_directory: ${{ inputs.working_directory }}/packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build
 
       - name: Lint Check

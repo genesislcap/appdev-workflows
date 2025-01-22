@@ -4,10 +4,10 @@ on:
   workflow_call:
     inputs:
       hostname:
-        required: false
+        required: true
         type: string
       s3imagepath:
-        required: false
+        required: true
         type: string
       genesis_user:
         required: false
@@ -29,7 +29,6 @@ jobs:
   build:
     name: Steps to refresh postgre db
     runs-on: appdev-small
-    environment: master
 
     steps:
 

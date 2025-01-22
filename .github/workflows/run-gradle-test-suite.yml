@@ -41,9 +41,9 @@ on:
         required: false
         type: string
       defaultHost:
-        required: false
+        required: true
         type: string
-      config-path:
+      config_path:
         required: false
         type: string
 
@@ -56,7 +56,7 @@ on:
       GENESIS_USER_PRIVATE_KEY:
         required: false
       GHA_TOKEN:
-        required: false
+        required: true
       GRADLE_PROPERTIES:
         required: true
       genesisArtifactoryUser:
