@@ -130,7 +130,10 @@ jobs:
           rm genesis_*.tar.gz
           ls -al
 
-
+      - name: Download JaCoCo exec file from S3
+        run: |
+          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/fical/jacoco.exec ./jacoco.exec
+          ls -al jacoco.exec
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
@@ -146,7 +149,7 @@ jobs:
 
           echo "JaCoCo exec file found at: $JACOCO_EXEC_PATH"
 
-          java -jar ../../../jacoco/lib/jacococli.jar report $(find ../../../ -name "jacoco.exec") \
+          java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
               --html jacocoTestReport.html
           ls -al
