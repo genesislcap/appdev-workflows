@@ -46,10 +46,57 @@ on:
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
+jobs:
+  fetch-aws-credentials:
+    runs-on: [ appdev-selfhosted-al2023 ]
+    outputs:
+      AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ steps.set-creds.outputs.AWS_SESSION_TOKEN }}
+
+    env:
+      SSM_PARAM_NAME: githubrunner-cddev-policy
+      REGION: eu-west-2
+
+    steps:
+
+      - name: Install AWS CLI and jq
+        run: |
+          sudo dnf update -y
+          sudo dnf install -y awscli jq
+      - name: Fetch and Assume AWS Role
+        id: set-creds
+        run: |
+          # Unset existing AWS credentials
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          # Fetch the AWS SSM parameter containing the role ARN
+          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
+          # Assume the IAM role using STS and extract the credentials
+          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
+          # Extract credentials and output them for the next job
+          AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.AccessKeyId)
+          AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SecretAccessKey)
+          AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SessionToken)
+          # Set outputs for next jobs to use
+          echo "::set-output name=AWS_ACCESS_KEY_ID::$AWS_ACCESS_KEY_ID"
+          echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
+          echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
+
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
     runs-on: [ appdev-selfhosted-al2023 ]
+    needs: fetch-aws-credentials
+
+    env:
+      DB_PASSWORD: Password11*
+      REGION: eu-west-2
+      AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ needs.fetch-aws-credentials.outputs.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -130,8 +177,20 @@ jobs:
           rm genesis_*.tar.gz
           ls -al
 
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v2
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+
       - name: Download JaCoCo exec file from S3
         run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
+          aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
+          aws configure set region $REGION --profile default
+
           aws s3 cp s3://genesis-cddev/qa-automation/jacoco/fical/jacoco.exec ./jacoco.exec
           ls -al jacoco.exec
 
