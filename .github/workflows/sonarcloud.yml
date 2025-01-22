@@ -136,7 +136,15 @@ jobs:
         run: |
           cd fical/fical/bin/
           ls -l ../../../jacoco
-          echo "path exec: ${{ find ../../../ -name "jacoco.exec" }}"
+          echo "Searching for jacoco.exec file..."
+          JACOCO_EXEC_PATH=$(find . -type f -name "jacoco.exec")
+
+          if [[ -z "$JACOCO_EXEC_PATH" ]]; then
+            echo "No jacoco.exec file found!"
+            exit 1
+          fi
+
+          echo "JaCoCo exec file found at: $JACOCO_EXEC_PATH"
 
           java -jar ../../../jacoco/lib/jacococli.jar report $(find ../../../ -name "jacoco.exec") \
               --classfiles ./ \
