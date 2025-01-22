@@ -120,6 +120,7 @@ jobs:
 
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
             RESPONSE=$(curl -s -u "jenkins:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
+            echo "Current status: $RESPONSE"
             JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
 
