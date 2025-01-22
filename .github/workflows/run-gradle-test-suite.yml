@@ -25,7 +25,7 @@ on:
       browser:
         required: false
         type: string
-        default: chrome-headless      
+        default: chrome-headless
       branch:
         required: false
         type: string
@@ -39,7 +39,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string       
+        type: string
       defaultHost:
         required: false
         type: string
@@ -66,7 +66,7 @@ on:
       genesisArtifactoryPassword:
         required: true
 
-env:  
+env:
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
@@ -78,17 +78,17 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
-    - name: Checkout code      
+    - name: Checkout code
       if: ${{ !inputs.testautomation_build }}
       uses: actions/checkout@v3
       with:
         fetch-depth: '0'
-        ref: ${{ inputs.branch }}     
+        ref: ${{ inputs.branch }}
 
     - uses: actions/checkout@v3
       if: inputs.testautomation_build
       with:
-        repository: ${{ inputs.testautorepo }}        
+        repository: ${{ inputs.testautorepo }}
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
         token: ${{ env.GHA_TOKEN }}
@@ -113,7 +113,7 @@ jobs:
           -PuseDevRepo=true
           -PdefaultHost=${{ inputs.defaultHost }}
           -PbaseURI=${{ inputs.defaultHost }}gwf
-        build-root-directory: "${{ inputs.test-root-path }}"    
+        build-root-directory: "${{ inputs.test-root-path }}"
 
     - name: Install git
       if: always()
@@ -121,7 +121,7 @@ jobs:
       run: |
         apt update
         apt install -y git
-        
+
     - name: Get Allure history
       if: always()
       uses: actions/checkout@v3

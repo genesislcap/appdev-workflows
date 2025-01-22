@@ -2,7 +2,7 @@ name:  Refresh  Database  from Archive
 
 on:
   workflow_call:
-    inputs:     
+    inputs:
       hostname:
         required: false
         type: string
@@ -14,7 +14,7 @@ on:
         type: string
       branch:
         required: false
-        type: string      
+        type: string
       startserverdatetime:
         required: false
         type: string
@@ -27,7 +27,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    name: Steps to refresh postgre db 
+    name: Steps to refresh postgre db
     runs-on: appdev-small
     environment: master
 
@@ -54,20 +54,20 @@ jobs:
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
             --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}"
-            
-      - name: Install jq        
-        run: sudo dnf install -y jq 
 
-      - name: wait-for-completion of Jenkins  Job          
+      - name: Install jq
+        run: sudo dnf install -y jq
+
+      - name: wait-for-completion of Jenkins  Job
         run: |
           JOB_STATUS=""
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/DB_Refresh_ExistingInstance/lastBuild/api/json"
-          
+
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
             RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
             JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
-            
+
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
               echo "Jenkins job completed successfully."
               exit 0

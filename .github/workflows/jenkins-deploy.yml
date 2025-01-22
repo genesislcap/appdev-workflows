@@ -59,8 +59,8 @@ on:
 
       repotype:
         required: false
-        type: string     
-      
+        type: string
+
 
     secrets:
       JENKINS_SECURITYTOKEN:
@@ -98,19 +98,19 @@ jobs:
             --data-urlencode "product=${{ inputs.PRODUCT }}" \
             --data-urlencode "repotype=${{ inputs.repotype }}"
 
-      - name: Install jq        
-        run: sudo dnf install -y jq 
+      - name: Install jq
+        run: sudo dnf install -y jq
 
-      - name: wait-for-completion of Jenkins  Job         
+      - name: wait-for-completion of Jenkins  Job
         run: |
           JOB_STATUS=""
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json"
-          
+
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
             RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
             JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
-            
+
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
               echo "Jenkins job completed successfully."
               exit 0

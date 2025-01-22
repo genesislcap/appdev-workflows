@@ -19,7 +19,7 @@ on:
         required: false
         type: boolean
         default: true
-      
+
       testautomation_build:
         required: false
         default: false
@@ -44,7 +44,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'  
+        default: 'main-repo/.github/workflows/version.properties'
 
     secrets:
       JFROG_USERNAME:
@@ -62,7 +62,7 @@ on:
       SLACK_WEBHOOK:
         required: false
       GHA_TOKEN:
-        required: false          
+        required: false
 
 
 env:
@@ -86,11 +86,11 @@ jobs:
         node-version: [16.x]
 
     steps:
-      - name: Checkout code        
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}   
+          ref: ${{ inputs.branch }}
 
       - name: Env Setup
         run:  |
@@ -112,9 +112,9 @@ jobs:
         run: |
               echo "PRODUCT_NAME=${{ inputs.product_name }}" >> $GITHUB_ENV #NOTE: only for those that are not following a standard naming convention
 
-      
 
-      - name: testautomation_build steps 
+
+      - name: testautomation_build steps
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
@@ -122,8 +122,8 @@ jobs:
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "web"        
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
           GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
       - name: Sonar Setup

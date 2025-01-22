@@ -77,8 +77,8 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string      
-      
+        type: string
+
       web_path:
         required: false
         type: string
@@ -105,28 +105,28 @@ on:
         required: false
       GHA_TOKEN:
         required: false
-        
+
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}  
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code  
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}  
-          
+          ref: ${{ inputs.branch }}
+
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
           java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'         
+          distribution: 'adopt'
 
       - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
@@ -142,9 +142,9 @@ jobs:
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}      
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-      - name: testautomation_build steps 
+      - name: testautomation_build steps
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
@@ -152,8 +152,8 @@ jobs:
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "web"        
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
           gha_token: ${{secrets.GHA_TOKEN}}
 
       - name: Restore gradle.properties and setup
@@ -179,7 +179,7 @@ jobs:
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/gradlew
-          
+
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
             echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
@@ -231,7 +231,7 @@ jobs:
           name: test-reports-${{ inputs.product_name }}
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
-        
+
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2

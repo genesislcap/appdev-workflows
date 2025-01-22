@@ -83,7 +83,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string     
+        type: string
       web_path:
         required: false
         type: string
@@ -91,7 +91,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'  
+        default: 'main-repo/.github/workflows/version.properties'
 
     secrets:
       GRADLE_PROPERTIES:
@@ -113,20 +113,20 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}  
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code              
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}   
+          ref: ${{ inputs.branch }}
 
-      - name: testautomation_build steps 
+      - name: testautomation_build steps
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
@@ -134,15 +134,15 @@ jobs:
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "server"        
-          gha_token: ${{secrets.GHA_TOKEN}}        
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "server"
+          gha_token: ${{secrets.GHA_TOKEN}}
 
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'  
+          distribution: 'adopt'
 
       - name: Restore gradle.properties and setup
         env:
@@ -167,7 +167,7 @@ jobs:
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
-          sudo chmod -R +rx ./${{ inputs.server-path }}/          
+          sudo chmod -R +rx ./${{ inputs.server-path }}/
 
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
@@ -271,11 +271,11 @@ jobs:
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code        
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}   
+          ref: ${{ inputs.branch }}
 
       - name: Configure Node
         if: ${{ !inputs.REGISTRY_URL  }}
@@ -306,14 +306,14 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-      
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
-      - name: testautomation_build steps 
+      - name: testautomation_build steps
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@develop
         with:
@@ -321,9 +321,9 @@ jobs:
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "web"        
-          gha_token: ${{secrets.GHA_TOKEN}} 
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
+          gha_token: ${{secrets.GHA_TOKEN}}
 
       - name: Restore gradle.properties and setup
         working-directory: "${{ inputs.working-directory }}"
@@ -338,7 +338,7 @@ jobs:
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
-          
+
 
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
@@ -364,8 +364,8 @@ jobs:
           fi
           echo "::set-output name=modified-location::${CLIENT_BUILD_LOCATION}"
           CLIENT_BUILD_LOCATION=$(echo "${CLIENT_BUILD_LOCATION}" | sed 's/\//:/g')
-          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"      
-      
+          echo "::set-output name=modified-arguments-location::${CLIENT_BUILD_LOCATION}"
+
 
       - name: Client Build
         if: steps.web_exists.outputs.client_folder_exists == 'true'
