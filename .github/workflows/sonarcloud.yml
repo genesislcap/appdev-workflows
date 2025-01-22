@@ -85,7 +85,7 @@ jobs:
           echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
 
 # A workflow run is called from the devops appdev-workflow repos
-jobs:
+# jobs:
   build:
     runs-on: [ appdev-selfhosted-al2023 ]
     needs: fetch-aws-credentials
