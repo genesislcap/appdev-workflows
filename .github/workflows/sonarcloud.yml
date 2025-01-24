@@ -28,18 +28,7 @@ on:
         type: string
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
-      hostname:
-        required: false
-        type: string
-      package_version:
-        required: false
-        type: string
-      genesis_user:
-        required: false
-        type: string
-      appuser:
-        required: false
-        type: string
+
 
     secrets:
       GPR_READ_TOKEN:
@@ -54,62 +43,13 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
-      JENKINS_TOKEN:
-        required: false
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-jobs:
-  fetch-aws-credentials:
-    runs-on: [ appdev-selfhosted-al2023 ]
-    outputs:
-      AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ steps.set-creds.outputs.AWS_SESSION_TOKEN }}
-
-    env:
-      SSM_PARAM_NAME: githubrunner-cddev-policy
-      REGION: eu-west-2
-
-    steps:
-
-      - name: Install AWS CLI and jq
-        run: |
-          sudo dnf update -y
-          sudo dnf install -y awscli jq
-      - name: Fetch and Assume AWS Role
-        id: set-creds
-        run: |
-          # Unset existing AWS credentials
-          unset AWS_ACCESS_KEY_ID
-          unset AWS_SECRET_ACCESS_KEY
-          unset AWS_SESSION_TOKEN
-          # Fetch the AWS SSM parameter containing the role ARN
-          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-          # Assume the IAM role using STS and extract the credentials
-          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
-          # Extract credentials and output them for the next job
-          AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.AccessKeyId)
-          AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SecretAccessKey)
-          AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SessionToken)
-          # Set outputs for next jobs to use
-          echo "::set-output name=AWS_ACCESS_KEY_ID::$AWS_ACCESS_KEY_ID"
-          echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
-          echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
-
 # A workflow run is called from the devops appdev-workflow repos
-# jobs:
+jobs:
   build:
     runs-on: [ appdev-selfhosted-al2023 ]
-    needs: fetch-aws-credentials
-
-    env:
-      DB_PASSWORD: Password11*
-      REGION: eu-west-2
-      AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ needs.fetch-aws-credentials.outputs.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -170,82 +110,11 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      - name: Download JaCoCo CLI
-        run: |
-          mkdir -p jacoco
-          wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
-
-          unzip jacoco/jacoco.zip -d jacoco || (echo "Unzip failed!" && exit 1)
-
-          echo "Extracted files:"
-          ls -l jacoco
-
-      - name: Downloads
-        run: |
-          mkdir -p fical
-          cd fical
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz
-          ls -al
-          tar xf genesis_*.tar.gz
-          rm genesis_*.tar.gz
-          ls -al
-
-      - name: Download JaCoCo exec file from S3
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
-          aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
-          aws configure set region $REGION --profile default
-
-          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/fical/jacoco.exec ./jacoco.exec
-          ls -al jacoco.exec
-          pwd
-
-      - name: Generate JaCoCo XML Report (Manual)
-        run: |
-          cd fical/fical/bin/
-          java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
-              --classfiles ./ \
-              --html jacocoTestReport.html
-          ls -al
-          pwd
-
-
-      - name: Upload JaCoCo Coverage Report
-        uses: actions/upload-artifact@v3
+      - name: Server Build
+        uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          name: jacoco-report
-          path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.html
-
-      - name: Debug Class Files Location
-        run: |
-          echo "Checking compiled class files..."
-          find . -type f -name "*.class"
-
-      # - name: SonarCloud Scan
-      #   uses: SonarSource/sonarcloud-github-action@v2.1.1
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-      #   with:
-      #     projectBaseDir: ./${{ inputs.server-path }}
-      #     args: >
-      #       -Dsonar.organization=genesislcap
-      #       -Dsonar.projectKey=genesislcap_fical
-      #       -Dsonar.host.url=https://sonarcloud.io
-      #       -Dsonar.java.binaries=/opt/actions-runner/_work/fical/fical/fical/fical/bin
-
-
-      # - name: Server Build
-      #   uses: gradle/gradle-build-action@v2
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-      #   with:
-      #     arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-      #     build-root-directory: ./${{ inputs.server-path }}
-      #     cache-disabled: true
-
-      # - name: SonarCloud Quality Gate
-      #   run: |
-      #     sleep 30  # Wait for SonarCloud processing
-      #     curl -u "${{ secrets.JENKINSGENESIS_SONAR }}:" \
-      #       "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${{ inputs.repo-name }}" | jq
+          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
+          build-root-directory: ./${{ inputs.server-path }}
+          cache-disabled: true
