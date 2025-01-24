@@ -24,11 +24,52 @@ on:
       #   required: false
       #   type: string
 
+      branch:
+        required: false
+        type: string
+      version:
+        required: false
+        type: string
+      server-path:
+        required: false
+        type: string
+        default: 'server/jvm'
+      java_version:
+        required: false
+        default: '11'
+        type: string
+      node_version:
+        required: false
+        default: '16.x'
+        type: string
+      REGISTRY_URL:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
+      SCOPE:
+        type: string
+        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
+        required: false
+
     secrets:
       JENKINS_SECURITYTOKEN:
         required: true
       JENKINS_TOKEN:
         required: false
+
+      GPR_READ_TOKEN:
+        required: true
+      GRADLE_PROPERTIES:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+      JENKINSGENESIS_SONAR:
+        required: true
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   fetch-aws-credentials:
