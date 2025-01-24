@@ -295,7 +295,7 @@ jobs:
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
         with:
-          name: jacoco-report
+          name: ${{ inputs.appuser }}-jacoco-report
           path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
 
