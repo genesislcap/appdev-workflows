@@ -8,9 +8,6 @@ on:
       version:
         required: false
         type: string
-      repo-name:
-        required: false
-        type: string
       server-path:
         required: false
         type: string
@@ -32,33 +29,6 @@ on:
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
 
-      testautomation_build:
-        required: false
-        default: false
-        type: boolean
-      testautorepo:
-        required: false
-        type: string
-      testautobranch:
-        required: false
-        type: string
-
-      server-path:
-        required: false
-        type: string
-        default: 'server'
-      FOUNDATION_VERSION:
-        required: false
-        type: string
-      web-path:
-        required: false
-        type: string
-        default: 'client'
-      additional_file:
-        required: false
-        type: string
-        default: 'main-repo/.github/workflows/version.properties'
-
 
     secrets:
       GPR_READ_TOKEN:
@@ -73,8 +43,6 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
-      GHA_TOKEN:
-        required: false
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
@@ -87,7 +55,6 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
-
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -109,18 +76,6 @@ jobs:
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
 
-      # - name: testautomation_build steps
-      #   if: inputs.testautomation_build
-      #   uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
-      #   with:
-      #     web-path: ${{ inputs.web-path }}
-      #     testautomation_build: ${{ inputs.testautomation_build }}
-      #     testautorepo: ${{ inputs.testautorepo }}
-      #     testautobranch: ${{ inputs.testautobranch }}
-      #     additional_file: ${{ inputs.additional_file }}
-      #     repo_type: "web"
-      #     GHA_TOKEN: ${{secrets.GHA_TOKEN}}
-
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
@@ -129,7 +84,7 @@ jobs:
         run: |
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
           echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
