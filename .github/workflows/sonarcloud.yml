@@ -8,6 +8,9 @@ on:
       version:
         required: false
         type: string
+      repo-name:
+        required: false
+        type: string
       server-path:
         required: false
         type: string
