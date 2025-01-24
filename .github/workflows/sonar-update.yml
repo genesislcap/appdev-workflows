@@ -153,7 +153,7 @@ jobs:
 
   build-generate-report-upload:
     runs-on: [ appdev-selfhosted-al2023 ]
-    needs: fetch-aws-credentials
+    needs: [fetch-aws-credentials,build-generate-jacocoexec]
 
     env:
       REGION: eu-west-2
