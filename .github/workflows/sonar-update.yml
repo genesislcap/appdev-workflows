@@ -6,7 +6,7 @@ on:
       hostname:
         required: false
         type: string
-      s3ImagePath:
+      package_version:
         required: false
         type: string
       genesis_user:
@@ -264,7 +264,7 @@ jobs:
         run: |
           mkdir -p ${{ inputs.appuser }}
           cd ${{ inputs.appuser }}
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/genesis_${{ inputs.appuser }}_package-FahdTazi72-patch-3-qaautomation.tar.gz
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
           ls -al
           tar xf genesis_*.tar.gz
           rm genesis_*.tar.gz
@@ -287,7 +287,7 @@ jobs:
           java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
               --html jacocoTestReport.html
-              --xml jacocoTestReport.xml
+              # --xml jacocoTestReport.xml
           ls -al
           pwd
 

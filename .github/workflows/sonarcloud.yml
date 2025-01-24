@@ -31,7 +31,7 @@ on:
       hostname:
         required: false
         type: string
-      s3ImagePath:
+      package_version:
         required: false
         type: string
       genesis_user:
