@@ -79,6 +79,23 @@ jobs:
       - name: Install jq
         run: sudo dnf install -y jq
 
+      - name: Get Jenkins CSRF Crumb
+        run: |
+          JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
+          CRUMB_URL="$JENKINS_URL/crumbIssuer/api/json"
+
+          # Fetch the CSRF crumb
+          CRUMB_RESPONSE=$(curl -s --user ${{ secrets.JENKINS_TOKEN }} "$CRUMB_URL")
+          CRUMB=$(echo "$CRUMB_RESPONSE" | jq -r .crumb)
+
+          if [ -z "$CRUMB" ] || [ "$CRUMB" == "null" ]; then
+            echo "Error: Could not retrieve CSRF crumb from Jenkins."
+            exit 1
+          fi
+
+          echo "Jenkins Crumb: $CRUMB"
+          echo "CRUMB=$CRUMB" >> $GITHUB_ENV
+
       - name: Trigger Jenkins Job and Get Queue ID
         run: |
           JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
@@ -86,8 +103,9 @@ jobs:
 
           JOB_TRIGGER_URL="$JENKINS_URL/$JOB_PATH/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}"
 
-          # Trigger Jenkins Job
+          # Trigger Jenkins Job with CSRF Crumb
           RESPONSE=$(curl -X POST "$JOB_TRIGGER_URL" \
+            -H "Jenkins-Crumb: ${{ env.CRUMB }}" \
             --data-urlencode "client=${{ inputs.client }}" \
             --data-urlencode "environment=${{ inputs.environment }}" \
             --data-urlencode "hosts=${{ inputs.hosts }}" \
@@ -123,7 +141,6 @@ jobs:
           fi
 
           echo "Jenkins Job added to Queue with ID: $QUEUE_ID"
-
           echo "QUEUE_ID=$QUEUE_ID" >> $GITHUB_ENV
 
       - name: Poll Jenkins for Job Status
@@ -184,4 +201,3 @@ jobs:
               echo "Error: Jenkins job polling timed out."
               exit 3
             fi
-          done
