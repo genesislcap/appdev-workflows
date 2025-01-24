@@ -110,7 +110,17 @@ jobs:
 
           while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
             RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.JENKINS_SECURITYTOKEN }}" "$JOB_URL")
-            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+
+            # Debugging: Print response to check if it's valid JSON
+            echo "Jenkins API Response: $RESPONSE"
+
+            # Check if RESPONSE is valid JSON before using jq
+            if echo "$RESPONSE" | jq empty 2>/dev/null; then
+              JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+            else
+              echo "Error: Invalid JSON response from Jenkins API."
+              exit 4
+            fi
 
             echo "Current status: $JOB_STATUS"
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
