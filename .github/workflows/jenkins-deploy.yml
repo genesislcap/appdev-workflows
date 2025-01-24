@@ -76,11 +76,17 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: Trigger Jenkins Job
+      - name: Trigger Jenkins Job & Poll Status
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters" \
+          JOB_NAME="AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade"
+          JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
+          JOB_TRIGGER_URL="$JENKINS_URL/job/$JOB_NAME/buildWithParameters"
+          JENKINS_QUEUE_URL="$JENKINS_URL/queue/item"
+
+          # Trigger Jenkins Job & Capture Queue ID
+          echo "Triggering Jenkins job..."
+          RESPONSE=$(curl -X POST "$JOB_TRIGGER_URL" \
             --data-urlencode "token=${{ secrets.JENKINS_SECURITYTOKEN }}" \
-            --data-urlencode "job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
             --data-urlencode "client=${{ inputs.client }}" \
             --data-urlencode "environment=${{ inputs.environment }}" \
             --data-urlencode "hosts=${{ inputs.hosts }}" \
@@ -95,33 +101,56 @@ jobs:
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
             --data-urlencode "product=${{ inputs.product }}" \
             --data-urlencode "repotype=${{ inputs.repotype }}" \
-            --data-urlencode "deploy_custom_nginx=${{ inputs.deploy_custom_nginx }}"
+            --data-urlencode "deploy_custom_nginx=${{ inputs.deploy_custom_nginx }}" \
+            -i | grep -Fi Location | awk '{print $2}' | tr -d '\r\n')
 
-      - name: Install jq
-        if: ${{ inputs.testautomation_build }}
-        run: sudo dnf install -y jq
+          QUEUE_ID=$(echo "$RESPONSE" | sed 's|.*/queue/item/||')
 
-      - name: Poll Jenkins for Job Status
-        if: ${{ inputs.testautomation_build }}
-        run: |
-          JOB_URL="https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade"
+          if [[ -z "$QUEUE_ID" ]]; then
+            echo "Error: Could not retrieve Jenkins Queue ID."
+            exit 1
+          fi
+
+          echo "Jenkins Job added to Queue with ID: $QUEUE_ID"
+
+          # Wait for Job to Start & Get Build Number
+          echo "Waiting for build to start..."
+          BUILD_NUMBER=""
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
+          while [ -z "$BUILD_NUMBER" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            sleep 5
+            RESPONSE=$(curl -s "$JENKINS_QUEUE_URL/$QUEUE_ID/api/json")
+            if echo "$RESPONSE" | jq -e '.executable.number' > /dev/null; then
+              BUILD_NUMBER=$(echo "$RESPONSE" | jq -r '.executable.number')
+            fi
+            ((ATTEMPTS++))
+          done
+
+          if [[ -z "$BUILD_NUMBER" ]]; then
+            echo "Error: Could not retrieve Jenkins Build Number."
+            exit 2
+          fi
+
+          echo "Jenkins Job Started with Build Number: $BUILD_NUMBER"
+
+          # Poll Build Status
+          JOB_STATUS_URL="$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/api/json"
+          echo "Polling Jenkins Build Status..."
 
           ATTEMPTS=0
-          MAX_ATTEMPTS=30  # Adjust as needed
-
           while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            RESPONSE=$(curl -s "$JOB_URL")
+            sleep 10
+            RESPONSE=$(curl -s "$JOB_STATUS_URL")
 
-            # Debugging: Print response to check if it's valid JSON
+            # Debugging: Print response
             echo "Jenkins API Response: $RESPONSE"
 
-            # Check if response contains authentication failure message
             if echo "$RESPONSE" | grep -q "Unauthorized"; then
-              echo "Error: Jenkins authentication failed. Check JENKINS_SECURITYTOKEN."
+              echo "Error: Jenkins authentication failed."
               exit 5
             fi
 
-            # Check if RESPONSE is valid JSON before using jq
             if echo "$RESPONSE" | jq empty 2>/dev/null; then
               JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             else
@@ -130,6 +159,7 @@ jobs:
             fi
 
             echo "Current status: $JOB_STATUS"
+
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
               echo "Jenkins job completed successfully."
               exit 0
@@ -141,8 +171,6 @@ jobs:
               exit 2
             fi
 
-            echo "Job is still running..."
-            sleep 10
             ((ATTEMPTS++))
           done
 
