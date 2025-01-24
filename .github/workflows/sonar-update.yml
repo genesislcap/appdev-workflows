@@ -61,13 +61,49 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
-      JENKINS_TOKEN:
-        required: false
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  fetch-aws-credentials:
+    runs-on: [ appdev-small ]
+    outputs:
+      AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ steps.set-creds.outputs.AWS_SESSION_TOKEN }}
+
+    env:
+      SSM_PARAM_NAME: githubrunner-cddev-policy
+      REGION: eu-west-2
+
+    steps:
+
+      - name: Install AWS CLI and jq
+        run: |
+          sudo dnf update -y
+          sudo dnf install -y awscli jq
+      - name: Fetch and Assume AWS Role
+        id: set-creds
+        run: |
+          # Unset existing AWS credentials
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          # Fetch the AWS SSM parameter containing the role ARN
+          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
+          # Assume the IAM role using STS and extract the credentials
+          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
+          # Extract credentials and output them for the next job
+          AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.AccessKeyId)
+          AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SecretAccessKey)
+          AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SessionToken)
+          # Set outputs for next jobs to use
+          echo "::set-output name=AWS_ACCESS_KEY_ID::$AWS_ACCESS_KEY_ID"
+          echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
+          echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
+
   build-generate-jacocoexec:
     name: Steps to update sonar
-    runs-on: appdev-small
+    runs-on: [ appdev-selfhosted-al2023 ]
 
     steps:
 
@@ -114,43 +150,6 @@ jobs:
               sleep 10
             fi
           done
-
-  fetch-aws-credentials:
-    runs-on: [ appdev-small ]
-    outputs:
-      AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ steps.set-creds.outputs.AWS_SESSION_TOKEN }}
-
-    env:
-      SSM_PARAM_NAME: githubrunner-cddev-policy
-      REGION: eu-west-2
-
-    steps:
-
-      - name: Install AWS CLI and jq
-        run: |
-          sudo dnf update -y
-          sudo dnf install -y awscli jq
-      - name: Fetch and Assume AWS Role
-        id: set-creds
-        run: |
-          # Unset existing AWS credentials
-          unset AWS_ACCESS_KEY_ID
-          unset AWS_SECRET_ACCESS_KEY
-          unset AWS_SESSION_TOKEN
-          # Fetch the AWS SSM parameter containing the role ARN
-          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-          # Assume the IAM role using STS and extract the credentials
-          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
-          # Extract credentials and output them for the next job
-          AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.AccessKeyId)
-          AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SecretAccessKey)
-          AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SessionToken)
-          # Set outputs for next jobs to use
-          echo "::set-output name=AWS_ACCESS_KEY_ID::$AWS_ACCESS_KEY_ID"
-          echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
-          echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
 
   build-generate-report-upload:
     runs-on: [ appdev-selfhosted-al2023 ]
