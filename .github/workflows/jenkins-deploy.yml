@@ -109,10 +109,16 @@ jobs:
           MAX_ATTEMPTS=30  # Adjust as needed
 
           while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.JENKINS_SECURITYTOKEN }}" "$JOB_URL")
+            RESPONSE=$(curl -s --user ":${{ secrets.JENKINS_SECURITYTOKEN }}" "$JOB_URL")
 
             # Debugging: Print response to check if it's valid JSON
             echo "Jenkins API Response: $RESPONSE"
+
+            # Check if RESPONSE contains "Authentication required"
+            if echo "$RESPONSE" | grep -q "Authentication required"; then
+              echo "Error: Jenkins authentication failed. Check JENKINS_SECURITYTOKEN."
+              exit 5
+            fi
 
             # Check if RESPONSE is valid JSON before using jq
             if echo "$RESPONSE" | jq empty 2>/dev/null; then
