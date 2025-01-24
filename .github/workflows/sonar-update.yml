@@ -65,7 +65,7 @@ on:
         required: false
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build to generate jacoco exec:
+  build-generate-jacocoexec:
     name: Steps to update sonar
     runs-on: appdev-small
 
@@ -152,7 +152,7 @@ jobs:
           echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
           echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
 
-  build to generate report and upload:
+  build-generate-report-upload:
     runs-on: [ appdev-selfhosted-al2023 ]
     needs: fetch-aws-credentials
 
