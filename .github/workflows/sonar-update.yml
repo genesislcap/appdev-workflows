@@ -16,13 +16,13 @@ on:
         required: false
         type: string
 
-      testautomation_build:
-        required: false
-        default: false
-        type: boolean
-      startserverdatetime:
-        required: false
-        type: string
+      # testautomation_build:
+      #   required: false
+      #   default: false
+      #   type: boolean
+      # startserverdatetime:
+      #   required: false
+      #   type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
