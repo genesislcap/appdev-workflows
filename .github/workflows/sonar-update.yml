@@ -32,7 +32,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   fetch-aws-credentials:
-    runs-on: [ appdev-small ]
+    runs-on: [ appdev-selfhosted-al2023 ]
     outputs:
       AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
