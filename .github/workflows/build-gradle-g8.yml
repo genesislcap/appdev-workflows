@@ -315,22 +315,28 @@ jobs:
       #     echo "Updated package.json:"
       #     cat "$PACKAGE_JSON"
 
-      - name: Server and Sonar Build
+      # - name: Server and Sonar Build
+      #   uses: gradle/gradle-build-action@v2
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     arguments: >
+      #       build --no-build-cache --stacktrace
+      #       -PpushToCache=${{ inputs.push-to-artifactory-cache }}
+      #       -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+      #       ${{ inputs.server-build-gradle-arguments }}
+      #       -PuseDevRepo=true
+      #       test jacocoTestReport sonarqube --no-configuration-cache
+      #       -Dsonar.token=${{env.SONAR_TOKEN}}
+      #     build-root-directory: "${{ inputs.working-directory }}"
+      #     cache-disabled: true
+
+      - name: Server Build
         uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          arguments: >
-            build --no-build-cache --stacktrace
-            -PpushToCache=${{ inputs.push-to-artifactory-cache }}
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
-            ${{ inputs.server-build-gradle-arguments }}
-            -PuseDevRepo=true
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{env.SONAR_TOKEN}}
+          arguments: build --no-build-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
-
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
