@@ -83,17 +83,6 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: testautomation_build steps
-        if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
-        with:
-          web-path: ${{ inputs.web-path }}
-          testautomation_build: ${{ inputs.testautomation_build }}
-          testautorepo: ${{ inputs.testautorepo }}
-          testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }}
-          repo_type: "web"
-          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -114,6 +103,18 @@ jobs:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
+
+      - name: testautomation_build steps
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
+          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
       - name: Restore gradle.properties and setup
         env:
