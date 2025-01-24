@@ -51,6 +51,13 @@ on:
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
 
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+
     secrets:
       JENKINS_SECURITYTOKEN:
         required: true
@@ -69,6 +76,9 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
+
+      GHA_TOKEN:
+        required: false
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -174,64 +184,71 @@ jobs:
       AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'
+      # - uses: actions/checkout@v3
+      #   with:
+      #     repository: ${{ inputs.testautorepo }}
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.testautobranch }}
+      #     token: ${{ secrets.GHA_TOKEN }}
 
-      - name: Configure Node
-        if: ${{ !inputs.REGISTRY_URL  }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ inputs.node_version }}
+      # - name: Set up JDK
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     java-version: ${{ inputs.java_version }}
+      #     distribution: 'adopt'
 
-      - name: Configure Node if using JFROG npm packages
-        if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ inputs.node_version }}
-          registry-url: ${{ inputs.REGISTRY_URL }}
-          scope: ${{ inputs.SCOPE }}
+      # - name: Configure Node
+      #   if: ${{ !inputs.REGISTRY_URL  }}
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: ${{ inputs.node_version }}
 
-      - name: Restore gradle.properties and setup
-        env:
-          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "${{ inputs.working-directory }}"
-        shell: bash
-        run: |
-          mkdir -p ~/.gradle/
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+      # - name: Configure Node if using JFROG npm packages
+      #   if: ${{ inputs.REGISTRY_URL }}
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: ${{ inputs.node_version }}
+      #     registry-url: ${{ inputs.REGISTRY_URL }}
+      #     scope: ${{ inputs.SCOPE }}
 
-          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
-          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+      # - name: Restore gradle.properties and setup
+      #   env:
+      #     GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+      #   working-directory: "${{ inputs.working-directory }}"
+      #   shell: bash
+      #   run: |
+      #     mkdir -p ~/.gradle/
+      #     echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+      #     echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+      #     echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
-          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
-          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
-          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
-          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+      #     echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+      #     echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
 
-          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
-          sudo chmod +x ./gradlew
-          sudo chmod +x ./${{ inputs.server-path }}/gradlew
-          sudo chmod -R +rx ./${{ inputs.server-path }}/
-          cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          if [ -z "${{ inputs.repo-name }}" ]; then
-            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
-          else
-            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
-          fi
-          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+      #     echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+      #     echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+      #     echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+      #     echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
+      #     echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+      #     echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+      #     sudo chmod +x ./gradlew
+      #     sudo chmod +x ./${{ inputs.server-path }}/gradlew
+      #     sudo chmod -R +rx ./${{ inputs.server-path }}/
+      #     cat ~/.gradle/gradle.properties >>  ./gradle.properties
+      #     if [ -z "${{ inputs.repo-name }}" ]; then
+      #       echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+      #     else
+      #       echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+      #     fi
+      #     RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+      #     echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+      #     sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
       - name: Download JaCoCo CLI
         run: |
@@ -245,9 +262,9 @@ jobs:
 
       - name: Downloads
         run: |
-          mkdir -p fical
-          cd fical
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/fical/server/genesis_fical_package-FahdTazi72-patch-3-qaautomation.tar.gz
+          mkdir -p ${{ inputs.appuser }}
+          cd ${{ inputs.appuser }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/genesis_${{ inputs.appuser }}_package-FahdTazi72-patch-3-qaautomation.tar.gz
           ls -al
           tar xf genesis_*.tar.gz
           rm genesis_*.tar.gz
@@ -260,13 +277,13 @@ jobs:
           aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
           aws configure set region $REGION --profile default
 
-          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/fical/jacoco.exec ./jacoco.exec
+          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
           ls -al jacoco.exec
           pwd
 
       - name: Generate JaCoCo XML Report (Manual)
         run: |
-          cd fical/fical/bin/
+          cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
           java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
               --html jacocoTestReport.html
@@ -279,7 +296,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: jacoco-report
-          path: /opt/actions-runner/_work/fical/fical/fical/fical/bin/jacocoTestReport.html
+          path: /opt/actions-runner/_work/${{ inputs.appuser }}/${{ inputs.appuser }}/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.html
 
 
 
@@ -296,11 +313,11 @@ jobs:
       #       -Dsonar.java.binaries=/opt/actions-runner/_work/fical/fical/fical/fical/bin
 
 
-      - name: Server Build
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-          build-root-directory: ./${{ inputs.server-path }}
-          cache-disabled: true
+      # - name: Server Build
+      #   uses: gradle/gradle-build-action@v2
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
+      #     build-root-directory: ./${{ inputs.server-path }}
+      #     cache-disabled: true
