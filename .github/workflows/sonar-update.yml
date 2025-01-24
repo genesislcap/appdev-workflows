@@ -286,7 +286,7 @@ jobs:
           cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
           java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
-              --html jacocoTestReport.html
+              --html ${{ inputs.appuser }}.html
               # --xml jacocoTestReport.xml
           ls -al
           pwd
@@ -296,7 +296,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: jacoco-report
-          path: /opt/actions-runner/_work/${{ inputs.appuser }}/${{ inputs.appuser }}/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.html
+          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
 
 
