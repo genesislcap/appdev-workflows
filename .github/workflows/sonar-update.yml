@@ -34,6 +34,8 @@ on:
         default: '16.x'
         type: string
     secrets:
+      JENKINS_TOKEN:
+        required: false
       JENKINS_SECURITYTOKEN:
         required: true
       JFROG_USERNAME:
@@ -91,15 +93,25 @@ jobs:
         run: |
           JOB_STATUS=""
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/sonar-update/lastBuild/api/json"
+
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            RESPONSE=$(curl -s "$JOB_URL")
+            RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
             JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
-            if [ "$JOB_STATUS" == "SUCCESS" ]; then exit 0; fi
-            if [ "$JOB_STATUS" == "FAILURE" ]; then exit 1; fi
-            if [ "$JOB_STATUS" == "ABORTED" ]; then exit 2; fi
-            echo "Job is still running..."
-            sleep 10
+
+            if [ "$JOB_STATUS" == "SUCCESS" ]; then
+              echo "Jenkins job completed successfully."
+              exit 0
+            elif [ "$JOB_STATUS" == "FAILURE" ]; then
+              echo "Jenkins job failed."
+              exit 1
+            elif [ "$JOB_STATUS" == "ABORTED" ]; then
+              echo "Jenkins job was aborted."
+              exit 2
+            elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
+              echo "Job is still running..."
+              sleep 10
+            fi
           done
 
       - name: Download and Extract JaCoCo CLI
