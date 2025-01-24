@@ -105,6 +105,8 @@ on:
         required: false
       GHA_TOKEN:
         required: true
+      JENKINSGENESIS_SONAR:
+        required: true
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -313,12 +315,26 @@ jobs:
       #     echo "Updated package.json:"
       #     cat "$PACKAGE_JSON"
 
+
+
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build  --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
+
+      - name: Test and Coverage
+        uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          arguments: >
+            test jacocoTestReport sonarqube --no-configuration-cache
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
