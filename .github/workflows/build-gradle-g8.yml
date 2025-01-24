@@ -164,7 +164,7 @@ jobs:
 
       - name: testautomation_build steps
         if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        uses: genesislcap/appdev-workflows/testautomation-action@Tqaautomation
         with:
           web-path: ${{ inputs.web-path }}
           testautomation_build: ${{ inputs.testautomation_build }}
