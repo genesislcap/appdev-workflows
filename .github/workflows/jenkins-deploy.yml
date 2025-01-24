@@ -113,31 +113,40 @@ jobs:
             exit 5
           fi
 
-          # Check if RESPONSE is valid JSON before using jq
-          if echo "$RESPONSE" | jq empty 2>/dev/null; then
-            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
-          else
-            echo "Error: Invalid JSON response from Jenkins API."
-            exit 4
-          fi
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30  # Adjust the number of retries if needed
 
-          echo "Current status: $JOB_STATUS"
-          if [ "$JOB_STATUS" == "SUCCESS" ]; then
-            echo "Jenkins job completed successfully."
-            exit 0
-          elif [ "$JOB_STATUS" == "FAILURE" ]; then
-            echo "Jenkins job failed."
-            exit 1
-          elif [ "$JOB_STATUS" == "ABORTED" ]; then
-            echo "Jenkins job was aborted."
-            exit 2
-          fi
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Fetch job status using the Jenkins API
+            JOB_STATUS_RESPONSE=$(curl -s "https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade/api/json?tree=result")
 
-          echo "Job is still running..."
-          sleep 10
-          ((ATTEMPTS++))
+            echo "Job Status Response: $JOB_STATUS_RESPONSE"
 
-          if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
-            echo "Jenkins job polling timed out."
-            exit 3
-          fi
+            # Check if the response is valid JSON before parsing it
+            if echo "$JOB_STATUS_RESPONSE" | jq empty 2>/dev/null; then
+              JOB_STATUS=$(echo "$JOB_STATUS_RESPONSE" | jq -r .result)
+            else
+              echo "Error: Invalid JSON response from Jenkins API."
+              exit 4
+            fi
+
+            echo "Current job status: $JOB_STATUS"
+
+            if [ "$JOB_STATUS" == "SUCCESS" ]; then
+              echo "Jenkins job completed successfully."
+              exit 0
+            elif [ "$JOB_STATUS" == "FAILURE" ]; then
+              echo "Jenkins job failed."
+              exit 1
+            elif [ "$JOB_STATUS" == "ABORTED" ]; then
+              echo "Jenkins job was aborted."
+              exit 2
+            fi
+
+            echo "Job is still running..."
+            sleep 10  # Wait before checking again
+            ((ATTEMPTS++))
+          done
+
+          echo "Jenkins job polling timed out."
+          exit 3
