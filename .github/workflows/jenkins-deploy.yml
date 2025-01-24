@@ -104,18 +104,19 @@ jobs:
       - name: Poll Jenkins for Job Status
         if: ${{ inputs.testautomation_build }}
         run: |
-          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade/lastBuild/api/json"
+          JOB_URL="https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade"
+
           ATTEMPTS=0
           MAX_ATTEMPTS=30  # Adjust as needed
 
           while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            RESPONSE=$(curl -s --user ":${{ secrets.JENKINS_SECURITYTOKEN }}" "$JOB_URL")
+            RESPONSE=$(curl -s "$JOB_URL")
 
             # Debugging: Print response to check if it's valid JSON
             echo "Jenkins API Response: $RESPONSE"
 
-            # Check if RESPONSE contains "Authentication required"
-            if echo "$RESPONSE" | grep -q "Authentication required"; then
+            # Check if response contains authentication failure message
+            if echo "$RESPONSE" | grep -q "Unauthorized"; then
               echo "Error: Jenkins authentication failed. Check JENKINS_SECURITYTOKEN."
               exit 5
             fi
