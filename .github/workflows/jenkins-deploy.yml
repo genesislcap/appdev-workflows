@@ -77,35 +77,17 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Install jq
+        if: ${{ inputs.testautomation_build }}
         run: sudo dnf install -y jq
 
-      - name: Get Jenkins CSRF Crumb
+      - name: Poll Jenkins for Job Status
+        if: ${{ inputs.testautomation_build }}
         run: |
-          JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
-          CRUMB_URL="$JENKINS_URL/crumbIssuer/api/json"
+          JOB_URL="https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters"
 
-          # Fetch the CSRF crumb
-          CRUMB_RESPONSE=$(curl -s --user ${{ secrets.JENKINS_TOKEN }} "$CRUMB_URL")
-          CRUMB=$(echo "$CRUMB_RESPONSE" | jq -r .crumb)
-
-          if [ -z "$CRUMB" ] || [ "$CRUMB" == "null" ]; then
-            echo "Error: Could not retrieve CSRF crumb from Jenkins."
-            exit 1
-          fi
-
-          echo "Jenkins Crumb: $CRUMB"
-          echo "CRUMB=$CRUMB" >> $GITHUB_ENV
-
-      - name: Trigger Jenkins Job and Get Queue ID
-        run: |
-          JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
-          JOB_PATH="job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade"
-
-          JOB_TRIGGER_URL="$JENKINS_URL/$JOB_PATH/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}"
-
-          # Trigger Jenkins Job with CSRF Crumb
-          RESPONSE=$(curl -X POST "$JOB_TRIGGER_URL" \
-            -H "Jenkins-Crumb: ${{ env.CRUMB }}" \
+          RESPONSE=$(curl -X POST "$JOB_URL" \
+            --data-urlencode "token=${{ secrets.JENKINS_SECURITYTOKEN }}" \
+            --data-urlencode "job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
             --data-urlencode "client=${{ inputs.client }}" \
             --data-urlencode "environment=${{ inputs.environment }}" \
             --data-urlencode "hosts=${{ inputs.hosts }}" \
@@ -120,84 +102,42 @@ jobs:
             --data-urlencode "environment_level=${{ inputs.environment_level }}" \
             --data-urlencode "product=${{ inputs.product }}" \
             --data-urlencode "repotype=${{ inputs.repotype }}" \
-            --data-urlencode "deploy_custom_nginx=${{ inputs.deploy_custom_nginx }}" \
-            -i)
+            --data-urlencode "deploy_custom_nginx=${{ inputs.deploy_custom_nginx }}" )
 
-          echo "Jenkins API Trigger Response:"
-          echo "$RESPONSE"
+          # Debugging: Print response to check if it's valid JSON
+          echo "Jenkins API Response: $RESPONSE"
 
-          # Fetch the latest queue item
-          QUEUE_URL="$JENKINS_URL/queue/api/json"
-          QUEUE_RESPONSE=$(curl -s "$QUEUE_URL")
-
-          echo "Jenkins Queue API Response:"
-          echo "$QUEUE_RESPONSE"
-
-          QUEUE_ID=$(echo "$QUEUE_RESPONSE" | jq -r '.items[-1].id')
-
-          if [[ -z "$QUEUE_ID" || "$QUEUE_ID" == "null" ]]; then
-            echo "Error: Could not retrieve Jenkins Queue ID."
-            exit 1
+          # Check if response contains authentication failure message
+          if echo "$RESPONSE" | grep -q "Unauthorized"; then
+            echo "Error: Jenkins authentication failed. Check JENKINS_SECURITYTOKEN."
+            exit 5
           fi
 
-          echo "Jenkins Job added to Queue with ID: $QUEUE_ID"
-          echo "QUEUE_ID=$QUEUE_ID" >> $GITHUB_ENV
+          # Check if RESPONSE is valid JSON before using jq
+          if echo "$RESPONSE" | jq empty 2>/dev/null; then
+            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+          else
+            echo "Error: Invalid JSON response from Jenkins API."
+            exit 4
+          fi
 
-      - name: Poll Jenkins for Job Status
-        run: |
-          JENKINS_URL="https://jenkinsdev.cdservice.genesis.global"
-          JOB_PATH="job/AppDev-CI_CD/job/${{ inputs.product }}/job/${{ inputs.environment_level }}/job/product_${{ inputs.product }}_upgrade"
-
-          MAX_ATTEMPTS=30
-          ATTEMPTS=0
-          BUILD_NUMBER=""
-
-          echo "Waiting for Jenkins Job to start..."
-          while [ -z "$BUILD_NUMBER" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            JOB_INFO=$(curl -s "$JENKINS_URL/$JOB_PATH/api/json")
-            BUILD_NUMBER=$(echo "$JOB_INFO" | jq -r '.lastBuild.number')
-
-            if [ "$BUILD_NUMBER" != "null" ] && [ -n "$BUILD_NUMBER" ]; then
-              echo "Jenkins Job Started with Build Number: $BUILD_NUMBER"
-              echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
-              break
-            fi
-
-            echo "Waiting for job to start..."
-            sleep 10
-            ((ATTEMPTS++))
-          done
-
-          if [ -z "$BUILD_NUMBER" ]; then
-            echo "Error: Jenkins job did not start in time."
+          echo "Current status: $JOB_STATUS"
+          if [ "$JOB_STATUS" == "SUCCESS" ]; then
+            echo "Jenkins job completed successfully."
+            exit 0
+          elif [ "$JOB_STATUS" == "FAILURE" ]; then
+            echo "Jenkins job failed."
+            exit 1
+          elif [ "$JOB_STATUS" == "ABORTED" ]; then
+            echo "Jenkins job was aborted."
             exit 2
           fi
 
-          # Poll for Job Completion
-          JOB_STATUS=""
-          ATTEMPTS=0
-          while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            JOB_RESPONSE=$(curl -s "$JENKINS_URL/$JOB_PATH/$BUILD_NUMBER/api/json")
-            JOB_STATUS=$(echo "$JOB_RESPONSE" | jq -r .result)
+          echo "Job is still running..."
+          sleep 10
+          ((ATTEMPTS++))
 
-            echo "Current status: $JOB_STATUS"
-
-            if [ "$JOB_STATUS" == "SUCCESS" ]; then
-              echo "Jenkins job completed successfully."
-              exit 0
-            elif [ "$JOB_STATUS" == "FAILURE" ]; then
-              echo "Jenkins job failed."
-              exit 1
-            elif [ "$JOB_STATUS" == "ABORTED" ]; then
-              echo "Jenkins job was aborted."
-              exit 2
-            fi
-
-            echo "Job is still running..."
-            sleep 10
-            ((ATTEMPTS++))
-
-            if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
-              echo "Error: Jenkins job polling timed out."
-              exit 3
-            fi
+          if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
+            echo "Jenkins job polling timed out."
+            exit 3
+          fi
