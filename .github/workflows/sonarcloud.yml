@@ -28,7 +28,18 @@ on:
         type: string
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
-
+      hostname:
+        required: false
+        type: string
+      s3ImagePath:
+        required: false
+        type: string
+      genesis_user:
+        required: false
+        type: string
+      appuser:
+        required: false
+        type: string
 
     secrets:
       GPR_READ_TOKEN:
@@ -43,6 +54,8 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
+      JENKINS_TOKEN:
+        required: false
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
