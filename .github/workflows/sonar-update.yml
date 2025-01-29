@@ -92,20 +92,20 @@ jobs:
     steps:
 
 
-      # - name: Install AWS CLI and jq
-      #   run: |
-      #     sudo dnf update -y
-      #     sudo dnf install -y awscli jq
+      - name: Install AWS CLI and jq
+        run: |
+          sudo dnf update -y
+          sudo dnf install -y awscli jq
 
-      # - name: Fetch and Assume AWS Role
-      #   id: set-creds
-      #   run: |
-      #     unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
-      #     aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-      #     aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
-      #     echo "AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
-      #     echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
-      #     echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
+      - name: Fetch and Assume AWS Role
+        id: set-creds
+        run: |
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
+          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
+          echo "AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
 
       # - uses: actions/checkout@v3
       #   with:
