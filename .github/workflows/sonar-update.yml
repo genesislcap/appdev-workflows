@@ -167,12 +167,23 @@ jobs:
           aws configure set region $REGION --profile default
           aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
 
-      - name: Generate JaCoCo XML Report
+      - name: Generate JaCoCo ReportsS
         run: |
           cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
           java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
-              --html ${{ inputs.appuser }}.html
+              --html ${{ inputs.appuser }}.html \
+              --xml ${{ inputs.appuser }}.xml
+
+      - name: Upload JaCoCo XML to SonarCloud
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=genesislcap_pbi \
+            -Dsonar.organization=genesislcap \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.appuser }}.xml
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
