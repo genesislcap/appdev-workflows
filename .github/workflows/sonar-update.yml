@@ -57,10 +57,6 @@ on:
       testautobranch:
         required: false
         type: string
-      node_version:
-        required: false
-        default: '16.x'
-        type: string
 
     secrets:
       JENKINS_SECURITYTOKEN:
@@ -212,17 +208,17 @@ jobs:
           mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
           ls -l
 
-      - name: Trigger SonarCloud analysis
-        run: |
-          sudo yum update -y
-          sudo yum install -y java-17-amazon-corretto-devel
+      # - name: Trigger SonarCloud analysis
+      #   run: |
+      #     sudo yum update -y
+      #     sudo yum install -y java-17-amazon-corretto-devel
 
-          sonar-scanner \
-            -Dsonar.projectKey=genesislcap_fical \
-            -Dsonar.organization=genesislcap \
-            -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=app-repo/reports/jacoco/test/jacocoTestReport.xml \
-            -Dsonar.host.url=https://sonarcloud.io
+      #     sonar-scanner \
+      #       -Dsonar.projectKey=genesislcap_fical \
+      #       -Dsonar.organization=genesislcap \
+      #       -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
+      #       -Dsonar.coverage.jacoco.xmlReportPaths=app-repo/reports/jacoco/test/jacocoTestReport.xml \
+      #       -Dsonar.host.url=https://sonarcloud.io
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
@@ -233,7 +229,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
       - name: Configure Node
