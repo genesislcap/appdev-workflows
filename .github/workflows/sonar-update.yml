@@ -90,40 +90,27 @@ jobs:
       REGION: eu-west-2
 
     steps:
-      # - name: Install SonarScanner
+
+
+      # - name: Install AWS CLI and jq
       #   run: |
-      #     # Install necessary dependencies
-      #     sudo dnf install -y wget unzip
+      #     sudo dnf update -y
+      #     sudo dnf install -y awscli jq
 
-      #     # Download SonarScanner CLI
-      #     wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+      # - name: Fetch and Assume AWS Role
+      #   id: set-creds
+      #   run: |
+      #     unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+      #     aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
+      #     aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
+      #     echo "AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
+      #     echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
+      #     echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
 
-      #     # Unzip SonarScanner
-      #     unzip sonar-scanner-cli-4.7.0.2747-linux.zip
-
-      #     # Move to /opt and create symlink for global access
-      #     sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
-      #     sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
-
-      - name: Install AWS CLI and jq
-        run: |
-          sudo dnf update -y
-          sudo dnf install -y awscli jq
-
-      - name: Fetch and Assume AWS Role
-        id: set-creds
-        run: |
-          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
-          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
-          echo "AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
-          echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
 
       - name: Checkout app repository
         uses: actions/checkout@v3
@@ -134,10 +121,10 @@ jobs:
           path: app-repo
           fetch-depth: 0
 
-      - name: Print Input Values
-        run: |
-          echo "hostname: ${{ inputs.hostname }}"
-          echo "genesis_user: ${{ inputs.genesis_user }}"
+      # - name: Print Input Values
+      #   run: |
+      #     echo "hostname: ${{ inputs.hostname }}"
+      #     echo "genesis_user: ${{ inputs.genesis_user }}"
 
       # - name: Trigger Jenkins Job
       #   run: |
@@ -170,44 +157,44 @@ jobs:
       #       fi
       #     done
 
-      - name: Download and Extract JaCoCo CLI
-        run: |
-          mkdir -p jacoco
-          wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
-          unzip jacoco/jacoco.zip -d jacoco
+      # - name: Download and Extract JaCoCo CLI
+      #   run: |
+      #     mkdir -p jacoco
+      #     wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
+      #     unzip jacoco/jacoco.zip -d jacoco
 
-      - name: Download Application Package from JFrog
-        run: |
-          mkdir -p ${{ inputs.appuser }}
-          cd ${{ inputs.appuser }}
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
-          tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
+      # - name: Download Application Package from JFrog
+      #   run: |
+      #     mkdir -p ${{ inputs.appuser }}
+      #     cd ${{ inputs.appuser }}
+      #     wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
+      #     tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
 
-      - name: Download JaCoCo exec file from S3
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
-          aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
-          aws configure set region $REGION --profile default
-          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
+      # - name: Download JaCoCo exec file from S3
+      #   run: |
+      #     aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
+      #     aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
+      #     aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
+      #     aws configure set region $REGION --profile default
+      #     aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
 
 
 
-      - name: Generate JaCoCo ReportsS
-        run: |
-          pwd
-          cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
-          java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
-              --classfiles ./ \
-              --html ${{ inputs.appuser }}.html \
-              --xml jacocoTestReport.xml
+      # - name: Generate JaCoCo ReportsS
+      #   run: |
+      #     pwd
+      #     cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
+      #     java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
+      #         --classfiles ./ \
+      #         --html ${{ inputs.appuser }}.html \
+      #         --xml jacocoTestReport.xml
 
-      - name: Move jacocoTestReport.xml to app-repo folder
-        run: |
-          mkdir -p app-repo/reports/jacoco/test
-          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
-          ls -l
-          pwd
+      # - name: Move jacocoTestReport.xml to app-repo folder
+      #   run: |
+      #     mkdir -p app-repo/reports/jacoco/test
+      #     mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
+      #     ls -l
+      #     pwd
 
       # - name: Upload JaCoCo Coverage Report
       #   uses: actions/upload-artifact@v3
@@ -238,7 +225,7 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "../../../app-repo"
+        working-directory: "/opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -275,6 +262,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-          build-root-directory: ../../../app-repo/${{ inputs.server-path }}
+          build-root-directory: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}
           cache-disabled: true
 
