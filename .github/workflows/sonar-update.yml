@@ -265,3 +265,9 @@ jobs:
           build-root-directory: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}
           cache-disabled: true
 
+          - name: Verify JaCoCo Test Report
+            run: |
+              ls -l /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/
+              test -f /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
+
+
