@@ -191,7 +191,7 @@ jobs:
 
       - name: Move jacocoTestReport.xml to app-repo folder
         run: |
-          mkdir -p app-repo/reports/jacoco/test
+          mkdir -p app-repo/server/build/reports/jacoco/test
           mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
           ls -l
           pwd
