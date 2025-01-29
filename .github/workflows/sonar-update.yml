@@ -177,13 +177,10 @@ jobs:
 
       - name: Upload JaCoCo XML to SonarCloud
         run: |
-          sonar-scanner \
-            -Dsonar.projectKey=genesislcap_pbi \
-            -Dsonar.organization=genesislcap \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.appuser }}.xml
+          curl -u "${{ secrets.JENKINSGENESIS_SONAR }}:" \
+              -X POST \
+              -d "file=@${{ inputs.appuser }}.xml" \
+              "https://sonarcloud.io/api/coverage/upload?project=genesislcap_pbi"
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
