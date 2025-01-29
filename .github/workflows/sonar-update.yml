@@ -207,6 +207,7 @@ jobs:
           mkdir -p app-repo/reports/jacoco/test
           mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
           ls -l
+          pwd
 
       # - name: Upload JaCoCo Coverage Report
       #   uses: actions/upload-artifact@v3
@@ -237,7 +238,7 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "${{ inputs.working-directory }}/app-repo"
+        working-directory: "../../../app-repo"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -274,6 +275,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-          build-root-directory: ./app-repo/${{ inputs.server-path }}
+          build-root-directory: ../../../app-repo/${{ inputs.server-path }}
           cache-disabled: true
 
