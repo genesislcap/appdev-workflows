@@ -130,7 +130,7 @@ jobs:
         with:
           repository: genesislcap/fical
           ref: develop
-          token: ${{ inputs.GHA_TOKEN }}
+          token: ${{ secrets.GHA_TOKEN }}
           path: app-repo
           fetch-depth: 0
 
