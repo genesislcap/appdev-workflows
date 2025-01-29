@@ -270,4 +270,9 @@ jobs:
           ls -l /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/
           test -f /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
 
+      - name: Upload JaCoCo Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-test-report
+          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml
 
