@@ -157,44 +157,44 @@ jobs:
       #       fi
       #     done
 
-      # - name: Download and Extract JaCoCo CLI
-      #   run: |
-      #     mkdir -p jacoco
-      #     wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
-      #     unzip jacoco/jacoco.zip -d jacoco
+      - name: Download and Extract JaCoCo CLI
+        run: |
+          mkdir -p jacoco
+          wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
+          unzip jacoco/jacoco.zip -d jacoco
 
-      # - name: Download Application Package from JFrog
-      #   run: |
-      #     mkdir -p ${{ inputs.appuser }}
-      #     cd ${{ inputs.appuser }}
-      #     wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
-      #     tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
+      - name: Download Application Package from JFrog
+        run: |
+          mkdir -p ${{ inputs.appuser }}
+          cd ${{ inputs.appuser }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
+          tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
 
-      # - name: Download JaCoCo exec file from S3
-      #   run: |
-      #     aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
-      #     aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
-      #     aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
-      #     aws configure set region $REGION --profile default
-      #     aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
+      - name: Download JaCoCo exec file from S3
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
+          aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
+          aws configure set region $REGION --profile default
+          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
 
 
 
-      # - name: Generate JaCoCo ReportsS
-      #   run: |
-      #     pwd
-      #     cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
-      #     java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
-      #         --classfiles ./ \
-      #         --html ${{ inputs.appuser }}.html \
-      #         --xml jacocoTestReport.xml
+      - name: Generate JaCoCo ReportsS
+        run: |
+          pwd
+          cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
+          java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
+              --classfiles ./ \
+              --html ${{ inputs.appuser }}.html \
+              --xml jacocoTestReport.xml
 
-      # - name: Move jacocoTestReport.xml to app-repo folder
-      #   run: |
-      #     mkdir -p app-repo/reports/jacoco/test
-      #     mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
-      #     ls -l
-      #     pwd
+      - name: Move jacocoTestReport.xml to app-repo folder
+        run: |
+          mkdir -p app-repo/reports/jacoco/test
+          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
+          ls -l
+          pwd
 
       # - name: Upload JaCoCo Coverage Report
       #   uses: actions/upload-artifact@v3
