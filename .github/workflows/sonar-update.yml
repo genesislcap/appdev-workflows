@@ -110,6 +110,15 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Checkout app repository
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/fical
+          ref: ${{ github.ref }}
+          token: ${{ inputs.GHA_TOKEN }}
+          path: app-repo
+          fetch-depth: 0
+
       - name: Print Input Values
         run: |
           echo "hostname: ${{ inputs.hostname }}"
@@ -167,23 +176,48 @@ jobs:
           aws configure set region $REGION --profile default
           aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
 
+
+
       - name: Generate JaCoCo ReportsS
         run: |
+          pwd
           cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
           java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
               --classfiles ./ \
               --html ${{ inputs.appuser }}.html \
-              --xml ${{ inputs.appuser }}.xml
+              --xml jacocoTestReport.xml
 
-      - name: Upload JaCoCo XML to SonarCloud
+      - name: Move jacocoTestReport.xml to app-repo folder
         run: |
-          curl -u "${{ secrets.JENKINSGENESIS_SONAR }}:" \
-              -X POST \
-              -d "file=@${{ inputs.appuser }}.xml" \
-              "https://sonarcloud.io/api/coverage/upload?project=genesislcap_pbi"
+          mkdir -p app-repo/reports/jacoco/test
+          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
+          ls -l
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.appuser }}-jacoco-report
           path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
+
+      - name: Install SonarScanner
+        run: |
+          # Install necessary dependencies
+          sudo dnf install -y wget unzip
+
+          # Download SonarScanner CLI
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+
+          # Unzip SonarScanner
+          unzip sonar-scanner-cli-4.7.0.2747-linux.zip
+
+          # Move to /opt and create symlink for global access
+          sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
+          sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+
+      - name: Trigger SonarCloud analysis
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=genesislcap_fical \
+            -Dsonar.organization=genesislcap \
+            -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=app-repo/reports/jacoco/test/jacocoTestReport.xml
