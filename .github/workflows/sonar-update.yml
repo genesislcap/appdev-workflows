@@ -222,4 +222,5 @@ jobs:
             -Dsonar.projectKey=genesislcap_fical \
             -Dsonar.organization=genesislcap \
             -Dsonar.login=${{ secrets.JENKINSGENESIS_SONAR }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=app-repo/reports/jacoco/test/jacocoTestReport.xml
+            -Dsonar.coverage.jacoco.xmlReportPaths=app-repo/reports/jacoco/test/jacocoTestReport.xml \
+            -Dsonar.host.url=https://sonarcloud.io
