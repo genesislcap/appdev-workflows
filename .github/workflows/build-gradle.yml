@@ -76,7 +76,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string     
+        type: string
       web-path:
         required: false
         type: string
@@ -84,7 +84,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'      
+        default: 'main-repo/.github/workflows/version.properties'
 
     secrets:
       GRADLE_PROPERTIES:
@@ -114,34 +114,34 @@ jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout code  
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}   
+          ref: ${{ inputs.branch }}
 
-      
+
 
       # - uses: actions/checkout@v3
       #   if: inputs.testautomation_build
       #   with:
-      #     repository: ${{ inputs.testautorepo }}        
+      #     repository: ${{ inputs.testautorepo }}
       #     fetch-depth: '0'
       #     ref: ${{ inputs.testautobranch }}
-      #     token: ${{ env.GHA_TOKEN }}       
+      #     token: ${{ env.GHA_TOKEN }}
 
-      - name: testautomation_build steps 
+      - name: testautomation_build steps
         if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
         with:
           web-path: ${{ inputs.web-path }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "server"        
-          GHA_TOKEN: ${{secrets.GHA_TOKEN}}   
-      
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "server"
+          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -156,12 +156,12 @@ jobs:
       #     ref: ${{ github.ref }}
       #     token: ${{ secrets.GHA_TOKEN }}
       #     path: main-repo
-      #     fetch-depth: 0 
-          
+      #     fetch-depth: 0
+
       # - name: Print version.properties file
       #   if: inputs.testautomation_build
       #   run: cat main-repo/.github/workflows/version.properties
-        
+
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
@@ -170,10 +170,10 @@ jobs:
         run: |
           pwd
           ls -l
-          
+
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          
+
           echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
           echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
@@ -191,7 +191,7 @@ jobs:
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
-          
+
           # if [ "${{ inputs.testautomation_build }}" == "true" ]; then
           #   echo "Appending contents of additional file to gradle.properties"
           #   if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
@@ -202,22 +202,22 @@ jobs:
           # fi
           # echo "Contents of gradle.properties after modification:"
           cat ~/.gradle/gradle.properties
-          
+
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          
+
           if [ -z "${{ inputs.repo-name }}" ]; then
             echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
           else
             echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
           fi
-          
+
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
-      
-      
 
-      - name: Server Build        
+
+
+      - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
@@ -307,17 +307,17 @@ jobs:
 
   build-web:
     runs-on: [ appdev-selfhosted-al2023 ]
-    steps:     
-      - name: Checkout code        
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}     
+          ref: ${{ inputs.branch }}
 
       # - uses: actions/checkout@v3
       #   if: inputs.testautomation_build
       #   with:
-      #     repository: ${{ inputs.testautorepo }}        
+      #     repository: ${{ inputs.testautorepo }}
       #     fetch-depth: '0'
       #     ref: ${{ inputs.testautobranch }}
       #     token: ${{ env.GHA_TOKEN }}
@@ -357,13 +357,13 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-          
+
           # # Authentication for npm-remote-cache
           # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           # echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-remote-cache/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-          
+
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
@@ -379,29 +379,29 @@ jobs:
       #     ref: ${{ github.ref }}
       #     token: ${{ secrets.GHA_TOKEN }}
       #     path: main-repo
-      #     fetch-depth: 0 
-          
+      #     fetch-depth: 0
+
       # - name: Print version.properties file
       #   if: inputs.testautomation_build
       #   run: cat main-repo/.github/workflows/version.properties
-      
+
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
-      
-      - name: testautomation_build steps 
+
+      - name: testautomation_build steps
         if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
         with:
           web-path: ${{ inputs.web-path }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "web"        
-          GHA_TOKEN: ${{secrets.GHA_TOKEN}} 
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
+          GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
       - name: Restore gradle.properties and setup
         working-directory: "${{ inputs.working-directory }}"
@@ -462,7 +462,7 @@ jobs:
       # - name: Read FOUNDATION_VERSION from additional file
       #   if: steps.web_exists.outputs.client_folder_exists == 'true'
       #   working-directory: "${{ inputs.working-directory }}"
-      #   id: extract_version        
+      #   id: extract_version
       #   shell: bash
       #   run: |
       #     if [ "${{ inputs.testautomation_build }}" == "true" ]; then
@@ -478,7 +478,7 @@ jobs:
       #     fi
       # - name: Check for package-lock.json and remove if exists
       #   if: steps.web_exists.outputs.client_folder_exists == 'true'
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"  
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
       #   run: |
       #     if [ -f package-lock.json ]; then
       #       echo "Removing existing package-lock.json..."
@@ -487,12 +487,12 @@ jobs:
       #       echo "No package-lock.json found."
       #     fi
 
-     
-      # - name: Update @genesislcap dependencies 
+
+      # - name: Update @genesislcap dependencies
       #   if: steps.web_exists.outputs.client_folder_exists == 'true'
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"        
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
       #   run: |
-      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
       #     # Update @genesislcap dependencies across all objects in the package.json
       #     jq --arg version "$NEW_VERSION" '
       #       walk(
@@ -503,21 +503,21 @@ jobs:
       #         else . end
       #       )
       #     ' package.json > package.json.tmp
-          
+
       #     # Move tmp file to overwrite the original package.json
       #     mv package.json.tmp package.json
       #     # Print the final updated package.json
       #     echo "Final updated package.json:"
       #     cat package.json
-      
+
       # - name: Update @genesislcap versions in package.json
       #   if: steps.web_exists.outputs.client_folder_exists == 'true'
       #   shell: bash
       #   working-directory: "./"
       #   run: |
-          
+
       #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
+      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
 
       #     # Read and update dependencies from version.properties
       #     while IFS= read -r line; do

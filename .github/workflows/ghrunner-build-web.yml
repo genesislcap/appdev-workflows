@@ -44,7 +44,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'  
+        default: 'main-repo/.github/workflows/version.properties'
 
     secrets:
       JFROG_USERNAME:
@@ -62,7 +62,7 @@ on:
       SLACK_WEBHOOK:
         required: false
       GHA_TOKEN:
-        required: true          
+        required: true
 
 env:
   REPO_NAME: ${{ inputs.repo_name }}
@@ -91,15 +91,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-          ref: ${{ inputs.branch }}     
+          ref: ${{ inputs.branch }}
 
       # - uses: actions/checkout@v3
       #   if: inputs.testautomation_build
       #   with:
-      #     repository: ${{ inputs.testautorepo }}        
+      #     repository: ${{ inputs.testautorepo }}
       #     fetch-depth: '0'
       #     ref: ${{ inputs.testautobranch }}
-      #     token: ${{ env.GHA_TOKEN }} 
+      #     token: ${{ env.GHA_TOKEN }}
 
       - name: Env Setup
         run:  |
@@ -131,7 +131,7 @@ jobs:
       # - name: Read FOUNDATION_VERSION from additional file
       #   if: inputs.testautomation_build
       #   working-directory: "${{ inputs.working-directory }}"
-      #   id: extract_version        
+      #   id: extract_version
       #   shell: bash
       #   run: |
       #     if [ "${{ inputs.testautomation_build }}" == "true" ]; then
@@ -145,10 +145,10 @@ jobs:
       #         exit 1
       #       fi
       #     fi
-      
+
       # - name: Check for package-lock.json and remove if exists
-      #   if: inputs.testautomation_build   
-      #   working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }} 
+      #   if: inputs.testautomation_build
+      #   working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}
       #   run: |
       #     if [ -f package-lock.json ]; then
       #       echo "Removing existing package-lock.json..."
@@ -157,12 +157,12 @@ jobs:
       #       echo "No package-lock.json found."
       #     fi
 
-     
-      # - name: Update @genesislcap dependencies 
-      #   if: inputs.testautomation_build   
-      #   working-directory: ${{ inputs.working-directory }}/${{ inputs.web-path }}/${{ env.PRODUCT_NAME }}      
+
+      # - name: Update @genesislcap dependencies
+      #   if: inputs.testautomation_build
+      #   working-directory: ${{ inputs.working-directory }}/${{ inputs.web-path }}/${{ env.PRODUCT_NAME }}
       #   run: |
-      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"          
+      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
       #     # Update @genesislcap dependencies across all objects in the package.json
       #     jq --arg version "$NEW_VERSION" '
       #       walk(
@@ -173,21 +173,21 @@ jobs:
       #         else . end
       #       )
       #     ' package.json > package.json.tmp
-          
+
       #     # Move tmp file to overwrite the original package.json
       #     mv package.json.tmp package.json
       #     # Print the final updated package.json
       #     echo "Final updated package.json:"
       #     cat package.json
-      
+
       # - name: Update @genesislcap versions in package.json
-      #   if: inputs.testautomation_build   
+      #   if: inputs.testautomation_build
       #   shell: bash
       #   working-directory: "./"
       #   run: |
-          
+
       #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}"/${{ env.PRODUCT_NAME }}/package.json"
-      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"          
+      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
 
       #     # Read and update dependencies from version.properties
       #     while IFS= read -r line; do
@@ -220,19 +220,19 @@ jobs:
       #     echo "Updated package.json:"
       #     cat "$PACKAGE_JSON"
 
-      - name: testautomation_build steps 
+      - name: testautomation_build steps
         if: inputs.testautomation_build
-        uses: genesislcap/appdev-workflows/testautomation-web-action@qaautomation
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
         with:
           web-path: ${{ inputs.web-path }}/${{ env.PRODUCT_NAME }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
-          additional_file: ${{ inputs.additional_file }} 
-          repo_type: "web"        
+          additional_file: ${{ inputs.additional_file }}
+          repo_type: "web"
           GHA_TOKEN: ${{secrets.GHA_TOKEN}}
 
-       
+
       - name: Sonar Setup
         run:  |
               echo "Sonar Setup:"
@@ -256,7 +256,7 @@ jobs:
               npm config list
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-      
+
 
       - name: Bootstrap
         run: |
@@ -266,7 +266,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Build
-        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}  
+        working-directory: ${{ inputs.working-directory }}/packages/apps/${{ env.PRODUCT_NAME }}
         run: npm run build
 
       - name: Lint Check
