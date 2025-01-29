@@ -90,6 +90,21 @@ jobs:
       REGION: eu-west-2
 
     steps:
+      - name: Install SonarScanner
+        run: |
+          # Install necessary dependencies
+          sudo dnf install -y wget unzip
+
+          # Download SonarScanner CLI
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+
+          # Unzip SonarScanner
+          unzip sonar-scanner-cli-4.7.0.2747-linux.zip
+
+          # Move to /opt and create symlink for global access
+          sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
+          sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+
       - name: Install AWS CLI and jq
         run: |
           sudo dnf update -y
@@ -199,20 +214,7 @@ jobs:
           name: ${{ inputs.appuser }}-jacoco-report
           path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
-      - name: Install SonarScanner
-        run: |
-          # Install necessary dependencies
-          sudo dnf install -y wget unzip
 
-          # Download SonarScanner CLI
-          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
-
-          # Unzip SonarScanner
-          unzip sonar-scanner-cli-4.7.0.2747-linux.zip
-
-          # Move to /opt and create symlink for global access
-          sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
-          sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
 
       - name: Trigger SonarCloud analysis
         run: |
