@@ -208,11 +208,11 @@ jobs:
           mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/reports/jacoco/test/
           ls -l
 
-      - name: Upload JaCoCo Coverage Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.appuser }}-jacoco-report
-          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
+      # - name: Upload JaCoCo Coverage Report
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ${{ inputs.appuser }}-jacoco-report
+      #     path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
       - name: Set up JDK
         uses: actions/setup-java@v4
