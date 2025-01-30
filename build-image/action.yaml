@@ -19,6 +19,8 @@ inputs:
     required: true
   jfrog-password:
     required: true
+  app-name:
+    required: true
 
 runs:
   using: "composite"
@@ -74,6 +76,7 @@ runs:
       env:
         ECR_REGISTRY: ${{ inputs.ecr-registry }}
         IMAGE_VERSION: ${{ inputs.version }}
+        APP_NAME: ${{ inputs.app-name }}
       run: |
-          docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}:${IMAGE_VERSION}
+          docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
           docker push ${ECR_REGISTRY}:${IMAGE_VERSION}
