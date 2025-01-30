@@ -191,8 +191,8 @@ jobs:
 
       - name: Move jacocoTestReport.xml to app-repo folder
         run: |
-          mkdir -p app-repo/server/build/reports/jacoco/test
-          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/server/build/reports/jacoco/test/
+          mkdir -p app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
+          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
           ls -l
           pwd
 
@@ -267,12 +267,12 @@ jobs:
 
       - name: Verify JaCoCo Test Report
         run: |
-          ls -l ./app-repo/server/build/reports/jacoco/test/
-          test -f ./app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
+          ls -l ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
+          test -f ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
 
       - name: Upload JaCoCo Report as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-test-report
-          path: ./app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml
+          path: ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/jacocoTestReport.xml
 
