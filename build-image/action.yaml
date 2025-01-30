@@ -19,6 +19,8 @@ inputs:
     required: true
   jfrog-password:
     required: true
+  image-name:
+    required: false
 
 runs:
   using: "composite"
@@ -59,8 +61,20 @@ runs:
           build-root-directory: ${{ inputs.working-directory }}/server/
           cache-disabled: true
 
-    - name: Push Image
+    - name: Push Image using gradle
+      if: ${{ inputs.image-name == '' }}
       uses: gradle/actions/setup-gradle@v3
       with:
           arguments: pushImage --no-configuration-cache -PdockerUrl=${{ inputs.ecr-registry }}
           build-root-directory: ${{ inputs.working-directory }}/server/
+    
+    - name: Push Image using bash
+      if: ${{ inputs.image-name != '' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image-name }}
+        ECR_REGISTRY: ${{ inputs.ecr-registry }}
+        IMAGE_VERSION: ${{ inputs.version }}
+      run: |
+          docker tag ${IMAGE_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}:${IMAGE_VERSION}
+          docker push ${ECR_REGISTRY}:${IMAGE_VERSION}
