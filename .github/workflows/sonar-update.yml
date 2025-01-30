@@ -121,7 +121,7 @@ jobs:
           path: app-repo
           fetch-depth: 0
 
-      - name: Move jacocoTestReport.xml to app-repo folder
+      - name:   folder location
         run: |
 
           pwd
