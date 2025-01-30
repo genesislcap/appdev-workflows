@@ -54,7 +54,7 @@ runs:
       run: |
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/build.gradle.kts
 
-    - name: Find app name
+    - name: Find product name
       id: find-app-build-type
       shell: bash
       run: |
@@ -79,4 +79,4 @@ runs:
         APP_NAME: ${{ inputs.app-name }}
       run: |
           docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
-          docker push ${ECR_REGISTRY}:${IMAGE_VERSION}
+          docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
