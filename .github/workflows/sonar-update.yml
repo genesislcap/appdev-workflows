@@ -126,6 +126,7 @@ jobs:
 
           pwd
           cd app-repo
+          pwd
           ls -l
 
 
