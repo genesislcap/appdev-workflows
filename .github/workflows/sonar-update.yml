@@ -115,8 +115,8 @@ jobs:
       - name: Checkout app repository
         uses: actions/checkout@v3
         with:
-          repository: genesislcap/fical
-          ref: sonar
+          repository: ${{ inputs.testautorepo }}
+          ref: ${{ inputs.testautobranch }}
           token: ${{ secrets.GHA_TOKEN }}
           path: app-repo
           fetch-depth: 0
@@ -225,7 +225,7 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "/opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo"
+        working-directory: "./app-repo"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -262,17 +262,17 @@ jobs:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-          build-root-directory: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}
+          build-root-directory: ./app-repo/${{ inputs.server-path }}
           cache-disabled: true
 
       - name: Verify JaCoCo Test Report
         run: |
-          ls -l /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/
-          test -f /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
+          ls -l ./app-repo/server/build/reports/jacoco/test/
+          test -f ./app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
 
       - name: Upload JaCoCo Report as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-test-report
-          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml
+          path: ./app-repo/server/build/reports/jacoco/test/jacocoTestReport.xml
 
