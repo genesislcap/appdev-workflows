@@ -8,10 +8,6 @@ inputs:
     required: false
     default: 'true'
     description: Set to true to run on all instances, false to run on the first instance only
-  fail_if_instance_not_running:
-    required: false
-    default: 'true'
-    description: Set to true to fail if the instance is not running, meaning the command won't be executed
   environment:
     required: true
   aws-access-key-id:
@@ -37,7 +33,6 @@ runs:
         RUN_ON_ALL: ${{ inputs.run_on_all }}
         ENVIRONMENT_TAG: ${{ inputs.environment }}
         COMMAND: ${{ inputs.command }}
-        FAIL_IF_NOT_RUNNING: ${{ inputs.fail_if_instance_not_running }}
       run: |
         # Step 1: Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
@@ -48,11 +43,7 @@ runs:
         # Check if instances were found
         if [ -z "$INSTANCE_IDS" ]; then
             echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
-            if [[ "$FAIL_IF_NOT_RUNNING" == "false" ]]; then
-              exit 0
-            else
-              exit 1
-            fi
+            exit 1
         fi
 
         # If RUN_ON_ALL is false, only use the first instance
