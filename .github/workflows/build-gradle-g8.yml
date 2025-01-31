@@ -195,7 +195,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: "${{ inputs.working-directory }}/test-results"
+          path: |
+            "${{ inputs.working-directory }}/test-results"
+            "${{ inputs.working-directory }}/server/*/build/reports/jacoco"
+            "${{ inputs.working-directory }}/server/*/build/reports/tests/test"
+
         if: always()
         
       - name: Docker Build Image
