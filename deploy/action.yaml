@@ -29,7 +29,7 @@ runs:
     - uses: actions/checkout@v4
 
     - name: Stop Genesis
-      uses: genesislcap/appdev-workflows/ssm-command@develop
+      uses: genesislcap/appdev-workflows/ssm-command@ferreirar/docker-tag
       with:
         command: "cd /data/docker-compose && docker compose down || exit 0"
         environment: ${{ inputs.environment }}
@@ -37,6 +37,29 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - name: Start Instance if not running
+      shell: bash
+      run: |
+        INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=stopped" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+        if [ -z "$INSTANCE_IDS" ]; then
+          echo "✅ No instance at stopped status"
+        fi
+        
+        for INSTANCE_ID in $INSTANCE_IDS; do
+          STATUS=$(aws ec2 start-instances --instance-ids $INSTANCE_ID --output text)
+
+          echo "Instance $INSTANCE_ID: $STATUS"
+
+          if [ "$STATUS" != "Success" ]; then
+              echo "❌ Failed to start instance $INSTANCE_ID, aborting"
+              exit 1
+          fi
+        done
 
     - name: Sync config files
       uses: genesislcap/appdev-workflows/sync-files@develop
