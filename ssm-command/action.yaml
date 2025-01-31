@@ -6,7 +6,12 @@ inputs:
     required: true
   run_on_all:
     required: false
-    defualt: true
+    default: 'true'
+    description: Set to true to run on all instances, false to run on the first instance only
+  fail_if_instance_not_running:
+    required: false
+    default: 'true'
+    description: Set to true to fail if the instance is not running, meaning the command won't be executed
   environment:
     required: true
   aws-access-key-id:
@@ -28,12 +33,12 @@ runs:
 
     - name: Set the version
       shell: bash
+      env:
+        RUN_ON_ALL: ${{ inputs.run_on_all }}
+        ENVIRONMENT_TAG: ${{ inputs.environment }}
+        COMMAND: ${{ inputs.command }}
+        FAIL_IF_NOT_RUNNING: ${{ inputs.fail_if_instance_not_running }}
       run: |
-        # Variables
-        RUN_ON_ALL="${{ inputs.run_on_all }}"  # Set to true to run on all instances, false to run on the first instance only
-        ENVIRONMENT_TAG="${{ inputs.environment }}"
-        COMMAND="${{ inputs.command }}"
-
         # Step 1: Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
@@ -43,11 +48,15 @@ runs:
         # Check if instances were found
         if [ -z "$INSTANCE_IDS" ]; then
             echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
-            exit 1
+            if [[ "$FAIL_IF_NOT_RUNNING" == "false" ]]; then
+              exit 0
+            else
+              exit 1
+            fi
         fi
 
         # If RUN_ON_ALL is false, only use the first instance
-        if [ "$RUN_ON_ALL" = false ]; then
+        if [[ "$RUN_ON_ALL" == "false" ]]; then
             INSTANCE_IDS=$(echo $INSTANCE_IDS | awk '{print $1}')
             echo "RUN_ON_ALL is false. Targeting only the first instance: $INSTANCE_IDS"
         else

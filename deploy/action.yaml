@@ -33,6 +33,7 @@ runs:
       with:
         command: "cd /data/docker-compose && docker compose down || exit 0"
         environment: ${{ inputs.environment }}
+        fail_if_instance_not_running: false
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
