@@ -123,5 +123,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-html-report
-          path: ${{ inputs.server-path }}/pbi-code-coverage/build/reports/jacoco/testCodeCoverageReport/html/
-          retention-days: 5
+          path: ${{ inputs.server-path }}/build/reports/jacoco/test/html/
+          retention-days: 2
