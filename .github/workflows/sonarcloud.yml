@@ -120,8 +120,8 @@ jobs:
           cache-disabled: true
 
       - name: Upload JaCoCo Report to GitHub Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: jacoco-report
-          path: ${{ inputs.server-path }}/build/reports/jacoco/test/html
+          name: jacoco-html-report
+          path: ${{ inputs.server-path }}/pbi-code-coverage/build/reports/jacoco/testCodeCoverageReport/html/
           retention-days: 5
