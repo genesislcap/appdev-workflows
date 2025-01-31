@@ -123,5 +123,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-html-report
+          path: ${{ inputs.server-path }}/build/reports/jacoco/testCodeCoverageReport/html/
+          retention-days: 2
+
+      - name: Upload JaCoCo Report to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-html-report
           path: ${{ inputs.server-path }}/build/reports/jacoco/test/html/
           retention-days: 2
