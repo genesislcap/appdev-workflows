@@ -118,3 +118,10 @@ jobs:
           arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
+
+      - name: Upload JaCoCo Report to GitHub Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: jacoco-report
+          path: ${{ inputs.server-path }}/build/reports/jacoco/test/html
+          retention-days: 5
