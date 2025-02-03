@@ -1,0 +1,27 @@
+name: Reads .env files
+description: Reads a .env file by adding its context into the action environment variables
+
+inputs:
+  config-path:
+    required: true
+    description: The folder location where the build.env is located
+
+runs:
+  using: "composite"
+  steps:
+    - name: Reads .env from config
+      shell: bash
+      env: 
+        ENV_FILE_PATH: ${{ inputs.config-path }}/build.env
+      run: |
+          if [ -f "$ENV_FILE_PATH" ]; then
+            while IFS='=' read -r key value; do
+              if [[ -n "$key" && "$key" != \#* ]]; then
+                echo "$key"="$value" >> $GITHUB_ENV
+              fi
+            done < "$ENV_FILE_PATH"
+
+            echo "✅ Environment variables loaded successfully."
+          else
+            echo "⚠️ No .env file found at $ENV_FILE_PATH"
+          fi
