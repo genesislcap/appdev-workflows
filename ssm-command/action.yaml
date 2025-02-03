@@ -6,7 +6,8 @@ inputs:
     required: true
   run_on_all:
     required: false
-    defualt: true
+    default: 'true'
+    description: Set to true to run on all instances, false to run on the first instance only
   environment:
     required: true
   aws-access-key-id:
@@ -28,12 +29,11 @@ runs:
 
     - name: Set the version
       shell: bash
+      env:
+        RUN_ON_ALL: ${{ inputs.run_on_all }}
+        ENVIRONMENT_TAG: ${{ inputs.environment }}
+        COMMAND: ${{ inputs.command }}
       run: |
-        # Variables
-        RUN_ON_ALL="${{ inputs.run_on_all }}"  # Set to true to run on all instances, false to run on the first instance only
-        ENVIRONMENT_TAG="${{ inputs.environment }}"
-        COMMAND="${{ inputs.command }}"
-
         # Step 1: Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
@@ -47,7 +47,7 @@ runs:
         fi
 
         # If RUN_ON_ALL is false, only use the first instance
-        if [ "$RUN_ON_ALL" = false ]; then
+        if [[ "$RUN_ON_ALL" == "false" ]]; then
             INSTANCE_IDS=$(echo $INSTANCE_IDS | awk '{print $1}')
             echo "RUN_ON_ALL is false. Targeting only the first instance: $INSTANCE_IDS"
         else

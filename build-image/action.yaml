@@ -19,6 +19,8 @@ inputs:
     required: true
   jfrog-password:
     required: true
+  app-name:
+    required: true
 
 runs:
   using: "composite"
@@ -52,15 +54,29 @@ runs:
       run: |
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/build.gradle.kts
 
+    - name: Find product name
+      id: find-app-build-type
+      shell: bash
+      run: |
+        # sensible to customization
+        project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
+        
+        echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
+      working-directory: ${{ inputs.working-directory }}/server/
+
     - name: Build Image
       uses: gradle/actions/setup-gradle@v3
       with:
-          arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }} -PdockerUrl=${{ inputs.ecr-registry }}
+          arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
           build-root-directory: ${{ inputs.working-directory }}/server/
           cache-disabled: true
-
-    - name: Push Image
-      uses: gradle/actions/setup-gradle@v3
-      with:
-          arguments: pushImage --no-configuration-cache -PdockerUrl=${{ inputs.ecr-registry }}
-          build-root-directory: ${{ inputs.working-directory }}/server/
+    
+    - name: Push Image using bash
+      shell: bash
+      env:
+        ECR_REGISTRY: ${{ inputs.ecr-registry }}
+        IMAGE_VERSION: ${{ inputs.version }}
+        APP_NAME: ${{ inputs.app-name }}
+      run: |
+          docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+          docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}

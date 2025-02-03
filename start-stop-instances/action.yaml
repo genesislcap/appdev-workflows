@@ -60,7 +60,7 @@ runs:
         fi
 
         # Step 3: Wait for the instances to reach the desired state
-        TIMEOUT=60  # Timeout in seconds
+        TIMEOUT=120  # Timeout in seconds
         END_TIME=$(( $(date +%s) + $TIMEOUT ))
 
         while :; do
@@ -90,7 +90,7 @@ runs:
             fi
 
             echo "Waiting for instances to reach the desired state..."
-            sleep 5
+            sleep 30
 
         done
 

@@ -55,6 +55,7 @@ runs:
       shell: bash
       run: |
         aws s3 sync ./${{ inputs.local-path }} s3://${{ steps.find-bucket.outputs.bucket-name }} --delete --exact-timestamps
+        sleep 5
 
     - uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
