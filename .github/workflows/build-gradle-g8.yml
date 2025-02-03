@@ -67,6 +67,10 @@ on:
         type: string
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
+      config-path:
+        type: string
+        description: Environment file used to set the action context before building the artifacts, useful when the same project is built for different profiles/customers
+        required: false
 
 
     secrets:
@@ -171,7 +175,13 @@ jobs:
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
           echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-      - name: Server Build
+      - name: Read .env file for build
+        if: ${{ inputs.config-path }}
+        uses: genesislcap/appdev-workflows/read-dot-env@ferreirar/build-using-dot-env
+        with:
+          config-path: ${{ inputs.config-path }}
+
+      - name: Build
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build --no-build-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}

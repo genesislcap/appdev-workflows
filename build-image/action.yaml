@@ -21,6 +21,8 @@ inputs:
     required: true
   app-name:
     required: true
+  config-path:
+    required: false
 
 runs:
   using: "composite"
@@ -63,6 +65,12 @@ runs:
         
         echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
       working-directory: ${{ inputs.working-directory }}/server/
+
+    - name: Read .env file for build
+      if: ${{ inputs.config-path }}
+      uses: genesislcap/appdev-workflows/read-dot-env@ferreirar/build-using-dot-env
+      with:
+        config-path: ${{ inputs.config-path }}
 
     - name: Build Image
       uses: gradle/actions/setup-gradle@v3
