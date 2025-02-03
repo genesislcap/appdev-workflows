@@ -105,6 +105,8 @@ on:
         required: false
       GHA_TOKEN:
         required: true
+      JENKINSGENESIS_SONAR:
+        required: false
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
