@@ -84,10 +84,7 @@ on:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
-
-concurrency:
-  group: ${{ github.repository_id }}-${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+        
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -204,7 +201,7 @@ jobs:
             "${{ inputs.working-directory }}/server/*/build/reports/tests/test"
 
         if: always()
-
+        
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2

@@ -91,10 +91,6 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: false
 
-concurrency:
-  group: ${{ github.repository_id }}-${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
