@@ -68,7 +68,7 @@ runs:
 
     - name: Read .env file for build
       if: ${{ inputs.config-path }}
-      uses: genesislcap/appdev-workflows/read-dot-env@ferreirar/build-using-dot-env
+      uses: genesislcap/appdev-workflows/read-dot-env@develop
       with:
         config-path: ${{ inputs.config-path }}
 
