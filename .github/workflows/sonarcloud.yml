@@ -140,5 +140,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-html-report
-          path: ${{ inputs.server-path }}/fical-app\build\reports\jacoco\test\jacocoTestReport.xml
+          path: ${{ inputs.server-path }}/fical-app/build/reports/jacoco/test/jacocoTestReport.xml
           retention-days: 2
