@@ -28,7 +28,10 @@ on:
         type: string
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
-
+      report_path:
+        type: string
+        description: report path
+        required: false
 
     secrets:
       GPR_READ_TOKEN:
@@ -130,5 +133,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-html-report
-          path: ${{ inputs.server-path }}/build/reports/jacoco/test/html/
+          path: ${{ inputs.report_path }}/
+          retention-days: 2
+
+      - name: Upload JaCoCo Report to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-html-report
+          path: ${{ inputs.server-path }}/fical-app\build\reports\jacoco\test\jacocoTestReport.xml
           retention-days: 2
