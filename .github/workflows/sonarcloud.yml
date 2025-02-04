@@ -139,6 +139,6 @@ jobs:
       - name: Upload JaCoCo Report to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-html-report
+          name: jacoco-xml-report-
           path: ${{ inputs.server-path }}/fical-app/build/reports/jacoco/test/jacocoTestReport.xml
           retention-days: 2
