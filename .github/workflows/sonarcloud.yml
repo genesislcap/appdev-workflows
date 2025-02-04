@@ -133,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-html-report
-          path: ${{ inputs.report_path }}/
+          path: ${{ inputs.server-path }}/${{ inputs.report_path }}
           retention-days: 2
 
       - name: Upload JaCoCo Report to GitHub Artifacts
