@@ -1,7 +1,29 @@
-name: SonarCloud
+name: Sonar Update
+
 on:
   workflow_call:
     inputs:
+      hostname:
+        required: false
+        type: string
+      package_version:
+        required: false
+        type: string
+      genesis_user:
+        required: false
+        type: string
+      appuser:
+        required: false
+        type: string
+
+      # testautomation_build:
+      #   required: false
+      #   default: false
+      #   type: boolean
+      # startserverdatetime:
+      #   required: false
+      #   type: string
+
       branch:
         required: false
         type: string
@@ -29,8 +51,19 @@ on:
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
 
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
 
     secrets:
+      JENKINS_SECURITYTOKEN:
+        required: true
+      JENKINS_TOKEN:
+        required: false
+
       GPR_READ_TOKEN:
         required: true
       GRADLE_PROPERTIES:
@@ -43,18 +76,142 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
-env:
-  NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+      GHA_TOKEN:
+        required: false
 
-# A workflow run is called from the devops appdev-workflow repos
 jobs:
   build:
+    name: Sonar Update Process
     runs-on: [ appdev-selfhosted-al2023 ]
+    environment: master
+
+    env:
+      SSM_PARAM_NAME: githubrunner-cddev-policy
+      REGION: eu-west-2
+
     steps:
-      - uses: actions/checkout@v3
+
+
+      - name: Install AWS CLI and jq
+        run: |
+          sudo dnf update -y
+          sudo dnf install -y awscli jq
+
+      - name: Fetch and Assume AWS Role
+        id: set-creds
+        run: |
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
+          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
+          echo "AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
+
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
+
+      - name: Checkout app repository
+        uses: actions/checkout@v3
         with:
-          fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+          repository: ${{ inputs.testautorepo }}
+          ref: ${{ inputs.testautobranch }}
+          token: ${{ secrets.GHA_TOKEN }}
+          path: app-repo
+          fetch-depth: 0
+
+      - name:   folder location
+        run: |
+
+          pwd
+          cd app-repo
+          pwd
+          ls -l
+
+
+
+      - name: Print Input Values
+        run: |
+          echo "hostname: ${{ inputs.hostname }}"
+          echo "genesis_user: ${{ inputs.genesis_user }}"
+
+      - name: Trigger Jenkins Job
+        run: |
+          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
+            --data-urlencode "host_name=${{ inputs.hostname }}" \
+            --data-urlencode "appuser=${{ inputs.appuser }}"
+
+      - name: Poll Jenkins for Job Status
+        run: |
+          JOB_STATUS=""
+          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/sonar-update/lastBuild/api/json"
+
+          while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
+            RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
+            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+            echo "Current status: $JOB_STATUS"
+
+            if [ "$JOB_STATUS" == "SUCCESS" ]; then
+              echo "Jenkins job completed successfully."
+              exit 0
+            elif [ "$JOB_STATUS" == "FAILURE" ]; then
+              echo "Jenkins job failed."
+              exit 1
+            elif [ "$JOB_STATUS" == "ABORTED" ]; then
+              echo "Jenkins job was aborted."
+              exit 2
+            elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
+              echo "Job is still running..."
+              sleep 10
+            fi
+          done
+
+      - name: Download and Extract JaCoCo CLI
+        run: |
+          mkdir -p jacoco
+          wget -O jacoco/jacoco.zip https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.12/jacoco-0.8.12.zip
+          unzip jacoco/jacoco.zip -d jacoco
+
+      - name: Download Application Package from JFrog
+        run: |
+          mkdir -p ${{ inputs.appuser }}
+          cd ${{ inputs.appuser }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
+          tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
+
+      - name: Download JaCoCo exec file from S3
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile default
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile default
+          aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
+          aws configure set region $REGION --profile default
+          aws s3 cp s3://genesis-cddev/qa-automation/jacoco/${{ inputs.appuser }}/jacoco.exec ./jacoco.exec
+
+
+
+      - name: Generate JaCoCo ReportsS
+        run: |
+          pwd
+          cd ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
+          java -jar ../../../jacoco/lib/jacococli.jar report ../../../jacoco.exec \
+              --classfiles ./ \
+              --html ${{ inputs.appuser }}.html \
+              --xml jacocoTestReport.xml
+
+      - name: Move jacocoTestReport.xml to app-repo folder
+        run: |
+          mkdir -p app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
+          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
+          ls -l
+          pwd
+
+
+      - name: Upload JaCoCo Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.appuser }}-jacoco-report
+          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -79,7 +236,7 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: "./app-repo"
         shell: bash
         run: |
           mkdir -p ~/.gradle/
@@ -110,11 +267,22 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
-      - name: Server Build
+      - name: Sonar Test
         uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
-          build-root-directory: ./${{ inputs.server-path }}
+          build-root-directory: ./app-repo/${{ inputs.server-path }}
           cache-disabled: true
+
+      - name: Verify JaCoCo Test Report
+        run: |
+          ls -l ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
+          test -f ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/jacocoTestReport.xml && echo "JaCoCo Report Found" || echo "JaCoCo Report Missing"
+
+      - name: Upload JaCoCo Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-test-report
+          path: ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/jacocoTestReport.xml

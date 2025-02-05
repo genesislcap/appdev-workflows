@@ -4,7 +4,7 @@ name: Run Maven test suite
 on:
   workflow_call:
     inputs:
-      
+
       profile:
         required: false
         type: string
@@ -26,11 +26,11 @@ on:
       browser:
         required: false
         type: string
-        default: chrome-headless      
+        default: chrome-headless
       branch:
         required: false
         type: string
-      
+
       testautomation_build:
         required: false
         default: false
@@ -40,7 +40,7 @@ on:
         type: string
       testautobranch:
         required: false
-        type: string      
+        type: string
       defaultEnv:
         required: false
         type: string
@@ -72,12 +72,12 @@ on:
         required: true
       genesisArtifactoryPassword:
         required: true
-      
-env:  
+
+env:
   GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
- 
+
 
 jobs:
   build-Tests:
@@ -85,17 +85,17 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
-    - name: Checkout code      
+    - name: Checkout code
       if: ${{ !inputs.testautomation_build }}
       uses: actions/checkout@v3
       with:
         fetch-depth: '0'
-        ref: ${{ inputs.branch }}     
+        ref: ${{ inputs.branch }}
 
     - uses: actions/checkout@v3
       if: inputs.testautomation_build
       with:
-        repository: ${{ inputs.testautorepo }}        
+        repository: ${{ inputs.testautorepo }}
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
         token: ${{ env.GHA_TOKEN }}
@@ -114,16 +114,16 @@ jobs:
         if [ -n "${{ inputs.defaultHost }}" ]; then
           sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.defaultHost }}|' config.properties
           sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
-          
+
         fi
-          
+
     - name: Print config.properties
       if: inputs.defaultEnv
       working-directory: "${{ inputs.test-root-path }}"
       run: |
         echo "Contents of config.properties after modification:"
         cat config.properties
-    
+
     - name: Set tamdefaultEnv value in config.properties
       if: inputs.tamdefaultEnv
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
@@ -131,8 +131,8 @@ jobs:
         if [ -n "${{ inputs.tamdefaultEnv }}" ]; then
           sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
         fi
-          
-          
+
+
     - name: Print config.properties
       if: inputs.tamdefaultEnv
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
@@ -149,14 +149,20 @@ jobs:
     - name: Make gradlew executable
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
-    
+
 
     - name: Run tests
       uses: gradle/gradle-build-action@v2
       with:
-        arguments: build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true --console=plain --info
+        arguments: >
+          build
+          -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }}
+          -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }}
+          -PuseDevRepo=true
+          -PdefaultHost=${{ inputs.defaultHost }}
+          -PbaseURI=${{ inputs.defaultHost }}gwf
         build-root-directory: "${{ inputs.test-root-path }}"
-    
+
     - name: Install git
       if: always()
       shell: bash
