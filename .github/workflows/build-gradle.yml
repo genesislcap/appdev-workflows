@@ -234,6 +234,7 @@ jobs:
           arguments: >
             test jacocoTestReport sonarqube --no-configuration-cache
             -Dsonar.token=${{env.SONAR_TOKEN}}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
       - name: Copy Test Reports
