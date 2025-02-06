@@ -107,10 +107,10 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
           echo "AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-          ref: ${{ inputs.branch }}
+      # - uses: actions/checkout@v4
+      #   with:
+      #     fetch-depth: '0'
+      #     ref: ${{ inputs.branch }}
 
       - name: Checkout app repository
         uses: actions/checkout@v4
