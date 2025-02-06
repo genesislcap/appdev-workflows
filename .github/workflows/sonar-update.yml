@@ -177,7 +177,7 @@ jobs:
         run: |
           mkdir -p ${{ inputs.appuser }}
           cd ${{ inputs.appuser }}
-          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.appuser }}/server/${{ inputs.package_version }}
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{ secrets.JFROG_PASSWORD }}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.package_version }}
           tar xf genesis_*.tar.gz && rm genesis_*.tar.gz
 
       - name: Download JaCoCo exec file from S3
