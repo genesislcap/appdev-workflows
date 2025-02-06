@@ -54,8 +54,7 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - uses: actions/checkout@v3
-        if: inputs.testautomation_build
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.testautorepo }}
           fetch-depth: '0'
