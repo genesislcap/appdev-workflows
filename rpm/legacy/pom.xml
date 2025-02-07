@@ -19,6 +19,10 @@
                 <version>2.2.0</version>
                 <inherited>false</inherited>
                 <configuration>
+                    <defineStatements>
+                        <defineStatement>_source_payload w0.gzdio</defineStatement>
+                        <defineStatement>_binary_payload w0.gzdio</defineStatement>
+                    </defineStatements>
                     <name>genesis-PRODUCT</name>
                     <license>(c) genesis.global</license>
                     <needarch>x86_64</needarch>
