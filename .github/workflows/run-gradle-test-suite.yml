@@ -113,7 +113,7 @@ jobs:
       run: |
         if [ -n "${{ inputs.defaultHost }}" ]; then
           sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.defaultHost }}|' config.properties
-          sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
+          # sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
 
         fi
 
