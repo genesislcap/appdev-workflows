@@ -35,6 +35,7 @@ jobs:
             echo "EXISTS=true" >> $GITHUB_ENV
           else
             echo "EXISTS=false" >> $GITHUB_ENV
+            echo "⚠️ Branch already exists and it won't be created."
           fi
 
       - name: Create release branch if not exists
