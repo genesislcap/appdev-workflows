@@ -1,0 +1,25 @@
+name: Relase (TAG) version
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      
+      - name: Release
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          npm ci
+          npm run release

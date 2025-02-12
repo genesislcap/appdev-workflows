@@ -1,0 +1,45 @@
+name: Create Maintenance Branch
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: The tag to base the release branch on (must be in semver format, e.g., 10.0.1)
+        required: true
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Extract major and minor version
+        id: extract-version
+        env:
+            TAG: ${{ github.event.inputs.tag }}
+        run: |
+          VERSION_PREFIX=$(echo "$TAG" | awk -F. '{print $1"."$2".x"}')
+          echo "VERSION_PREFIX=$VERSION_PREFIX" >> $GITHUB_ENV
+          echo "Branch name will be release-$VERSION_PREFIX"
+
+      - name: Check if branch exists
+        id: check-branch
+        run: |
+          if git ls-remote --heads origin | grep -i "release-${VERSION_PREFIX}"; then
+            echo "Branch release-${VERSION_PREFIX} already exists."
+            echo "EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "EXISTS=false" >> $GITHUB_ENV
+            echo "⚠️ Branch already exists and it won't be created."
+          fi
+
+      - name: Create release branch if not exists
+        if: env.EXISTS == 'false'
+        run: |
+          git checkout -b release-${VERSION_PREFIX}
+          git push origin release-${VERSION_PREFIX}
