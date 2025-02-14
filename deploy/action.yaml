@@ -67,7 +67,7 @@ runs:
           GENESIS_VERSION=${{ inputs.version }}
           APP_NAME=${{ inputs.app_name }}
           AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
-          docker compose run --rm -e GENESIS_DB_INSTALL=true genesis_app
+          docker compose run --rm -e GENESIS_DB_UPGRADE=true genesis_app
         run_on_all: false
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
