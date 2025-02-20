@@ -90,7 +90,7 @@ runs:
           docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
 
     - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Dockerfile
-          path: ./server/*/build/docker/Dockerfile
+      uses: actions/upload-artifact@v4
+      with:
+        name: Dockerfile
+        path: ./server/*/build/docker/Dockerfile
