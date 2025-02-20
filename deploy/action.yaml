@@ -84,7 +84,16 @@ runs:
           GENESIS_VERSION=${{ inputs.version }}
           APP_NAME=${{ inputs.app_name }}
           AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
-          docker compose up -d
+          docker compose up -d 
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+    
+    - name: Prune Docker
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: docker system prune -af
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
