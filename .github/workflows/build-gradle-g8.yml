@@ -335,6 +335,33 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
+      - name: Run Tests and Generate Coverage
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
+        run: npm run test:coverage
+        if: always()
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info"
+
+      - name: SonarCloud Scan for Web
+        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          projectBaseDir: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
+          args: >
+            -Dsonar.projectKey=genesislcap_${{ inputs.product_name }}
+            -Dsonar.organization=genesislcap
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts
+            -Dsonar.tests=tests
+            -Dsonar.test.inclusions=**/*.test.ts,**/*.spec.ts
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
