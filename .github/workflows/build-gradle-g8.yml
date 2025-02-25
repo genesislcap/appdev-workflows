@@ -104,7 +104,7 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: false
       GHA_TOKEN:
-        required: true
+        required: false
       JENKINSGENESIS_SONAR:
         required: true
 
@@ -358,10 +358,10 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.sources=src
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts
-            -Dsonar.tests=tests
+            -Dsonar.tests=src
             -Dsonar.test.inclusions=**/*.test.ts,**/*.spec.ts
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
+            -Dsonar.typescript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
