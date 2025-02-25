@@ -124,14 +124,6 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      # - uses: actions/checkout@v3
-      #   if: inputs.testautomation_build
-      #   with:
-      #     repository: ${{ inputs.testautorepo }}
-      #     fetch-depth: '0'
-      #     ref: ${{ inputs.testautobranch }}
-      #     token: ${{ env.GHA_TOKEN }}
-
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -151,16 +143,6 @@ jobs:
           npm config list
         env:
           NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-
-
-      # - name: Checkout main repository
-      #   if: inputs.testautomation_build
-      #   uses: actions/checkout@v3
-      #   with:
-      #     repository: genesislcap/platform-qa-automation
-      #     ref: ${{ github.ref }}
-      #     token: ${{ secrets.GHA_TOKEN }}
-      #     path: main-repo
 
       - name: testautomation_build steps
         if: inputs.testautomation_build
@@ -223,100 +205,6 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
 
-       # Step to extract FOUNDATION_VERSION from additional_file
-      # - name: Read FOUNDATION_VERSION from additional file
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}"
-      #   id: extract_version
-      #   shell: bash
-      #   run: |
-      #     if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-      #       # Extract FOUNDATION_VERSION from the additional file
-      #       if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-      #         FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-      #         echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-      #         echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-      #       else
-      #         echo "FOUNDATION_VERSION not found in additional file"
-      #         exit 1
-      #       fi
-      #     fi
-
-      # - name: Check for package-lock.json and remove if exists
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      #   run: |
-      #     if [ -f package-lock.json ]; then
-      #       echo "Removing existing package-lock.json..."
-      #       rm package-lock.json
-      #     else
-      #       echo "No package-lock.json found."
-      #     fi
-
-      # - name: Update @genesislcap dependencies
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      #   run: |
-      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-      #     # Update @genesislcap dependencies across all objects in the package.json
-      #     jq --arg version "$NEW_VERSION" '
-      #       walk(
-      #         if type == "object" then
-      #           with_entries(
-      #             if (.key | startswith("@genesislcap")) then .value = $version else . end
-      #           )
-      #         else . end
-      #       )
-      #     ' package.json > package.json.tmp
-
-      #     # Move tmp file to overwrite the original package.json
-      #     mv package.json.tmp package.json
-      #     # Print the final updated package.json
-      #     echo "Final updated package.json:"
-      #     cat package.json
-
-      # - name: Update @genesislcap versions in package.json
-
-      #   shell: bash
-      #   working-directory: "./"
-      #   run: |
-      #     # Define variables
-
-      #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
-
-      #     # Read and update dependencies from version.properties
-      #     while IFS= read -r line; do
-      #       # Skip empty lines or comments
-      #       [[ -z "$line" || "$line" =~ ^# ]] && continue
-
-      #       # Process JSON-like entries
-      #       if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-      #         key="${BASH_REMATCH[1]}"
-      #         value="${BASH_REMATCH[2]}"
-      #       else
-      #         # Process key=value pairs
-      #         key=$(echo "$line" | cut -d'=' -f1 | xargs)
-      #         value=$(echo "$line" | cut -d'=' -f2 | xargs)
-      #       fi
-
-      #       # Update the package.json file
-      #       jq --arg dep "$key" --arg version "$value" '
-      #         walk(
-      #           if type == "object" and has($dep) then
-      #             .[$dep] = $version
-      #           else
-      #             .
-      #           end
-      #         )
-      #       ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-      #     done < "$INPUT_FILE"
-
-      #     # Print the updated package.json
-      #     echo "Updated package.json:"
-      #     cat "$PACKAGE_JSON"
-
-
-
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
@@ -347,7 +235,7 @@ jobs:
           path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info"
 
       - name: SonarCloud Scan for Web
-        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        uses: SonarSource/sonarcloud-github-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
@@ -361,7 +249,6 @@ jobs:
             -Dsonar.tests=src
             -Dsonar.test.inclusions=**/*.test.ts,**/*.spec.ts
             -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
-            -Dsonar.typescript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
