@@ -34,7 +34,7 @@ runs:
         ENVIRONMENT_TAG: ${{ inputs.environment }}
         COMMAND: ${{ inputs.command }}
       run: |
-        # Step 1: Get instance IDs with the specified Environment tag
+        # Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
@@ -54,11 +54,13 @@ runs:
             echo "Found instances: $INSTANCE_IDS"
         fi
 
-        # Step 2: Send the command via SSM
+        EXPORTS=$(env | awk -F= '{print "export " $1 "=\"" $2 "\""}' | tr '\n' ';')
+
+        # Send the command via SSM
         COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=instanceIds,Values=$(echo $INSTANCE_IDS | tr ' ' ',')" \
-            --parameters "commands=[$COMMAND]" \
+            --parameters "commands=[\"$COMMAND\"]" \
             --comment "Running custom command on instances with Environment tag value '$ENVIRONMENT_TAG'" \
             --query "Command.CommandId" \
             --output text)
@@ -70,7 +72,7 @@ runs:
 
         echo "Command sent. Command ID: $COMMAND_ID"
 
-        # Step 3: Wait for the command to complete and check status
+        # Wait for the command to complete and check status
         echo "Waiting for command to complete..."
 
         # Poll command status
@@ -89,7 +91,7 @@ runs:
             fi
         done
 
-        # Step 4: Check the final status of each instance
+        # Check the final status of each instance
         FAILED=0
         echo "Final statuses for instances:"
         for INSTANCE_ID in $INSTANCE_IDS; do
@@ -103,6 +105,14 @@ runs:
 
             if [ "$STATUS" != "Success" ]; then
                 FAILED=1
+                echo "Fetching error output for instance $INSTANCE_ID..."
+                ERROR_OUTPUT=$(aws ssm get-command-invocation \
+                    --command-id "$COMMAND_ID" \
+                    --instance-id "$INSTANCE_ID" \
+                    --query "StandardErrorContent" \
+                    --output text)
+                echo "Error output for instance $INSTANCE_ID:"
+                echo "$ERROR_OUTPUT"
             fi
         done
 
