@@ -258,9 +258,9 @@ jobs:
               -Dsonar.host.url=https://sonarcloud.io
               -Dsonar.sources=server/src,client/src
               -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts
-              -Dsonar.tests=server/src,client/src
+              -Dsonar.tests=server,client/src
               -Dsonar.test.inclusions=**/*.test.ts,**/*.spec.ts
-              -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+              -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/pbi-code-coverage/reports/jacoco/test/jacocoTestReport.xml
               -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
 
       - name: Copy Test Reports
