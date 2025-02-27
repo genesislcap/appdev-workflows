@@ -245,6 +245,7 @@ jobs:
         with:
           name: ${{ inputs.product_name }}-web-coverage-report
           path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info"
+        if: always()
 
       - name: SonarCloud Scan (Combined)
         uses: SonarSource/sonarcloud-github-action@v4
@@ -262,6 +263,7 @@ jobs:
               -Dsonar.test.inclusions=**/*.test.ts,**/*.spec.ts
               -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/pbi-code-coverage/reports/jacoco/test/jacocoTestReport.xml
               -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
+        if: always()
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
