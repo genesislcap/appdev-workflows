@@ -238,7 +238,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-coverage-report
-          path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage-html
+          path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage-html"
 
       - name: web - Upload Coverage Report
         uses: actions/upload-artifact@v4
