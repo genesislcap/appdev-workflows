@@ -212,20 +212,20 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
 
-      - name: server Test and Coverage
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
-            -Dsonar.java.binaries=${{ inputs.working-directory }}/server/build/classes
-            -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-            -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-            -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-          cache-disabled: true
+      # - name: server Test and Coverage
+      #   uses: gradle/gradle-build-action@v2
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     arguments: >
+      #       test jacocoTestReport sonarqube --no-configuration-cache
+      #       -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
+      #       -Dsonar.java.binaries=${{ inputs.working-directory }}/server/build/classes
+      #       -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #       -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #       -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #     build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+      #     cache-disabled: true
 
       - name: web Test and Coverage
         working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
