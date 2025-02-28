@@ -252,6 +252,9 @@ jobs:
               -Dsonar.host.url=https://sonarcloud.io
               -Dsonar.sources=server,client/src
               -Dsonar.tests=server,client/src
+              -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+              -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+              -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
               -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/pbi-code-coverage/reports/jacoco/test/jacocoTestReport.xml
               -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
         if: always()
