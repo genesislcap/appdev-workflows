@@ -219,11 +219,11 @@ jobs:
         with:
           arguments: >
             test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
+            -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
             -Dsonar.java.binaries=${{ inputs.working-directory }}/server/build/classes
-            -Dsonar.exclusions=**/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-            -Dsonar.test.exclusions=**/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-
+            -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+            -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+            -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
