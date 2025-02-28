@@ -221,6 +221,9 @@ jobs:
             test jacocoTestReport sonarqube --no-configuration-cache
             -Dsonar.token=${{ env.SONAR_TOKEN }}
             -Dsonar.java.binaries=${{ inputs.working-directory }}/server/build/classes
+            -Dsonar.exclusions=**/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+            -Dsonar.test.exclusions=**/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
@@ -229,17 +232,6 @@ jobs:
         run: npm run test:coverage
         if: always()
 
-      # - name: Install lcov and Convert lcov.info to HTML
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      #   run: |
-      #     sudo apt-get install lcov -y
-      #     genhtml -o coverage-html coverage/lcov.info
-
-      # - name: web-Upload HTML Coverage Report to GitHub Artifacts
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: web-coverage-report
-      #     path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage-html"
 
       - name: web - Upload Coverage Report
         uses: actions/upload-artifact@v4
