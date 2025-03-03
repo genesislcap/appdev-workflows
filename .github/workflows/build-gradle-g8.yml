@@ -241,7 +241,7 @@ jobs:
         if: always()
 
       - name: SonarCloud Scan (Combined)
-        uses: SonarSource/sonarcloud-github-action@v4
+        uses: SonarSource/sonarcloud-github-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
