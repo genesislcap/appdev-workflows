@@ -250,7 +250,6 @@ jobs:
               -Dsonar.projectKey=genesislcap_${{ inputs.product_name }}
               -Dsonar.organization=genesislcap
               -Dsonar.host.url=https://sonarcloud.io
-              -Dsonar.sources=server,client/src
               -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
               -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
               -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
