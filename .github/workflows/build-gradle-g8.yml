@@ -192,6 +192,14 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
 
+      - name: Upload npm error log if build fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-error-log
+          path: /home/ec2-user/.npm/_logs/
+
+
       - name: Upload Test Reports
         uses: actions/upload-artifact@v4
         with:
