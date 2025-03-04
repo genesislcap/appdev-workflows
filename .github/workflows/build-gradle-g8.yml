@@ -213,9 +213,6 @@ jobs:
         working-directory: ${{ inputs.web-path }}
         run: npm run test:coverage
 
-      # - name: Run Backend Tests and Generate Coverage
-      #   run: ./gradlew :server:test jacocoTestReport --no-build-cache --stacktrace
-
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         env:
@@ -231,12 +228,12 @@ jobs:
       #   run: |
       #     ./gradlew sonar
 
-      - name: Server Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build  --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
-          build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: true
+      # - name: Server Build
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: build  --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
+      #     build-root-directory: "${{ inputs.working-directory }}"
+      #     cache-disabled: true
 
       # - name: server Test and Coverage
       #   uses: gradle/gradle-build-action@v2
