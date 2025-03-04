@@ -229,9 +229,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         run: |
-          ./gradlew sonar \
-          -Dsonar.javascript.lcov.reportPaths="${{ inputs.web-path }}/coverage/lcov.info" \
-          -Dsonar.coverage.jacoco.xmlReportPaths="server/build/reports/jacoco/test/jacocoTestReport.xml"
+          ./gradlew sonar
 
       - name: Server Build
         uses: gradle/gradle-build-action@v2
