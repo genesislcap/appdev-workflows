@@ -225,11 +225,11 @@ jobs:
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
 
-      - name: Upload Coverage Reports to SonarCloud
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        run: |
-          ./gradlew sonar
+      # - name: Upload Coverage Reports to SonarCloud
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   run: |
+      #     ./gradlew sonar
 
       - name: Server Build
         uses: gradle/gradle-build-action@v2
