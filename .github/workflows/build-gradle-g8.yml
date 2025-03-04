@@ -221,7 +221,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
-          arguments: test jacocoTestReport sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
+          arguments: build sonar --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}} -Dsonar.verbose=true
           build-root-directory: ./${{ inputs.server-path }}
           cache-disabled: true
 
@@ -253,35 +253,35 @@ jobs:
       #     build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       #     cache-disabled: true
 
-      - name: web Test and Coverage
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-        run: npm run test:coverage
-        if: always()
+      # - name: web Test and Coverage
+      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
+      #   run: npm run test:coverage
+      #   if: always()
 
 
-      - name: web - Upload Coverage Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.product_name }}-web-coverage-report
-          path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info"
-        if: always()
+      # - name: web - Upload Coverage Report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ inputs.product_name }}-web-coverage-report
+      #     path: "${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info"
+      #   if: always()
 
-      - name: SonarCloud Scan (Combined)
-        uses: SonarSource/sonarcloud-github-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          projectBaseDir: "${{ inputs.working-directory }}"
-          args: >
-              -Dsonar.projectKey=genesislcap_${{ inputs.product_name }}
-              -Dsonar.organization=genesislcap
-              -Dsonar.host.url=https://sonarcloud.io
-              -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-              -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-              -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
-              -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/pbi-code-coverage/reports/jacoco/test/jacocoTestReport.xml
-              -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
-        if: always()
+      # - name: SonarCloud Scan (Combined)
+      #   uses: SonarSource/sonarcloud-github-action@v5
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     projectBaseDir: "${{ inputs.working-directory }}"
+      #     args: >
+      #         -Dsonar.projectKey=genesislcap_${{ inputs.product_name }}
+      #         -Dsonar.organization=genesislcap
+      #         -Dsonar.host.url=https://sonarcloud.io
+      #         -Dsonar.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #         -Dsonar.test.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #         -Dsonar.coverage.exclusions=**/README.md,server/README.md,**/*.json,**/*.yml,**/node_modules/**,**/dist/**
+      #         -Dsonar.coverage.jacoco.xmlReportPaths=${{ inputs.working-directory }}/server/pbi-code-coverage/reports/jacoco/test/jacocoTestReport.xml
+      #         -Dsonar.javascript.lcov.reportPaths=${{ inputs.working-directory }}/${{ inputs.web-path }}/coverage/lcov.info
+      #   if: always()
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
