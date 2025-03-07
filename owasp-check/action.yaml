@@ -1,0 +1,43 @@
+name: Build Genesis Docker Image
+description: Builds a Genesis Docker image
+
+inputs:
+  working-directory:
+    required: false
+    default: "."
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: 'adopt'
+
+    - name: Copy Dependencies
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        arguments: copyDependencies --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
+        build-root-directory: ${{ inputs.working-directory }}/server/
+        cache-disabled: true
+
+    - name: Depcheck
+      uses: dependency-check/Dependency-Check_Action@main
+      id: Depcheck
+      with:
+        project: 'test'
+        path: '${{ inputs.working-directory }}/server/build/dependencies'
+        format: 'HTML'
+        args: >
+          --failOnCVSS 9
+
+    - name: Upload Test results
+      uses: actions/upload-artifact@master
+      with:
+        name: Depcheck report
+        path: ${{github.workspace}}/reports
