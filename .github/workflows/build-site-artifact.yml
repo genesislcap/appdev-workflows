@@ -65,7 +65,12 @@ jobs:
         run: |
              sudo yum install zip
              cd $(pwd)/${{ inputs.source_location }}
-             zip -r $(pwd)/${{ inputs.artifact_name }}.zip ./*
+             # Create site-specific directory
+             mkdir -p site-specific
+
+              # Move all files & directories into site-specific
+             mv * site-specific/
+             zip -r $(pwd)/${{ inputs.artifact_name }}.zip site-specific/*
              echo $(pwd)
              ls -a
              echo "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.product_name }}/site/${{ inputs.client }}/${{ inputs.artifact_name }}.zip"
