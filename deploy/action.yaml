@@ -4,14 +4,25 @@ description: Deploys a specific version of Genesis to a server
 inputs:
   version:
     required: true
+    description: The image version to deploy
   environment:
     required: true
+    description: The environment tag used to identify the servers to deploy to
   config-path:
     required: true
+    description: The path of the Docker Compose file and supporting configs
   migrate_db:
+    description: Whether to run remap or not
     required: false
-    type: boolean
-    default: true
+    default: "true"
+  initial_deploy:
+    description: Whether to initiate the DB and set all hooks be ignored and set to completed
+    required: false
+    default: "false"
+  backup_db:
+    description: Use Genesis DumpIt and copy to S3 (Should not be used in Prod)
+    required: false
+    default: "false"
   app_name:
     required: true
   ecr_registry:
@@ -46,6 +57,18 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - name: Backup DB
+      if: inputs.backup_db == 'true'
+      uses: genesislcap/appdev-workflows/backup-db@docker-pipeline-improvements
+      with:
+        version: ${{ inputs.version }}
+        ecr_registry: ${{ inputs.ecr_registry }}
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
     - name: Sync config files
       uses: genesislcap/appdev-workflows/sync-files@develop
       with:
@@ -56,14 +79,41 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Run DB Migration
-      if: ${{ inputs.migrate_db }}
+    - name: Populate secrets
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc && populate_secrets
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Initiate the DB
+      if: inputs.initial_deploy == 'true'
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command:
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          populate_secrets &&
+          GENESIS_VERSION=${{ inputs.version }}
+          APP_NAME=${{ inputs.app_name }}
+          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
+          docker compose run --rm -e GENESIS_DB_INSTALL=true genesis_app
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Run DB Migration
+      if: inputs.migrate_db == 'true'
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
           GENESIS_VERSION=${{ inputs.version }}
           APP_NAME=${{ inputs.app_name }}
           AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
@@ -80,16 +130,15 @@ runs:
         command:
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          populate_secrets &&
           GENESIS_VERSION=${{ inputs.version }}
           APP_NAME=${{ inputs.app_name }}
           AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
-          docker compose up -d 
+          docker compose up -d
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
-    
+
     - name: Prune Docker
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
