@@ -84,7 +84,6 @@ runs:
       with:
         command:
           source /root/.bashrc && populate_secrets
-        run_on_all: false
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
