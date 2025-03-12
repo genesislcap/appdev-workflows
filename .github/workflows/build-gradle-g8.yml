@@ -75,6 +75,10 @@ on:
         type: string
         description: The suffix to be added to test reports uploaded artifact to be used in case of matrix builds to avoid clashes.
         required: false
+      update-jira:
+        type: boolean
+        required: false
+        default: false
 
 
     secrets:
@@ -92,7 +96,9 @@ on:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
-        
+      JIRA_TOKEN:
+        required: false
+
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -198,7 +204,7 @@ jobs:
           name: test-reports${{ inputs.test-reports-suffix }}
           path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
         if: always()
-        
+
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
@@ -250,6 +256,19 @@ jobs:
           arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
           build-root-directory: "${{ inputs.working-directory }}/server"
           cache-disabled: true
+
+      - name: Update Jira tickets with fix version
+        if: inputs.update-jira
+        uses: actions/checkout@v4
+        with:
+          repository: genesislcap/appdev-workflows
+          path: ./appdev-workflows
+
+      - name: Update Jira tickets with fix version
+        if: inputs.update-jira
+        run : |
+          python ./appdev-workflows/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u devops@genesis.global -v ${{ env.RELEASE_VERSION }} -k ${{ secrets.JIRA_TOKEN }}
+        shell: bash
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
