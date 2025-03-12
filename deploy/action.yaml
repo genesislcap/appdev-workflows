@@ -37,12 +37,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v4
-
     - name: Start instance if not running
       uses: genesislcap/appdev-workflows/start-stop-instances@develop
       with:
         command: "start"
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -52,6 +51,7 @@ runs:
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: "cd /data/docker-compose && docker compose down || exit 0"
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -59,10 +59,8 @@ runs:
 
     - name: Backup DB
       if: inputs.backup_db == 'true'
-      uses: genesislcap/appdev-workflows/backup-db@docker-pipeline-improvements
+      uses: genesislcap/appdev-workflows/backup-db@develop
       with:
-        version: ${{ inputs.version }}
-        ecr_registry: ${{ inputs.ecr_registry }}
         app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
@@ -74,16 +72,21 @@ runs:
       with:
         local-path: ${{ inputs.config-path }}
         remote-path: "/data/docker-compose"
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Populate secrets
+    - name: Populate secrets & Docker Compose env vars
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command:
-          source /root/.bashrc && populate_secrets
+          source /root/.bashrc && populate_secrets &&
+          grep -q '^export GENESIS_VERSION=' ~/.bashrc && sed -i 's/^export GENESIS_VERSION=.*/export GENESIS_VERSION=${{ inputs.version }}/' ~/.bashrc || echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc &&
+          grep -q '^export APP_NAME=' ~/.bashrc && sed -i 's/^export APP_NAME=.*/export APP_NAME=${{ inputs.app_name }}/' ~/.bashrc || echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc &&
+          grep -q '^export AWS_ECR_REGISTRY=' ~/.bashrc && sed -i 's/^export AWS_ECR_REGISTRY=.*/export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}/' ~/.bashrc || echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -96,10 +99,8 @@ runs:
         command:
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          GENESIS_VERSION=${{ inputs.version }}
-          APP_NAME=${{ inputs.app_name }}
-          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
           docker compose run --rm -e GENESIS_DB_INSTALL=true genesis_app
+        app_name: ${{ inputs.app_name }}
         run_on_all: false
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
@@ -113,10 +114,8 @@ runs:
         command:
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          GENESIS_VERSION=${{ inputs.version }}
-          APP_NAME=${{ inputs.app_name }}
-          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
           docker compose run --rm -e GENESIS_DB_UPGRADE=true genesis_app
+        app_name: ${{ inputs.app_name }}
         run_on_all: false
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
@@ -129,10 +128,8 @@ runs:
         command:
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          GENESIS_VERSION=${{ inputs.version }}
-          APP_NAME=${{ inputs.app_name }}
-          AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}
           docker compose up -d
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -142,6 +139,7 @@ runs:
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: docker system prune -af && docker volume prune -af
+        app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
