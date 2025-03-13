@@ -66,10 +66,10 @@ jobs:
     runs-on: appdev-selfhosted-al2023
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
@@ -113,7 +113,7 @@ jobs:
 
       - name: Cache Maven Dependencies
         id: cache-maven-dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.m2
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
