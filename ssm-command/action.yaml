@@ -10,6 +10,8 @@ inputs:
     description: Set to true to run on all instances, false to run on the first instance only
   environment:
     required: true
+  app_name:
+    required: true
   aws-access-key-id:
     required: true
   aws-secret-access-key:
@@ -27,22 +29,23 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Set the version
+    - name: Run SSM Command
       shell: bash
       env:
         RUN_ON_ALL: ${{ inputs.run_on_all }}
         ENVIRONMENT_TAG: ${{ inputs.environment }}
         COMMAND: ${{ inputs.command }}
+        APP_NAME: ${{ inputs.app_name }}
       run: |
         # Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
-            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=instance-state-name,Values=running" \
+            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=tag:AppName,Values=$APP_NAME" "Name=tag:ServerType,Values=Genesis" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
 
         # Check if instances were found
         if [ -z "$INSTANCE_IDS" ]; then
-            echo "No running instances found with the Environment tag value '$ENVIRONMENT_TAG'."
+            echo "No running instances Environment tag value '$ENVIRONMENT_TAG' and AppName tag value '$APP_NAME'."
             exit 1
         fi
 
