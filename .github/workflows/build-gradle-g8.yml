@@ -264,11 +264,28 @@ jobs:
           repository: genesislcap/appdev-workflows
           path: ./appdev-workflows
 
-      - name: Update Jira tickets with fix version
+      - name: Generate release notes
         if: inputs.update-jira
-        run : |
-          python ./appdev-workflows/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u devops@genesis.global -v ${{ env.RELEASE_VERSION }} -k ${{ secrets.JIRA_TOKEN }}
-        shell: bash
+        id: generate-release-notes
+        uses: ./tools/.github/actions/generate-release-notes
+        with:
+          repository: ${{ inputs.repository }}
+          release-version: ${{ env.RELEASE_VERSION }}
+          github-token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+
+      - name: Publish release notes
+        if: inputs.update-jira
+        uses: genesislcap/appdev-workflows/publish-release-notes@jira
+        with:
+          repository: ${{ inputs.repository }}
+          version: ${{ env.RELEASE_VERSION }}
+          release-notes-txt: ${{ steps.generate-release-notes.outputs.release-notes-txt }}
+          release-notes-md: ${{ steps.generate-release-notes.outputs.release-notes-md }}
+          publish-to-jfrog: ${{ inputs.jfrog-release }}
+          github-token: ${{ inputs.github-release && secrets.JENKINSGENESIS_TOKEN || '' }}
+          jira-token: ${{ inputs.jira-release && secrets.JIRA_TOKEN || '' }}
+          notion-token: ${{ inputs.notion-release && secrets.NOTION_TOKEN || '' }}
+          slack-web-hook: ${{ inputs.notify-slack && secrets.SLACK_WEBHOOK || '' }}
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
