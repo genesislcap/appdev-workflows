@@ -2,6 +2,9 @@ name: Relase (TAG) version
 
 on:
   workflow_call:
+    secrets:
+      JENKINSGENESIS_TOKEN:
+        required: true
 
 permissions:
   contents: write
