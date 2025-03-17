@@ -9,8 +9,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: release
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.JENKINSGENESIS_TOKEN }}
       
       - name: Configure Node
         uses: actions/setup-node@v4
@@ -19,7 +22,7 @@ jobs:
       
       - name: Release
         env:
-          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GH_TOKEN: ${{secrets.JENKINSGENESIS_TOKEN}}
         run: |
           npm ci
           npm run release
