@@ -58,7 +58,7 @@ runs:
           mkdir /data/sendit &&
           chmod 777 /data/sendit &&
           aws s3 sync s3://${{ steps.find-bucket.outputs.bucket-name }}/sendit /data/sendit --delete --exact-timestamps &&
-          docker compose run --rm -v /data/sendit:/sendit genesis_app bash -c 'source ~/.bashrc; export SCRIPT_MAX_HEAP=-Xmx8g; cd /sendit; /app/run/genesis/scripts/unix/python3/JvmRun global.genesis.environment.scripts.SendTable --all .' &&
+          docker compose run --rm -v /data/sendit:/sendit genesis_app bash -c 'source ~/.bashrc; export SCRIPT_MAX_HEAP=-Xmx8g; cd /sendit; echo y | /app/run/genesis/scripts/unix/python3/JvmRun global.genesis.environment.scripts.SendTable --all .' &&
           rm -rf /data/sendit
         run_on_all: false
         environment: ${{ inputs.environment }}
