@@ -27,14 +27,14 @@ jobs:
 
       - name: Extract release notes
         id: extract-release-notes
-        uses: ./tools/.github/actions/extract-release-notes
+        uses: ./tools/extract-release-notes
         with:
           repository: ${{ inputs.repository }}
           release-version: ${{ inputs.release-version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag Jiras
-        uses: ./tools/.github/actions/update-jira-tickets
+        uses: ./tools/update-jira-tickets
         with:
           repository: ${{ inputs.repository }}
           version: ${{ inputs.release-version }}
