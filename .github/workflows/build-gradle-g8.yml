@@ -264,29 +264,6 @@ jobs:
           repository: genesislcap/appdev-workflows
           path: ./appdev-workflows
 
-      - name: Generate release notes
-        if: inputs.update-jira
-        id: generate-release-notes
-        uses: ./tools/.github/actions/generate-release-notes
-        with:
-          repository: ${{ inputs.repository }}
-          release-version: ${{ env.RELEASE_VERSION }}
-          github-token: ${{ secrets.JENKINSGENESIS_TOKEN }}
-
-      - name: Publish release notes
-        if: inputs.update-jira
-        uses: genesislcap/appdev-workflows/publish-release-notes@jira
-        with:
-          repository: ${{ inputs.repository }}
-          version: ${{ env.RELEASE_VERSION }}
-          release-notes-txt: ${{ steps.generate-release-notes.outputs.release-notes-txt }}
-          release-notes-md: ${{ steps.generate-release-notes.outputs.release-notes-md }}
-          publish-to-jfrog: ${{ inputs.jfrog-release }}
-          github-token: ${{ inputs.github-release && secrets.JENKINSGENESIS_TOKEN || '' }}
-          jira-token: ${{ inputs.jira-release && secrets.JIRA_TOKEN || '' }}
-          notion-token: ${{ inputs.notion-release && secrets.NOTION_TOKEN || '' }}
-          slack-web-hook: ${{ inputs.notify-slack && secrets.SLACK_WEBHOOK || '' }}
-
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
         if: failure() && env.SLACK_INCOMING_WEBHOOK
@@ -304,3 +281,14 @@ jobs:
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+  tag-jiras:
+    needs: build-server
+    if: inputs.update-jira
+    uses: ./.github/workflows/tag-jiras.yml
+    with:
+      repository: ${{ inputs.repo-name }}
+      release-version: ${{ inputs.version }}
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}

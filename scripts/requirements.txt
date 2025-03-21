@@ -1,0 +1,8 @@
+urllib3
+GitPython
+jira
+pyopenssl
+pyasn1
+ndg-httpsclient
+idna
+certifi
