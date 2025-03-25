@@ -86,12 +86,14 @@ runs:
       id: extract_gradle_version
       shell: bash
       run: |
-        if grep -q "gradle_version" ${{ inputs.additional_file }}; then
-          GRADLE_VERSION=$(grep 'gradle_version' ${{ inputs.additional_file }} | cut -d'=' -f2)
+        GRADLE_PROPERTIES_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+
+        if grep -q "gradle_version" "$GRADLE_PROPERTIES_FILE"; then
+          GRADLE_VERSION=$(grep 'gradle_version' "$GRADLE_PROPERTIES_FILE" | cut -d'=' -f2)
           echo "GRADLE_VERSION=$GRADLE_VERSION" >> $GITHUB_ENV
         else
-          echo "gradle_version not found in additional file" >&2
-          exit 1
+          echo "gradle_version not found in additional file, skipping update."
+          echo "GRADLE_VERSION=" >> $GITHUB_ENV
         fi
 
     - name: Update gradle-wrapper.properties with new gradle_version
