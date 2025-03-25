@@ -137,6 +137,7 @@ jobs:
         uses: genesislcap/appdev-workflows/testautomation-action@Tqaautomation
         with:
           web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
@@ -415,6 +416,7 @@ jobs:
         uses: genesislcap/appdev-workflows/testautomation-action@Tqaautomation
         with:
           web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
           testautomation_build: ${{ inputs.testautomation_build }}
           testautorepo: ${{ inputs.testautorepo }}
           testautobranch: ${{ inputs.testautobranch }}
