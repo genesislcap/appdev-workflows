@@ -20,6 +20,10 @@ inputs:
     required: false
     type: string
     default: 'client/web'
+  server-path:
+    required: false
+    type: string
+    default: 'server'
   additional_file:
     required: false
     type: string
