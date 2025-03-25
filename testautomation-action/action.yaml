@@ -99,20 +99,18 @@ runs:
       shell: bash
       run: |
         GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
-        if [ -n "${{ env.GRADLE_VERSION }}" ]; then
-          NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
+        NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
 
-          if [ -f "$GRADLE_PROPERTIES_PATH" ]; then
-            sed -i "s|distributionUrl=.*|$NEW_DISTRIBUTION_URL|" "$GRADLE_PROPERTIES_PATH"
-            echo "Updated gradle-wrapper.properties:"
-            cat "$GRADLE_PROPERTIES_PATH"
-          else
-            echo "gradle-wrapper.properties not found!" >&2
-            exit 1
-          fi
+        if [ -f "$GRADLE_PROPERTIES_PATH" ]; then
+          sed -i "s|distributionUrl=.*|$NEW_DISTRIBUTION_URL|" "$GRADLE_PROPERTIES_PATH"
+          echo "Updated gradle-wrapper.properties:"
+          cat "$GRADLE_PROPERTIES_PATH"
         else
-          echo "No gradle_version provided, skipping gradle-wrapper.properties update."
+          echo "gradle-wrapper.properties not found!" >&2
+          exit 1
         fi
+
+
     # - name: Check file existence
     #   if: inputs.repo_type == 'web'
     #   id: web_exists
