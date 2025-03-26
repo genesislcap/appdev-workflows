@@ -33,7 +33,7 @@ on:
 jobs:
   build:
     name: Steps to refresh postgre db 
-    runs-on: appdev-small
+    runs-on: appdev-selfhosted-al2023
     environment: master
 
     steps:
