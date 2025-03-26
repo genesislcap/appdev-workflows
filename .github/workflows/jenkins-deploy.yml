@@ -79,7 +79,7 @@ on:
 jobs:
   build:
     name: Steps to Deploy package
-    runs-on: appdev-small
+    runs-on: appdev-selfhosted-al2023
     environment: master
 
     steps:
