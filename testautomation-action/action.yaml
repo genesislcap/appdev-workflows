@@ -101,9 +101,18 @@ runs:
       shell: bash
       run: |
         GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
+        DEFAULT_GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/gradle/wrapper/gradle-wrapper.properties"
         if [ -n "${{ env.GRADLE_VERSION }}" ]; then
           NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
 
+          if [ -f "$DEFAULT_GRADLE_PROPERTIES_PATH" ]; then
+            sed -i "s|distributionUrl=.*|$NEW_DISTRIBUTION_URL|" "$DEFAULT_GRADLE_PROPERTIES_PATH"
+            echo "Updated gradle-wrapper.properties:"
+            cat "$DEFAULT_GRADLE_PROPERTIES_PATH"
+          else
+            echo "gradle-wrapper.properties not found!" >&2
+            exit 1
+          fi
           if [ -f "$GRADLE_PROPERTIES_PATH" ]; then
             sed -i "s|distributionUrl=.*|$NEW_DISTRIBUTION_URL|" "$GRADLE_PROPERTIES_PATH"
             echo "Updated gradle-wrapper.properties:"
