@@ -59,6 +59,30 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+      REGISTRY_URL:
+        type: string
+        description: Only used by the older version of genesisframework
+        required: false
+      SCOPE:
+        type: string
+        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
+        required: false
+      config-path:
+        type: string
+        description: Environment file used to set the action context before building the artifacts, useful when the same project is built for different profiles/customers
+        required: false
+      test-reports-suffix:
+        type: string
+        description: The suffix to be added to test reports uploaded artifact to be used in case of matrix builds to avoid clashes.
+        required: false
+      update-jira:
+        type: boolean
+        required: false
+        default: false
+      sonar_enabled:
+        type: boolean
+        required: false
+        default: false
 
       testautomation_build:
         required: false
@@ -135,6 +159,16 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
+
+      - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
+        if: ${{ inputs.REGISTRY_URL }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ inputs.node_version }}
+          registry-url: ${{ inputs.REGISTRY_URL }}
+          scope: ${{ inputs.SCOPE }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
       - name: Setup npm registry for @genesislcap
         run: |
