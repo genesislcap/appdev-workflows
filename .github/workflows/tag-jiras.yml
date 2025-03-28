@@ -24,7 +24,7 @@ jobs:
         with:
           path: ./tools
           repository: genesislcap/appdev-workflows
-          ref: jira
+          ref: develop
 
       - name: Extract release notes
         id: extract-release-notes
