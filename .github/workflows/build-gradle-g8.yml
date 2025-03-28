@@ -308,5 +308,4 @@ jobs:
       repository: ${{ inputs.repo-name }}
       release-version: ${{ inputs.version }}
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
