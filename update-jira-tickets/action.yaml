@@ -1,0 +1,50 @@
+######################################################################################
+# This action updates jira tickets with the release version.
+######################################################################################
+
+name: 'Update Jira tickets with fix version'
+description: 'Update Jira tickets with the release version'
+inputs:
+  repository:
+    description: 'the repository to generate release versions'
+    required: true
+  version:
+    description: 'the version being released'
+    required: false
+  release-notes-txt:
+    description: 'the release notes text file'
+    required: true
+  jira-token:
+    description: 'token to access the jira api'
+    required: false
+  github-token:
+    description: 'token to access the github api'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    
+    - name: Install Python dependencies
+      uses: py-actions/py-dependency-install@v4
+      with:
+        path: "tools/scripts/requirements.txt"
+    
+    - name: Extract Jira tickets from changes
+      run : |
+        # the runner uses pipefail, so prevents grep to fail in case there are no tickets
+        { grep -oE '(\([A-Z]{2,5}-[0-9]+\)|\[[A-Z]{2,5}-[0-9]+\])' ./${{ inputs.release-notes-txt }} || test $? = 1; } | sed -E 's/^\(|\)$|^\[|\]$//g' | sort | uniq > jira_tickets.txt
+        
+        echo "Jira tickets:"
+        cat jira_tickets.txt
+
+      shell: bash
+    
+    - name: Update Jira tickets with fix version
+      run : |
+        python tools/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u devops@genesis.global -v ${{ inputs.version }} -k ${{ inputs.jira-token }}
+      shell: bash

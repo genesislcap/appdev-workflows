@@ -1,0 +1,46 @@
+######################################################################################
+# This action extracts release notes from a given repo.
+#
+######################################################################################
+
+name: 'Extract release notes'
+description: 'Extracts release notes from a given repo'
+inputs:
+  repository:
+    description: 'the repository to generate release versions'
+    required: true
+  release-version:
+    description: 'the version being released'
+    required: true
+  github-token:
+    description: 'token to access the github api'
+    required: true
+outputs:
+  release-notes-txt:
+    description: "the location of the TXT file containing the release notes"
+    value: release_notes.txt
+runs:
+  using: "composite"
+  steps:
+    - name: 'Setup jq'
+      uses: dcarbone/install-jq-action@v2.1.0
+
+    - name: Extract Changes from GitHub
+      run: |
+        echo "Fetching release information for $REPO version $RELEASE_VERSION"
+        mkdir -p .github/temp
+        
+        # Get the release information in JSON format
+        gh api repos/$REPO/releases/tags/$RELEASE_VERSION > .github/temp/release_info.json
+        
+        # Display the result for debugging
+        echo "Retrieved release information:"
+        cat .github/temp/release_info.json | jq .
+        
+        # Extract and format the release notes
+        cat .github/temp/release_info.json | jq -r .body > release_notes.txt
+      shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release-version }}
+        REPO: ${{ inputs.repository }}
+        GH_TOKEN: ${{ inputs.github-token }}

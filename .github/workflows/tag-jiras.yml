@@ -1,0 +1,44 @@
+name: Update Jira tickets
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        required: true
+        type: string
+        description: "Repository name"
+      release-version:
+        required: true
+        type: string
+        description: "Version to release"
+    secrets:
+      JIRA_TOKEN:
+        required: true
+
+jobs:
+  update-jira-tickets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: ./tools
+          repository: genesislcap/appdev-workflows
+          ref: develop
+
+      - name: Extract release notes
+        id: extract-release-notes
+        uses: ./tools/extract-release-notes
+        with:
+          repository: ${{ inputs.repository }}
+          release-version: ${{ inputs.release-version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag Jiras
+        uses: ./tools/update-jira-tickets
+        with:
+          repository: ${{ inputs.repository }}
+          version: ${{ inputs.release-version }}
+          release-notes-txt: ${{ steps.extract-release-notes.outputs.release-notes-txt }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          jira-token: ${{ secrets.JIRA_TOKEN }}

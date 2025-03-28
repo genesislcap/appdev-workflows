@@ -282,12 +282,6 @@ jobs:
           repository: genesislcap/appdev-workflows
           path: ./appdev-workflows
 
-      - name: Update Jira tickets with fix version
-        if: inputs.update-jira
-        run : |
-          python ./appdev-workflows/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u devops@genesis.global -v ${{ env.RELEASE_VERSION }} -k ${{ secrets.JIRA_TOKEN }}
-        shell: bash
-
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
         if: failure() && env.SLACK_INCOMING_WEBHOOK
@@ -305,3 +299,14 @@ jobs:
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+  tag-jiras:
+    needs: build-server
+    if: inputs.update-jira
+    uses: ./.github/workflows/tag-jiras.yml
+    with:
+      repository: ${{ inputs.repo-name }}
+      release-version: ${{ inputs.version }}
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
