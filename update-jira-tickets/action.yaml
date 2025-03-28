@@ -46,5 +46,5 @@ runs:
     
     - name: Update Jira tickets with fix version
       run : |
-        python tools/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u support@genesis.global -v ${{ inputs.version }} -k ${{ inputs.jira-token }}
+        python tools/scripts/update_jira_fix_version.py -f ./jira_tickets.txt -u devops@genesis.global -v ${{ inputs.version }} -k ${{ inputs.jira-token }}
       shell: bash
