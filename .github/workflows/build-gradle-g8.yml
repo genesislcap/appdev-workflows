@@ -409,11 +409,12 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}/server"
         run: |
-          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-install-gradle-arguments }}
+          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
           cd .genesis-home
           pwd
           ls -la
           tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+
 
       - name: Upload Server Package
         if: inputs.upload
