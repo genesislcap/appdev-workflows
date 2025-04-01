@@ -436,10 +436,19 @@ jobs:
         if: inputs.upload
         working-directory: ${{ inputs.working-directory }}
         run: |
-          if test -f client/build/distributions/web-distribution.zip; then
-            mv client/build/distributions/web-distribution.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+          if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
+            mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
             curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
           fi
+
+      # - name: Upload Web Package
+      #   if: inputs.upload
+      #   working-directory: ${{ inputs.working-directory }}
+      #   run: |
+      #     if test -f client/build/distributions/web-distribution.zip; then
+      #       mv client/build/distributions/web-distribution.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
+      #     fi
 
       - name: Artifactory Publish
         if: inputs.publish-to-artifactory
