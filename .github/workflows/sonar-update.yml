@@ -207,11 +207,11 @@ jobs:
           pwd
 
 
-      # - name: Upload JaCoCo Coverage Report
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ inputs.appuser }}-jacoco-report
-      #     path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
+      - name: Upload JaCoCo Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.appuser }}-jacoco-report-html
+          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
       - name: Set up JDK
         uses: actions/setup-java@v4
