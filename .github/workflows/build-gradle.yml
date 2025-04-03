@@ -575,6 +575,7 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/"
           cache-disabled: true
           gradle-home-cache-cleanup: 'true'
+          gradle-home-cache-includes: ''
 
       - name: Upload Client Package
         if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
