@@ -571,9 +571,10 @@ jobs:
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache --refresh-dependencies --debug -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache --debug -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
           build-root-directory: "${{ inputs.working-directory }}/"
           cache-disabled: true
+          gradle-home-cache-cleanup: 'true'
 
       - name: Upload Client Package
         if: inputs.upload &&  steps.web_exists.outputs.client_folder_exists == 'true'
