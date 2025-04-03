@@ -451,7 +451,7 @@ jobs:
 
           # # Print the gradle.properties file for verification
           # echo "Contents of gradle.properties after modification:"
-          # cat ~/.gradle/gradle.properties
+          cat ~/.gradle/gradle.properties
 
           cat ~/.gradle/gradle.properties >>  ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
