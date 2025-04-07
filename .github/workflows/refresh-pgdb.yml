@@ -75,7 +75,7 @@ jobs:
           JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/DB_Refresh_ExistingInstance/lastBuild/api/json"
 
           while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            RESPONSE=$(curl -s -u "jenkins:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
+            RESPONSE=$(curl -s -u "purna.sakhamuri:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
             JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
             echo "Current status: $JOB_STATUS"
 
