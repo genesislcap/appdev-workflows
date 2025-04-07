@@ -74,7 +74,7 @@ on:
         required: true
 
 env:
-  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+  # GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
 
@@ -100,7 +100,7 @@ jobs:
         repository: ${{ inputs.testautorepo }}
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
-        token: ${{ env.GHA_TOKEN }}
+        token: ${{ secrets.GHA_TOKEN }}
 
     - name: Set defaultEnv value in config.properties
       if: inputs.defaultEnv
