@@ -79,9 +79,11 @@ env:
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
 
 
+
 jobs:
   build-Tests:
     runs-on: [ appdev-selfhosted-al2023 ]
+    environment: master
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
     steps:
