@@ -50,6 +50,7 @@ jobs:
           echo "genesis_user: ${{ inputs.genesis_user }}"
           echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
           echo "app_user: ${{ inputs.app_user }}"
+          echo "token: ${{ secrets.JENKINS_TOKEN }}"
 
       - name: Trigger Jenkins Job
         run: |
