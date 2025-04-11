@@ -1,5 +1,5 @@
-name: Build Genesis Docker Image
-description: Builds a Genesis Docker image
+name: OWASP Dependency Checker
+description: Scans the projects JAVA dependencies for vulnerabilities
 
 inputs:
   working-directory:

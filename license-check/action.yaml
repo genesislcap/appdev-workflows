@@ -1,0 +1,19 @@
+name: License Checker
+description: Uses ORT to scan the project for the licenses of the dependencies
+
+inputs:
+  working-directory:
+    required: false
+    default: "."
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run ORT
+      shell: bash
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/project ort --input-dir /project analyze
