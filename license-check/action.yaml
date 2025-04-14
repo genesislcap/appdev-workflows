@@ -53,7 +53,7 @@ runs:
           -f StaticHtml
 
     - name: Upload ORT Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ort-report
         path: ort-output/report
