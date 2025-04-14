@@ -165,7 +165,7 @@ jobs:
           aws configure set region $REGION --profile default
 
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          ARCHS=("AMD" "ARM")
+          ARCHS=("ARM")
 
           for ARCH in "${ARCHS[@]}"; do
             OLD_FILE="${{ github.event.inputs.db_schema }}-$ARCH.tar"
