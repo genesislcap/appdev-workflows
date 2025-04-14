@@ -29,7 +29,7 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}:/project \
+          -v ${{ github.workspace }}/server:/project \
           -v ${{ github.workspace }}/ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           analyze \
