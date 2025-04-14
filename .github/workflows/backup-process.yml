@@ -128,12 +128,12 @@ jobs:
           ' > Dockerfile
 
 
-      - name: Build and Save AMD64 Image
-        run: |
-          docker buildx build --platform linux/amd64 -t pgdbimage . --load
-          TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
-          sudo docker save -o $TAR_FILE pgdbimage
-          sudo chmod +r $TAR_FILE
+      # - name: Build and Save AMD64 Image
+      #   run: |
+      #     docker buildx build --platform linux/amd64 -t pgdbimage . --load
+      #     TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
+      #     sudo docker save -o $TAR_FILE pgdbimage
+      #     sudo chmod +r $TAR_FILE
           # docker save -o pgdbimage-amd64.tar pgdbimage
 
       - name: Build and Save ARM64 Image
