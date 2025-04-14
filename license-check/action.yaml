@@ -37,7 +37,7 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g)
+          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/server:/project \
           -v ${{ github.workspace }}/ort-output:/output \
           -v ~/.gradle/gradle.properties:/home/gradle/.gradle/gradle.properties \
@@ -50,7 +50,7 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g)
+          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           evaluate-policy \
@@ -61,7 +61,7 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g)
+          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           report \
