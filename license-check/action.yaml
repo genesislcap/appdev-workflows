@@ -19,6 +19,12 @@ runs:
         distribution: 'temurin'
         java-version: '21'
 
+    - name: Create Gradle cache directory
+      shell: bash
+      run: |
+        mkdir -p ${{ github.workspace }}/.gradle
+        mkdir -p ${{ github.workspace }}/server/.gradle
+
     - name: Run ORT Analyzer
       shell: bash
       run: |
