@@ -28,8 +28,7 @@ runs:
           ghcr.io/oss-review-toolkit/ort-minimal \
           analyze \
           -i /project \
-          -o /output \
-          --allow-dynamic-versions
+          -o /output
 
     - name: Run ORT Evaluate Policy
       shell: bash
