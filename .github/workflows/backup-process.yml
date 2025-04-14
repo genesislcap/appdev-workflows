@@ -206,7 +206,7 @@ jobs:
           echo "Uploading to $S3_PATH"
 
           # Upload the AMD file to S3
-          aws s3 cp ${{ github.event.inputs.db_schema }}-AMD.tar "$S3_PATH/" --region $REGION
+          # aws s3 cp ${{ github.event.inputs.db_schema }}-AMD.tar "$S3_PATH/" --region $REGION
           # Upload the ARM file to S3
           aws s3 cp ${{ github.event.inputs.db_schema }}-ARM.tar "$S3_PATH/" --region $REGION
 
