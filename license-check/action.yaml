@@ -22,13 +22,15 @@ runs:
     - name: Copy Dependencies
       uses: gradle/actions/setup-gradle@v3
       with:
-        arguments: copyDependencies --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
+        arguments: --help
         build-root-directory: ${{ inputs.working-directory }}/server/
         cache-disabled: true
 
     - name: Set Perms
       shell: bash
       run: |
+        mkdir ${{ github.workspace }}/ort-output
+        chmod -R 777 ${{ github.workspace }}/ort-output
         chmod -R 777 ${{ inputs.working-directory }}/server/.gradle/
 
     - name: Run ORT Analyzer
