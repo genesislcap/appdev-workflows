@@ -19,11 +19,12 @@ runs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Create Gradle cache directory
-      shell: bash
-      run: |
-        mkdir -p ${{ github.workspace }}/.gradle
-        mkdir -p ${{ github.workspace }}/server/.gradle
+    - name: Copy Dependencies
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        arguments: copyDependencies --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
+        build-root-directory: ${{ inputs.working-directory }}/server/
+        cache-disabled: true
 
     - name: Run ORT Analyzer
       shell: bash
