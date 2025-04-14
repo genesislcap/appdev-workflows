@@ -13,7 +13,47 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Run ORT
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Run ORT Analyzer
       shell: bash
       run: |
-        docker run --rm -v ${{ github.workspace }}:/project ort --input-dir /project analyze
+        docker run --rm \
+          -v ${{ github.workspace }}:/project \
+          -v ${{ github.workspace }}/ort-output:/output \
+          ghcr.io/oss-review-toolkit/ort-minimal \
+          analyze \
+          -i /project \
+          -o /output \
+          --allow-dynamic-versions
+
+    - name: Run ORT Evaluate Policy
+      shell: bash
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}/ort-output:/output \
+          ghcr.io/oss-review-toolkit/ort-minimal \
+          evaluate-policy \
+          -i /output/analyzer-result.yml \
+          -o /output
+
+    - name: Generate ORT Report
+      shell: bash
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}/ort-output:/output \
+          ghcr.io/oss-review-toolkit/ort-minimal \
+          report \
+          -i /output/analyzer-result.yml \
+          -o /output/report \
+          -f StaticHtml
+
+    - name: Upload ORT Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: ort-report
+        path: ort-output/report
