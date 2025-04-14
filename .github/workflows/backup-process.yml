@@ -4,25 +4,20 @@ on:
   workflow_call:
     inputs:
       db_host:
-        description: 'Database Hostname where the source Schema is located'
-        required: true
-        default: ''
-      db_schema:
-        description: 'Source Schema name'
-        required: true
-        default: 'qa_btig_tam1'
-      db_user:
-        description: 'Source Database Username'
-        required: true
-        default: 'genesis'
-      db_name:
-        description: 'Source Database Name'
-        required: true
-        default: 'postgres'
-      client_name:
-        description: 'client  Name'
         required: false
-        default: ''
+        type: string
+      db_schema:
+        required: false
+        type: string
+      db_user:
+        required: false
+        type: string
+      db_name:
+        required: false
+        type: string
+      client_name:
+        required: false
+        type: string
 
     # secrets:
     #   GRADLE_PROPERTIES:
