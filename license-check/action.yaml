@@ -22,7 +22,7 @@ runs:
     - name: Copy Dependencies
       uses: gradle/actions/setup-gradle@v3
       with:
-        arguments: --help
+        arguments: -U
         build-root-directory: ${{ inputs.working-directory }}/server/
         cache-disabled: true
 
