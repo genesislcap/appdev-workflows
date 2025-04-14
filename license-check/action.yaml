@@ -33,11 +33,13 @@ runs:
         echo "genesisArtifactoryPassword=${{ inputs.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
         mkdir ${{ github.workspace }}/ort-output
 
+        chmod -R 777 ${{ github.workspace }}/ort-output
+        chmod -R 777 ${{ inputs.working-directory }}/server/.gradle/
+
     - name: Run ORT Analyzer
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/server:/project \
           -v ${{ github.workspace }}/ort-output:/output \
           -v ~/.gradle/gradle.properties:/home/gradle/.gradle/gradle.properties \
@@ -50,7 +52,6 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           evaluate-policy \
@@ -61,7 +62,6 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}/ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           report \
