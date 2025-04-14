@@ -42,7 +42,7 @@ runs:
         docker run --rm \
           -v ${{ github.workspace }}/server:/project \
           -v ${{ github.workspace }}/ort-output:/output \
-          -v ~/.gradle/gradle.properties:~/.gradle/gradle.properties \
+          -v ~/.gradle/gradle.properties:/root/.gradle/gradle.properties \
           ghcr.io/oss-review-toolkit/ort-minimal \
           analyze \
           -i /project \
