@@ -29,8 +29,8 @@ runs:
     - name: Set Perms
       shell: bash
       run: |
-        echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-        echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+        echo "genesisArtifactoryUser=${{ inputs.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+        echo "genesisArtifactoryPassword=${{ inputs.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
         mkdir ${{ github.workspace }}/ort-output
 
     - name: Run ORT Analyzer
