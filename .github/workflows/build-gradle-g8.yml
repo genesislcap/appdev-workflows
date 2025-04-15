@@ -104,6 +104,8 @@ on:
         required: false
       JENKINSGENESIS_SONAR:
         required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
 
 
 env:
@@ -203,6 +205,8 @@ jobs:
           arguments: build --no-build-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
