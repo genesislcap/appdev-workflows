@@ -74,7 +74,7 @@ on:
         required: true
 
 env:
-  GHA_TOKEN: ${{secrets.GHA_TOKEN}}
+  # GHA_TOKEN: ${{secrets.GHA_TOKEN}}
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
 
@@ -116,7 +116,7 @@ jobs:
         if [ -n "${{ inputs.defaultHost }}" ]; then
           sed -i 's|^defaultHost=.*|defaultHost=${{ inputs.defaultHost }}|' config.properties
           # sed -i 's|^baseURI=.*|baseURI=${{ inputs.defaultHost }}gwf|' config.properties
-
+          cat config.properties
         fi
 
     - name: Print config.properties
