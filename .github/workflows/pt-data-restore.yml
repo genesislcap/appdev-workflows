@@ -1,0 +1,107 @@
+name: PostgreSQL Schema Restore Using Docker
+
+on:
+
+
+  workflow_call:
+    inputs:
+      db_host:
+        description: 'Target Database Hostname'
+        required: true
+        default: ''
+        type: string
+      db_name:
+        description: 'Target Database Name'
+        required: true
+        default: 'genesis'
+        type: string
+      db_user:
+        description: 'Target Database Username'
+        required: true
+        default: 'genesis'
+        type: string
+      db_schema:
+        description: 'Schema Name to Restore'
+        required: true
+        default: ''
+        type: string
+      client_name:
+        description: 'Client Name'
+        required: true
+        default: 'genesis'
+        type: string
+      s3_bucket:
+        description: 'S3 Bucket Name'
+        required: true
+        default: 's3://genesis-dev-data-storage/qa-automation/prf-test/'
+        type: string
+
+    secrets:
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+
+
+jobs:
+  restore-db-schema:
+    runs-on: appdev-small
+    environment: master
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Retrieve Database Password from AWS Secrets Manager
+        run: |
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id pgdbpassword --query 'SecretString' --output text)
+          echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+
+      - name: Create Backup Directory
+        run: mkdir -p $PWD/backup
+
+      - name: Download Backup File from S3
+        run: |
+          BACKUP_FILE="${{ inputs.db_schema }}.sql"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/$BACKUP_FILE"
+
+
+          echo "Downloading backup from $S3_PATH..."
+          aws s3 cp "$S3_PATH" "$PWD/backup/$BACKUP_FILE"
+
+          ls -lh "$PWD/backup"
+
+      - name: Restore PostgreSQL Schema Using Docker
+        run: |
+          BACKUP_FILE="${{ inputs.db_schema }}.sql"
+
+          echo "Restoring schema ${{ inputs.db_schema }} in database ${{ inputs.db_name }} using Docker..."
+
+          sudo docker pull postgres:17
+
+          sudo docker run --rm \
+            -v $PWD/backup:/backup \
+            -e PGPASSWORD=${{ env.DB_PASSWORD }} \
+            postgres:17 \
+            psql \
+            -h ${{ inputs.db_host }} \
+            -U ${{ inputs.db_user }} \
+            -d ${{ inputs.db_name }} -c "DROP SCHEMA IF EXISTS ${{ inputs.db_schema }} CASCADE; CREATE SCHEMA ${{ inputs.db_schema }};"
+
+
+          sudo docker run --rm \
+            -v $PWD/backup:/backup \
+            -e PGPASSWORD=${{ env.DB_PASSWORD }} \
+            postgres:17 \
+            psql \
+            -h ${{ inputs.db_host }} \
+            -U ${{ inputs.db_user }} \
+            -d ${{ inputs.db_name }} -f "/backup/$BACKUP_FILE"
+
+          echo "Schema ${{ inputs.db_schema }} restored successfully!"
