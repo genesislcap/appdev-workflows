@@ -136,36 +136,36 @@ jobs:
           echo "hostname: ${{ inputs.hostname }}"
           echo "genesis_user: ${{ inputs.genesis_user }}"
 
-      - name: Trigger Jenkins Job
-        run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
-            --data-urlencode "host_name=${{ inputs.hostname }}" \
-            --data-urlencode "appuser=${{ inputs.appuser }}"
+      # - name: Trigger Jenkins Job
+      #   run: |
+      #     curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/sonar-update" \
+      #       --data-urlencode "host_name=${{ inputs.hostname }}" \
+      #       --data-urlencode "appuser=${{ inputs.appuser }}"
 
-      - name: Poll Jenkins for Job Status
-        run: |
-          JOB_STATUS=""
-          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/sonar-update/lastBuild/api/json"
+      # - name: Poll Jenkins for Job Status
+      #   run: |
+      #     JOB_STATUS=""
+      #     JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/sonar-update/lastBuild/api/json"
 
-          while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            RESPONSE=$(curl -s -u "jenkinsdeployuser:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
-            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
-            echo "Current status: $JOB_STATUS"
+      #     while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
+      #       RESPONSE=$(curl -s -u "jenkinsdeployuser:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
+      #       JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+      #       echo "Current status: $JOB_STATUS"
 
-            if [ "$JOB_STATUS" == "SUCCESS" ]; then
-              echo "Jenkins job completed successfully."
-              exit 0
-            elif [ "$JOB_STATUS" == "FAILURE" ]; then
-              echo "Jenkins job failed."
-              exit 1
-            elif [ "$JOB_STATUS" == "ABORTED" ]; then
-              echo "Jenkins job was aborted."
-              exit 2
-            elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
-              echo "Job is still running..."
-              sleep 10
-            fi
-          done
+      #       if [ "$JOB_STATUS" == "SUCCESS" ]; then
+      #         echo "Jenkins job completed successfully."
+      #         exit 0
+      #       elif [ "$JOB_STATUS" == "FAILURE" ]; then
+      #         echo "Jenkins job failed."
+      #         exit 1
+      #       elif [ "$JOB_STATUS" == "ABORTED" ]; then
+      #         echo "Jenkins job was aborted."
+      #         exit 2
+      #       elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
+      #         echo "Job is still running..."
+      #         sleep 10
+      #       fi
+      #     done
 
       - name: Download and Extract JaCoCo CLI
         run: |
@@ -201,13 +201,8 @@ jobs:
 
       - name: Move jacocoTestReport.xml to app-repo folder
         run: |
-          mkdir -p /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
-          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
-          # cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
-          # ls -l
-          cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
-          ls -l
-          ca ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
+          mkdir -p app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
+          mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
           ls -l
           pwd
 
@@ -216,7 +211,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.appuser }}-jacoco-report-html
-          path: /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
+          path: ./${{ inputs.appuser }}/${{ inputs.appuser }}/bin/${{ inputs.appuser }}.html
 
       # - name: Set up JDK
       #   uses: actions/setup-java@v4
