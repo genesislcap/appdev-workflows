@@ -1,4 +1,4 @@
-name: Sonar Update
+name: jacoco Update
 
 on:
   workflow_call:
@@ -81,7 +81,7 @@ on:
 
 jobs:
   build:
-    name: Sonar Update Process
+    name: Jacoco Update Process
     runs-on: [ appdev-selfhosted-al2023 ]
     environment: master
 
