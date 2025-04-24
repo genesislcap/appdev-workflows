@@ -203,8 +203,8 @@ jobs:
         run: |
           mkdir -p /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
           mv ${{ inputs.appuser }}/${{ inputs.appuser }}/bin/jacocoTestReport.xml /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
-          cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
-          ls -l
+          # cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/app-repo/${{ inputs.server-path }}/build/reports/jacoco/test
+          # ls -l
           cd /opt/actions-runner/_work/platform-qa-automation/platform-qa-automation/${{ inputs.appuser }}/${{ inputs.appuser }}/bin/
           ls -l
           ca ./app-repo/${{ inputs.server-path }}/build/reports/jacoco/test/
