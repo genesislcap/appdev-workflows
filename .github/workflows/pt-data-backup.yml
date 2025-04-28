@@ -7,26 +7,32 @@ on:
         description: 'Database Source Hostname'
         required: true
         default: ''
+        type: string
       db_name:
         description: 'Database Name'
         required: true
         default: 'postgres'
+        type: string
       db_user:
         description: 'Database Username'
         required: true
         default: 'postgres'
+        type: string
       db_schema:
         description: 'Schema Name'
         required: true
         default: ''
+        type: string
       client_name:
         description: 'Client Name'
         required: true
         default: 'genesis'
+        type: string
       s3_bucket:
         description: 'S3 Bucket Name'
         required: true
         default: 's3://genesis-dev-data-storage/qa-automation/prf-test/'
+        type: string
 
 jobs:
   backup-db:
