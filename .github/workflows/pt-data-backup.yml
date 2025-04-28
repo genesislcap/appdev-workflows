@@ -30,7 +30,7 @@ on:
         type: string
       s3_bucket:
         description: 'S3 Bucket Name'
-        required: true
+        required: false
         default: 's3://genesis-dev-data-storage/qa-automation/prf-test/'
         type: string
 
