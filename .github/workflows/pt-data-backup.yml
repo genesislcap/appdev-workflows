@@ -1,0 +1,103 @@
+name: PostgreSQL Backup Using Docker & Upload to S3
+
+on:
+  workflow_dispatch:
+    inputs:
+      db_host:
+        description: 'Database Source Hostname'
+        required: true
+        default: ''
+      db_name:
+        description: 'Database Name'
+        required: true
+        default: 'postgres'
+      db_user:
+        description: 'Database Username'
+        required: true
+        default: 'postgres'
+      db_schema:
+        description: 'Schema Name'
+        required: true
+        default: ''
+      client_name:
+        description: 'Client Name'
+        required: true
+        default: 'genesis'
+      s3_bucket:
+        description: 'S3 Bucket Name'
+        required: true
+        default: 's3://genesis-dev-data-storage/qa-automation/prf-test/'
+
+jobs:
+  backup-db:
+    runs-on: appdev-small
+    environment: master
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Retrieve Database Password from AWS Secrets Manager
+        run: |
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id pgdbpassword --query 'SecretString' --output text)
+          echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+
+      - name: Create PostgreSQL Database Dump Using Docker
+        run: |
+          sudo docker pull postgres:17
+          mkdir -p $PWD/backup
+
+          BACKUP_FILE="$PWD/backup/${{ inputs.db_schema }}.sql"
+
+          sudo docker run --rm \
+            -v $PWD/backup:/backup \
+            --env PGPASSWORD=${{ env.DB_PASSWORD }} \
+            postgres:17 \
+            pg_dump \
+            -h ${{ inputs.db_host }} \
+            -U ${{ inputs.db_user }} \
+            -d ${{ inputs.db_name }} \
+            -n ${{ inputs.db_schema }} \
+            -f /backup/${{ inputs.db_schema }}.sql
+
+          echo "Backup created: $BACKUP_FILE"
+          ls -lh $PWD/backup
+
+      - name: Check if Backup File Exists in S3
+        id: check_s3
+        run: |
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+          echo "Checking if file exists in S3: $S3_PATH"
+
+          if aws s3 ls "$S3_PATH" >/dev/null 2>&1; then
+            echo "File exists. Marking for rename."
+            echo "EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "File does not exist. Uploading new."
+            echo "EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Rename Existing S3 Backup (With Timestamp)
+        if: env.EXISTS == 'true'
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+          S3_BACKUP_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}_${TIMESTAMP}.sql"
+
+          echo "Renaming existing backup: $S3_PATH -> $S3_BACKUP_PATH"
+          aws s3 mv "$S3_PATH" "$S3_BACKUP_PATH"
+
+      - name: Upload New Backup to S3
+        run: |
+          BACKUP_FILE="$PWD/backup/${{ inputs.db_schema }}.sql"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+
+          echo "Uploading new backup: $BACKUP_FILE -> $S3_PATH"
+          aws s3 cp "$BACKUP_FILE" "$S3_PATH"
