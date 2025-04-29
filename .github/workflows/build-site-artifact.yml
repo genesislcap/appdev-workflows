@@ -68,8 +68,15 @@ jobs:
              # Create site-specific directory
              mkdir -p site-specific
 
-              # Move all files & directories into site-specific
-             mv * site-specific/
+             # Enable dotglob so hidden files are included in globbing
+              shopt -s dotglob nullglob
+
+              # Move everything except site-specific into it
+              for item in *; do
+                if [[ "$item" != "site-specific" ]]; then
+                  mv "$item" site-specific/
+                fi
+              done
              zip -r $(pwd)/${{ inputs.artifact_name }}.zip site-specific/*
              echo $(pwd)
              ls -a
