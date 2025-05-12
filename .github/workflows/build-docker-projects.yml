@@ -233,6 +233,55 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Restore gradle.properties and setup
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          echo "Listing all files in the working-directory:"
+          pwd
+          ls -la
+
+          mkdir -p ~/.gradle/
+          echo "COMPLETED0"
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "COMPLETED1"
+          # Write initial properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "COMPLETED2"
+
+          # Set file permissions
+          # sudo chmod +x ./gradlew
+          # sudo chmod +x ./${{ inputs.server-path }}/gradlew
+          # sudo chmod -R +rx ./${{ inputs.server-path }}/
+
+
+          # Append contents of additional file to gradle.properties based on condition
+          # if [ "${{ inputs.testautomation_build }}" == "true" ]; then
+            echo "Appending contents of additional file to gradle.properties"
+            if [ -f "${{ inputs.working-directory }}/${{ inputs.additional_file }}" ]; then
+              cat ${{ inputs.additional_file }} >> ~/.gradle/gradle.properties
+            else
+              echo "Additional file not found: ${{ inputs.additional_file }}" >&2
+            fi
+          # fi
+
+          # Print the gradle.properties file for verification
+          echo "Contents of gradle.properties after modification:"
+          cat ~/.gradle/gradle.properties
+
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+
+          # if [ -z "${{ inputs.repo-name }}" ]; then
+          #   echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          # else
+          #   echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          # fi
+
+          # RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          # echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          # sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+
       - name: Login to Genesis Container Registry
         uses: docker/login-action@v3
         with:
