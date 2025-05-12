@@ -310,6 +310,29 @@ jobs:
             echo "gradle_version not found in additional file, skipping update."
             echo "GRADLE_VERSION=" >> $GITHUB_ENV
           fi
+      - name: Update gradle-wrapper.properties with new gradle_version
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          pwd
+          ls -l
+          # GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
+          DEFAULT_GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/gradle/wrapper/gradle-wrapper.properties"
+          if [ -n "${{ env.GRADLE_VERSION }}" ]; then
+            NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
+
+            if [ -f "$DEFAULT_GRADLE_PROPERTIES_PATH" ]; then
+              sed -i "s|distributionUrl=.*|$NEW_DISTRIBUTION_URL|" "$DEFAULT_GRADLE_PROPERTIES_PATH"
+              echo "Updated gradle-wrapper.properties:"
+              cat "$DEFAULT_GRADLE_PROPERTIES_PATH"
+            else
+              echo "gradle-wrapper.properties not found!" >&2
+              exit 1
+            fi
+
+          else
+            echo "No gradle_version provided, skipping gradle-wrapper.properties update."
+          fi
 
       - name: Update gradle-wrapper.properties with new gradle_version
         working-directory: ${{ matrix.project }}
@@ -317,7 +340,7 @@ jobs:
         run: |
           pwd
           ls -l
-          GRADLE_PROPERTIES_PATH="${{ matrix.project }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
+          GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
           DEFAULT_GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/gradle/wrapper/gradle-wrapper.properties"
           if [ -n "${{ env.GRADLE_VERSION }}" ]; then
             NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
