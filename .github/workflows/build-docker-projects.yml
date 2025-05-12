@@ -315,7 +315,9 @@ jobs:
         working-directory: ${{ matrix.project }}
         shell: bash
         run: |
-          GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
+          pwd
+          ls -l
+          GRADLE_PROPERTIES_PATH="${{ matrix.project }}/${{ inputs.server-path }}/gradle/wrapper/gradle-wrapper.properties"
           DEFAULT_GRADLE_PROPERTIES_PATH="${{ inputs.working-directory }}/gradle/wrapper/gradle-wrapper.properties"
           if [ -n "${{ env.GRADLE_VERSION }}" ]; then
             NEW_DISTRIBUTION_URL="distributionUrl=https\://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip"
