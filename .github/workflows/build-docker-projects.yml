@@ -222,6 +222,16 @@ jobs:
           ref: consolidated-branch
           token: ${{ env.GHA_TOKEN }}
 
+      - name: Checkout main repository
+        # if: inputs.testautomation_build
+        uses: actions/checkout@v3
+        with:
+          repository: genesislcap/platform-qa-automation
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GHA_TOKEN }}
+          path: main-repo
+          fetch-depth: 0
+
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
