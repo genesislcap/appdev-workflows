@@ -25,3 +25,5 @@ runs:
           else
             echo "⚠️ No .env file found at $ENV_FILE_PATH"
           fi
+
+          echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
