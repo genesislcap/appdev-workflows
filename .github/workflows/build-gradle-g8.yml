@@ -261,7 +261,6 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
         run: |
           echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesisproduct*.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
       - name: Upload Web Package
