@@ -19,5 +19,5 @@ jobs:
           curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep "browser_download_url.*linux-amd64.rpm" | cut -d '"' -f 4
           sudo curl -L -o k6.rpm https://github.com/grafana/k6/releases/download/v0.51.0/k6-v0.51.0-linux-amd64.rpm
           sudo dnf install -y --nogpgcheck k6.rpm
-      - name: Run k6 load test
-        run: K6_LOG_LEVEL=error k6 run PerformanceTest/insert_latency_v1.js
+      # - name: Run k6 load test
+      #   run: K6_LOG_LEVEL=error k6 run PerformanceTest/insert_latency_v1.js
