@@ -53,7 +53,10 @@ on:
       config-path:
         required: false
         type: string
-
+      ptautomation_build:
+        required: false
+        default: false
+        type: boolean
 
     secrets:
       PAGES_TOKEN:
@@ -101,6 +104,13 @@ jobs:
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
         token: ${{ secrets.GHA_TOKEN }}
+
+    - name: Install k6
+      if: inputs.ptautomation_build
+      run: |
+        curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep "browser_download_url.*linux-amd64.rpm" | cut -d '"' -f 4
+        sudo curl -L -o k6.rpm https://github.com/grafana/k6/releases/download/v0.51.0/k6-v0.51.0-linux-amd64.rpm
+        sudo dnf install -y --nogpgcheck k6.rpm
 
     - name: Set defaultEnv value in config.properties
       if: inputs.defaultEnv
