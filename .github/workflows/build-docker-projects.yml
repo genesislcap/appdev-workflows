@@ -24,6 +24,10 @@ on:
         required: false
         type: string
         default: 'server'
+      web-path:
+        required: false
+        type: string
+        default: 'client'
       additional_file:
         required: false
         type: string
