@@ -57,6 +57,9 @@ on:
         required: false
         default: false
         type: boolean
+      appuser:
+        required: false
+        type: string
 
     secrets:
       PAGES_TOKEN:
@@ -205,7 +208,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: allure-report-${{ github.run_number }}
+        name: ${{ inputs.appuser }}-allure-report-${{ github.run_number }}
         path: allure-history
 
     - name: Deploy report to Github Pages
