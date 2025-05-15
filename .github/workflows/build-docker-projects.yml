@@ -373,6 +373,8 @@ jobs:
         run: |
           # if [ "${{ inputs.testautomation_build }}" == "true" ]; then
             # Extract FOUNDATION_VERSION from the additional file
+            pwd
+            ls -l
             if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
               FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
               echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
@@ -387,7 +389,10 @@ jobs:
         working-directory: "${{ matrix.project }}"
         shell: bash
         run: |
+          pwd
+          ls -l
           cd ${{ inputs.web-path }}
+          ls -l
           if [ -f package-lock.json ]; then
             echo "Removing existing package-lock.json..."
             rm package-lock.json
@@ -400,7 +405,10 @@ jobs:
         working-directory: "${{ matrix.project }}"
         shell: bash
         run: |
+          pwd
+          ls -l
           cd ${{ inputs.web-path }}
+          ls -l
           NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
           echo "${{ inputs.working-directory }}/${{ inputs.web-path }}"
           # Update @genesislcap dependencies across all objects in the package.json
