@@ -32,6 +32,9 @@ on:
         required: false
         type: string
         default: 'main-repo/.github/workflows/version.properties'
+      testautobranch:
+        required: false
+        type: string
 
     secrets:
       GRADLE_PROPERTIES:
@@ -80,7 +83,7 @@ jobs:
         with:
           repository: genesislcap/platform-howto
           fetch-depth: '0'
-          ref: consolidated-branch
+          ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
       # - name: Checkout main repository
@@ -227,7 +230,7 @@ jobs:
         with:
           repository: genesislcap/platform-howto
           fetch-depth: '0'
-          ref: consolidated-branch
+          ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
       - name: Checkout main repository
@@ -639,7 +642,7 @@ jobs:
         with:
           repository: genesislcap/platform-howto
           fetch-depth: '0'
-          ref: consolidated-branch
+          ref: ${{ inputs.testautobranch }}
           token: ${{ env.GHA_TOKEN }}
 
       - name: Download test results
