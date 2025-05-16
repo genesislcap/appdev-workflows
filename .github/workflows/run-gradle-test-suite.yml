@@ -62,6 +62,7 @@ on:
         type: string
       cucumberTags:
         required: false
+        default: novalue
         type: string
 
     secrets:
@@ -171,6 +172,20 @@ jobs:
 
 
     - name: Run tests
+      if: ${{ inputs.cucumberTags == 'novalue' }}
+      uses: gradle/gradle-build-action@v2
+      with:
+        arguments: >
+          build
+          -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }}
+          -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }}
+          -PuseDevRepo=true
+          --console=plain
+          --info
+        build-root-directory: "${{ inputs.test-root-path }}"
+
+    - name: Run tests
+      if: ${{ inputs.cucumberTags != 'novalue' }}
       uses: gradle/gradle-build-action@v2
       with:
         arguments: >
