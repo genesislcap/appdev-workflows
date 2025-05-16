@@ -53,6 +53,8 @@ on:
         required: false
       GHA_TOKEN:
         required: true
+      JENKINSGENESIS_SONAR:
+        required: false
 
   pull_request:
     branches:
@@ -532,6 +534,8 @@ jobs:
 
       - name: Run tests
         uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: ${{ env.PROJECT }}:build -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }} -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }} -PuseDevRepo=true ${{ env.GRADLE_PARAMS }}
 
