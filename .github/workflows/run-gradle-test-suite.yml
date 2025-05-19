@@ -188,8 +188,10 @@ jobs:
       if: ${{ inputs.cucumberTags != 'novalue' }}
       working-directory: "${{ inputs.test-root-path }}/src/test/java/support/runner/"
       run: |
-        sed -i 's|@IncludeTags(".*")|@IncludeTags("${{ inputs.cucumberTags }}")|' CucumberRunner.java
+        TAGS_ARRAY=$(echo '${{ inputs.cucumberTags }}' | sed 's/,/","/g')
+        sed -i "s|@IncludeTags(.*)|@IncludeTags({\"$TAGS_ARRAY\"})|" CucumberRunner.java
         cat CucumberRunner.java
+
 
     - name: Run tests
       if: ${{ inputs.cucumberTags != 'novalue' }}
