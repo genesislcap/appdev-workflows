@@ -184,6 +184,13 @@ jobs:
           --info
         build-root-directory: "${{ inputs.test-root-path }}"
 
+    - name: update CucumberRunner.java
+      if: ${{ inputs.cucumberTags != 'novalue' }}
+      working-directory: "${{ inputs.test-root-path }}/src/test/java/support/runner/"
+      run: |
+        sed -i 's|@IncludeTags(".*")|@IncludeTags("${{ inputs.cucumberTags }}")|' CucumberRunner.java
+        cat CucumberRunner.java
+
     - name: Run tests
       if: ${{ inputs.cucumberTags != 'novalue' }}
       uses: gradle/gradle-build-action@v2
