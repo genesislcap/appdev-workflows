@@ -457,6 +457,8 @@ jobs:
             exit 1
           fi
 
+          cat $INPUT_FILE
+
           # Read and update dependencies from version.properties
           while IFS= read -r line; do
             # Skip empty lines or comments
@@ -472,15 +474,29 @@ jobs:
               value=$(echo "$line" | cut -d'=' -f2 | xargs)
             fi
 
-            # Update the package.json file
+            echo "🔍 Looking for key: $key"
+
+            # Print current value if found in dependencies/devDependencies/peerDependencies
+            current=$(jq -r --arg dep "$key" '
+              if .dependencies[$dep] then
+                "dependencies: \(.dependencies[$dep])"
+              elif .devDependencies[$dep] then
+                "devDependencies: \(.devDependencies[$dep])"
+              elif .peerDependencies[$dep] then
+                "peerDependencies: \(.peerDependencies[$dep])"
+              else
+                "❌ Not found in package.json"
+              end
+            ' "$PACKAGE_JSON")
+
+            echo "   ➤ Current value: $current"
+            echo "   ➤ Updating to: $value"
+
+            # Apply the update
             jq --arg dep "$key" --arg version "$value" '
-              walk(
-                if type == "object" and has($dep) then
-                  .[$dep] = $version
-                else
-                  .
-                end
-              )
+              .dependencies[$dep] = $version |
+              .devDependencies[$dep] = $version |
+              .peerDependencies[$dep] = $version
             ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
           done < "$INPUT_FILE"
 
