@@ -80,7 +80,7 @@ jobs:
       PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         # if: inputs.testautomation_build
         with:
           repository: genesislcap/platform-howto
@@ -494,7 +494,7 @@ jobs:
         id: find-app-build-type
         run: |
           # sensible to customization
-          project_name=$(grep rootProject server/settings.gradle.kts | cut -d'=' -f2 | sed -n 's/.genesisproduct-\(.*\)"/\1/p' | tr -d ' ')
+          project_name=$(egrep "(rootProject|productName)" server/settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
 
           echo "APP_PROJECT=${project_name}-app" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
@@ -533,7 +533,7 @@ jobs:
 
       - name: Run healthcheck
         working-directory: docker
-        run: ./health-check.bash
+        run: ./health-check.bash ${{ env.PRODUCT_NAME }}
 
       - name: Run tests
         uses: gradle/gradle-build-action@v2
