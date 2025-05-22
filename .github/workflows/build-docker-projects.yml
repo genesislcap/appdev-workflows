@@ -444,6 +444,18 @@ jobs:
         run: |
           PACKAGE_JSON="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
           INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+          echo "Using package.json: $PACKAGE_JSON"
+          echo "Using input file: $INPUT_FILE"
+
+          if [[ ! -f "$PACKAGE_JSON" ]]; then
+            echo "❌ package.json not found at $PACKAGE_JSON"
+            exit 1
+          fi
+
+          if [[ ! -f "$INPUT_FILE" ]]; then
+            echo "❌ Input file not found at $INPUT_FILE"
+            exit 1
+          fi
 
           # Read and update dependencies from version.properties
           while IFS= read -r line; do
