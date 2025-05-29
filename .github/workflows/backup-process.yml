@@ -128,13 +128,13 @@ jobs:
           ' > Dockerfile
 
 
-      - name: Build and Save AMD64 Image
-        run: |
-          docker buildx build --platform linux/amd64 -t pgdbimage . --load
-          TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
-          sudo docker save -o $TAR_FILE pgdbimage
-          sudo chmod +r $TAR_FILE
-          # docker save -o pgdbimage-amd64.tar pgdbimage
+      # - name: Build and Save AMD64 Image
+      #   run: |
+      #     docker buildx build --platform linux/amd64 -t pgdbimage . --load
+      #     TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
+      #     sudo docker save -o $TAR_FILE pgdbimage
+      #     sudo chmod +r $TAR_FILE
+      #     # docker save -o pgdbimage-amd64.tar pgdbimage
 
       - name: Build and Save ARM64 Image
         run: |
@@ -165,7 +165,8 @@ jobs:
           aws configure set region $REGION --profile default
 
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          ARCHS=("AMD","ARM")
+          # ARCHS=("AMD","ARM")
+          ARCHS=("ARM")
 
           for ARCH in "${ARCHS[@]}"; do
             OLD_FILE="${{ github.event.inputs.db_schema }}-$ARCH.tar"
@@ -206,7 +207,7 @@ jobs:
           echo "Uploading to $S3_PATH"
 
           # Upload the AMD file to S3
-          aws s3 cp ${{ github.event.inputs.db_schema }}-AMD.tar "$S3_PATH/" --region $REGION
+          # aws s3 cp ${{ github.event.inputs.db_schema }}-AMD.tar "$S3_PATH/" --region $REGION
           # Upload the ARM file to S3
           aws s3 cp ${{ github.event.inputs.db_schema }}-ARM.tar "$S3_PATH/" --region $REGION
 
