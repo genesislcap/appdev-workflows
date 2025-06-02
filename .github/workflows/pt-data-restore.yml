@@ -35,6 +35,10 @@ on:
         required: true
         default: 's3://genesis-dev-data-storage/qa-automation/prf-test/'
         type: string
+      istam:
+        required: false
+        default: false
+        type: boolean
 
     secrets:
       AWS_SECRET_ACCESS_KEY:
@@ -78,6 +82,7 @@ jobs:
           ls -lh "$PWD/backup"
 
       - name: Restore PostgreSQL Schema Using Docker
+        if: ${{ inputs.istam }} == 'false'
         run: |
           BACKUP_FILE="${{ inputs.db_schema }}.sql"
 
@@ -105,3 +110,40 @@ jobs:
             -d ${{ inputs.db_name }} -f "/backup/$BACKUP_FILE"
 
           echo "Schema ${{ inputs.db_schema }} restored successfully!"
+
+      - name: Restore PostgreSQL Dump Using Docker (pg_restore)
+        if: ${{ inputs.istam }} == 'true'
+        run: |
+          BACKUP_FILE="${{ inputs.db_schema }}.dump"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/$BACKUP_FILE"
+
+          echo "Downloading .dump file from $S3_PATH..."
+          aws s3 cp "$S3_PATH" "$PWD/backup/$BACKUP_FILE"
+
+          echo "Dropping and recreating schema ${{ inputs.db_schema }}..."
+
+          sudo docker run --rm \
+            -e PGPASSWORD=${{ env.DB_PASSWORD }} \
+            postgres:17 \
+            psql -h ${{ inputs.db_host }} \
+                 -U ${{ inputs.db_user }} \
+                 -d ${{ inputs.db_name }} \
+                 -c "DROP SCHEMA IF EXISTS ${{ inputs.db_schema }} CASCADE; CREATE SCHEMA ${{ inputs.db_schema }};"
+
+
+          echo "Restoring .dump file using pg_restore..."
+
+          sudo docker pull postgres:17
+
+          sudo docker run --rm \
+            -v $PWD/backup:/backup \
+            -e PGPASSWORD=${{ env.DB_PASSWORD }} \
+            postgres:17 \
+            pg_restore \
+            -h ${{ inputs.db_host }} \
+            -U ${{ inputs.db_user }} \
+            -d ${{ inputs.db_name }} \
+            -p 5432 \
+            -v "/backup/$BACKUP_FILE"
+
+          echo "pg_restore completed for $BACKUP_FILE"
