@@ -82,7 +82,7 @@ jobs:
           ls -lh "$PWD/backup"
 
       - name: Restore PostgreSQL Schema Using Docker
-        if: ${{ inputs.istam }} == 'false'
+        if: ${{ !inputs.istam }}
         run: |
           BACKUP_FILE="${{ inputs.db_schema }}.sql"
 
@@ -112,7 +112,7 @@ jobs:
           echo "Schema ${{ inputs.db_schema }} restored successfully!"
 
       - name: Restore PostgreSQL Dump Using Docker (pg_restore)
-        if: ${{ inputs.istam }} == 'true'
+        if: inputs.istam
         run: |
           BACKUP_FILE="${{ inputs.db_schema }}.dump"
           S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/$BACKUP_FILE"
