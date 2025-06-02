@@ -66,6 +66,21 @@ on:
         description: Publish to artifactory libs-release-local or lib-release-client
         default: false
         required: false
+      cache-read-only:
+        type: boolean
+        description: Whether the GitHub cache should be read-only
+        default: true
+        required: false
+      cache-write-only:
+        type: boolean
+        description: Whether the GitHub cache should be write-only
+        default: false
+        required: false
+      disable-cache:
+        type: boolean
+        description: Whether to disable the GitHub cache entirely
+        default: true
+        required: false
       REGISTRY_URL:
         type: string
         description: Only used by the older version of genesisframework
@@ -94,13 +109,14 @@ on:
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  CACHE_OPTS: ${{ inputs.disable-cache && '--no-build-cache --no-configuration-cache' || '' }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
     runs-on: [ self-hosted, selfhosted-services ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
@@ -146,12 +162,17 @@ jobs:
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
           sed -E -i "s/^version=.+/version=${RELEASE_VERSION}/g" ${{ inputs.server-path }}/gradle.properties
 
-      - name: Server Build
-        uses: gradle/gradle-build-action@v2
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-          cache-disabled: true
+          cache-overwrite-existing: true
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-write-only: ${{ inputs.cache-write-only }}
+          cache-disabled: ${{ inputs.disable-cache }}
+
+      - name: Server Build
+        run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
@@ -175,19 +196,13 @@ jobs:
 
       - name: Docker Build Image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        run: ./gradlew :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/"
 
       - name: Docker Push Image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        run: ./gradlew :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/"
 
       - name: Create Giant Server Zip
         if: inputs.upload
@@ -210,11 +225,8 @@ jobs:
 
       - name: Artifactory Publish
         if: inputs.publish-to-artifactory
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-          cache-disabled: true
+        run: ./gradlew artifactoryPublish -x test -PdeployToClientRepo=false ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
 
       - name: Notify failure on Slack
         uses: bryannice/gitactions-slack-notification@2.0.0
