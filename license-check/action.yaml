@@ -31,18 +31,18 @@ runs:
       run: |
         echo "genesisArtifactoryUser=${{ inputs.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
         echo "genesisArtifactoryPassword=${{ inputs.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
-        mkdir ${{ github.workspace }}/ort-output
-
-        chmod -R 777 ${{ github.workspace }}/ort-output
-        chmod -R 777 ${{ inputs.working-directory }}/server/.gradle/
+        echo "org.gradle.java.installations.paths=/usr/lib/jvm/java-17"
+        mkdir ./ort-output
+        chmod -R 777 ./
 
     - name: Run ORT Analyzer
       shell: bash
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}/server:/project \
-          -v ${{ github.workspace }}/ort-output:/output \
-          -v ~/.gradle/gradle.properties:/root/.gradle/gradle.properties \
+          -v ./server:/project \
+          -v ./ort-output:/output \
+          -v /usr/lib/jvm/java-17-amazon-corretto.x86_64:/usr/lib/jvm/java-17 \
+          -v ~/.gradle/gradle.properties:/home/ort/.gradle/gradle.properties \
           ghcr.io/oss-review-toolkit/ort-minimal \
           analyze \
           -i /project \
@@ -52,17 +52,25 @@ runs:
       shell: bash
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}/ort-output:/output \
+          -v ./ort-output:/output \
+          -v /usr/lib/jvm/java-17-amazon-corretto.x86_64:/usr/lib/jvm/java-17 \
+          -v ~/.gradle/gradle.properties:/home/ort/.gradle/gradle.properties \
+          -v ~/license-classifications.yml:/home/ort/license-classifications.yml \
+          -v ~/curations.yml:/home/ort/curations.yml \
+          -v ~/example.rules.kts:/home/ort/evaluator.rules.kts \
           ghcr.io/oss-review-toolkit/ort-minimal \
-          evaluate-policy \
+          evaluate \
           -i /output/analyzer-result.yml \
+          --license-classifications-file /home/ort/license-classifications.yml \
+          --package-curations-file /home/ort/curations.yml  \
+          --rules-file /home/ort/evaluator.rules.kts \
           -o /output
 
     - name: Generate ORT Report
       shell: bash
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}/ort-output:/output \
+          -v ./ort-output:/output \
           ghcr.io/oss-review-toolkit/ort-minimal \
           report \
           -i /output/analyzer-result.yml \
