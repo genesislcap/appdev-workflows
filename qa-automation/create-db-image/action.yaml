@@ -1,0 +1,109 @@
+name: Create QA DB Image
+description: Connect to a remote Postgres DB to create a Docker image with the data populated
+
+inputs:
+  db_host:
+    required: false
+    type: string
+  db_schema:
+    required: false
+    type: string
+  db_user:
+    required: false
+    type: string
+  db_name:
+    required: false
+    type: string
+  image_name:
+    type: string
+    required: true
+  version:
+    type: string
+    required: true
+    default: "latest"
+  aws_ecr_access_key_id:
+    type: string
+    required: true
+  ecr_registry:
+    type: string
+    required: true
+  region:
+    type: string
+    required: true
+    default: "eu-west-2"
+  aws_ecr_secret_access_key:
+    required: true
+  db_password:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+          aws-access-key-id: ${{ inputs.aws_ecr_access_key_id }}
+          aws-secret-access-key: ${{ inputs.aws_ecr_secret_access_key }}
+          aws-region: ${{ inputs.region }}
+
+    - name: Log into ECR
+      shell: bash
+      run: |
+          aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr_registry }}
+
+    - name: Set Up Docker Buildx
+      shell: bash
+      run: |
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        docker buildx create --use
+
+    - name: Create PostgreSQL database dump using Docker
+      shell: bash
+      run: |
+        # Pull the PostgreSQL 17 Docker image
+        sudo docker pull postgres:17
+
+        # Run a temporary PostgreSQL container to execute the pg_dump
+        sudo docker run --rm \
+          -e PGPASSWORD=${{ inputs.db_password }} \
+          postgres:17 \
+          pg_dump \
+          -h ${{ github.event.inputs.db_host }} \
+          -U ${{ github.event.inputs.db_user }} \
+          -d ${{ github.event.inputs.db_name }} \
+          -n ${{ github.event.inputs.db_schema }} > ${{ github.event.inputs.db_schema }}.sql
+
+    - name: Create Dockerfile
+      shell: bash
+      run: |
+        echo '
+        FROM postgres:latest
+        ENV POSTGRES_DB=postgres
+        ENV POSTGRES_USER=${{ inputs.db_user }}
+        ENV POSTGRES_PASSWORD=${{ inputs.db_password }}
+        COPY ${{ github.event.inputs.db_schema }}.sql /docker-entrypoint-initdb.d/
+
+        # Modify max_connections directly in the postgresql.conf file inside the data directory
+        RUN echo "max_connections = 2000" >> /usr/share/postgresql/postgresql.conf.sample
+
+        # Ensure that the correct postgresql.conf file is used during container initialization
+        RUN mkdir -p /docker-entrypoint-initdb.d && \
+            echo "max_connections = 2000" > /docker-entrypoint-initdb.d/pg_config.conf
+
+        EXPOSE 5432
+        ' > Dockerfile
+
+    - name: Build and Save ARM64 Image
+      shell: bash
+      run: |
+        docker buildx build --platform linux/arm64 -t ${{ inputs.ecr_registry }}/${{ inputs.image_name }}:${{ inputs.version }} . --load
+        docker push ${{ inputs.ecr_registry }}/${{ inputs.image_name }}:${{ inputs.version }}
+
+    - name: Clean up
+      shell: bash
+      run: |
+        rm -rf ${{ github.event.inputs.db_schema }}.sql
+        docker system prune -af
