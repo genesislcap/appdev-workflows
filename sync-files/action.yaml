@@ -62,7 +62,9 @@ runs:
 
     - uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
-        command: "aws s3 sync s3://${{ steps.find-bucket.outputs.bucket-name }} ${{ inputs.remote-path }} --delete --exact-timestamps"
+        command: |
+          aws s3 sync s3://${{ steps.find-bucket.outputs.bucket-name }} ${{ inputs.remote-path }} --delete --exact-timestamps && \
+          chmod -R 777 ${{ inputs.remote-path }}
         environment: ${{ inputs.environment }}
         app_name: ${{ inputs.app_name }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
