@@ -1,0 +1,63 @@
+name: Generate Jacoco Report
+description: Stops Genesis and generates a Jacoco report
+
+inputs:
+  environment:
+    required: true
+    description: The environment tag used to identify the servers to deploy to
+  app_name:
+    required: true
+  ecr_registry:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Stop Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: "cd /data/docker-compose && docker compose stop genesis_app || exit 0"
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Generate the Report
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: |
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
+          mkdir -p /data/jacoco/$timestamp/
+          chmod -R 777 /data/jacoco/$timestamp/
+          docker compose run --rm genesis_app \
+            java -jar /home/genesis/jacoco/lib/jacococli.jar report /app/run/runtime/jacoco/jacoco.exec \
+            --classfiles /app/run/genesis/bin \
+            --xml /app/web/jacoco/$timestamp/genesis.xml \
+            --html /app/web/jacoco/$timestamp/html
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Start Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          docker compose up -d
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
