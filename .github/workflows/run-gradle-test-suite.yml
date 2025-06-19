@@ -215,7 +215,7 @@ jobs:
       if: ${{ always() && inputs.uploadreport }}
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
+        name: ${{ inputs.appuser }}-PT-test-results
         path: ${{ inputs.test-root-path }}/src/test/resources/Report/
 
     - name: Install git
