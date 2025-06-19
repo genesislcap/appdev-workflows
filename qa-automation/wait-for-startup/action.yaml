@@ -1,0 +1,66 @@
+name: Wait for Genesis to start
+description: Polls the Genesis healthcheck endpoint and completes when it gets a 200 response
+
+inputs:
+  interval:
+    required: false
+    default: "10"
+  timeout:
+    required: false
+    default: "5"
+  docker_network:
+    required: false
+    default: genesis
+  health_port:
+    required: false
+    default: "4569"
+  environment:
+    required: true
+    description: The environment tag used to identify the servers to deploy to
+  app_name:
+    required: true
+  ecr_registry:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Wait for Genesis to start
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: |
+          URL='http://genesis_app:${{ inputs.health_port }}/health/status'  # Use http inside Docker if not exposed externally
+          INTERVAL=5                                                        # seconds between requests
+          TIMEOUT_MINUTES=2                                                 # timeout in minutes
+          DOCKER_NETWORK=docker-compose_${{ inputs.docker_network }}          # docker network name
+
+          # CALCULATED
+          TIMEOUT=$((TIMEOUT_MINUTES * 60))
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+              STATUS=$(docker run --rm --network $DOCKER_NETWORK curlimages/curl -s -o /dev/null -w '%{http_code}' $URL)
+
+              if [ $STATUS -eq 200 ]; then
+                  echo 'Success: Received 200 OK from' $URL
+                  exit 0
+              fi
+
+              echo 'Waiting:' $STATUS 'received, retrying in' $INTERVAL 'seconds...'
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo 'Timeout reached after' $TIMEOUT_MINUTES 'minutes. Exiting.'
+          exit 1
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
