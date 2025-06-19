@@ -64,6 +64,10 @@ on:
         required: false
         default: novalue
         type: string
+      uploadreport:
+        required: false
+        default: false
+        type: boolean
 
     secrets:
       PAGES_TOKEN:
@@ -206,6 +210,13 @@ jobs:
           --console=plain
           --info
         build-root-directory: "${{ inputs.test-root-path }}"
+
+    - name: Upload test reports
+      if: ${{ !inputs.uploadreport }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: ${{ inputs.test-root-path }}/src/test/resources/Report/
 
     - name: Install git
       if: always()
