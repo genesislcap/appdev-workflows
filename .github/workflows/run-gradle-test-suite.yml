@@ -212,8 +212,7 @@ jobs:
         build-root-directory: "${{ inputs.test-root-path }}"
 
     - name: Upload test reports
-      if: ${{ inputs.uploadreport }}
-      if: always()
+      if: ${{ always() && inputs.uploadreport }}
       uses: actions/upload-artifact@v4
       with:
         name: test-results
