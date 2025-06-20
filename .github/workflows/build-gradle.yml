@@ -194,6 +194,16 @@ jobs:
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
 
+      - name: Publish All Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            ./**/surefire-reports/**/*.xml
+            ./**/build/test-results/**/*.xml
+          fail_on: nothing
+          report_suite_logs: any
+
       - name: Docker Build Image
         if: inputs.build_docker
         run: ./gradlew :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage ${{ env.CACHE_OPTS }}
