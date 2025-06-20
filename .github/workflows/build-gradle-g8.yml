@@ -205,6 +205,16 @@ jobs:
           path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
         if: always()
 
+      - name: Publish All Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            ./**/surefire-reports/**/*.xml
+            ./**/build/test-results/**/*.xml
+          fail_on: nothing
+          report_suite_logs: any
+
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
