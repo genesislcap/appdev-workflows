@@ -89,6 +89,16 @@ jobs:
             -d ${{ inputs.db_name }} \
             -n ${{ inputs.db_schema }} > ${{ inputs.db_schema }}.sql
 
+      - name: Determine effective schema name
+        run: |
+          if [[ -z "${{ inputs.new_schema }}" ]]; then
+            echo "Using db_schema as new_schema since new_schema is empty"
+            echo "new_schema=${{ inputs.db_schema }}" >> $GITHUB_ENV
+          else
+            echo "Using provided new_schema"
+            echo "new_schema=${{ inputs.db_schema }}" >> $GITHUB_ENV
+          fi
+
       - name: Replace schema name in SQL dump
         run: |
           echo "Replacing schema name from '${{ inputs.db_schema }}' to '${{ inputs.new_schema }}'..."
