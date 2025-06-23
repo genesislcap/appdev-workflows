@@ -92,7 +92,7 @@ jobs:
       - name: Replace schema name in SQL dump
         run: |
           echo "Replacing schema name from '${{ inputs.db_schema }}' to '${{ inputs.new_schema }}'..."
-          sed -i "s/\\b${{ inputs.db_schema }}\\b/${{ inputs.new_schema }}/g" ${{ inputs.new_schema }}.sql
+          sed -i "s/\\b${{ inputs.db_schema }}\\b/${{ inputs.new_schema }}/g" ${{ inputs.db_schema }}.sql
 
       - name: Create Dockerfile
         run: |
@@ -101,7 +101,7 @@ jobs:
           ENV POSTGRES_DB=postgres
           ENV POSTGRES_USER=${DB_USER}
           ENV POSTGRES_PASSWORD=${DB_PASSWORD}
-          COPY ${{ inputs.new_schema }}.sql /docker-entrypoint-initdb.d/init.sql
+          COPY ${{ inputs.db_schema }}.sql /docker-entrypoint-initdb.d/init.sql
 
           RUN echo "max_connections = 2000" >> /usr/share/postgresql/postgresql.conf.sample
           RUN mkdir -p /docker-entrypoint-initdb.d && echo "max_connections = 2000" > /docker-entrypoint-initdb.d/pg_config.conf
@@ -158,5 +158,5 @@ jobs:
 
       - name: Clean up
         run: |
-          sudo rm -f ${{ inputs.new_schema }}.sql
+          sudo rm -f ${{ inputs.db_schema }}.sql
           sudo rm -f ${{ inputs.new_schema }}-ARM.tar
