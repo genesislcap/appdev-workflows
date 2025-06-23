@@ -92,7 +92,7 @@ jobs:
       - name: Replace schema name in SQL dump
         run: |
           echo "Replacing schema name from '${{ inputs.db_schema }}' to '${{ inputs.new_schema }}'..."
-          sed -i "s/\\b${{ inputs.db_schema }}\\b/${{ inputs.new_schema }}/g" ${{ inputs.db_schema }}.sql
+          sed -i "s/\\b${{ inputs.db_schema }}\\b/${{ inputs.new_schema }}/g" ${{ inputs.new_schema }}.sql
 
       - name: Create Dockerfile
         run: |
@@ -101,7 +101,7 @@ jobs:
           ENV POSTGRES_DB=postgres
           ENV POSTGRES_USER=${DB_USER}
           ENV POSTGRES_PASSWORD=${DB_PASSWORD}
-          COPY ${{ inputs.db_schema }}.sql /docker-entrypoint-initdb.d/init.sql
+          COPY ${{ inputs.new_schema }}.sql /docker-entrypoint-initdb.d/init.sql
 
           RUN echo "max_connections = 2000" >> /usr/share/postgresql/postgresql.conf.sample
           RUN mkdir -p /docker-entrypoint-initdb.d && echo "max_connections = 2000" > /docker-entrypoint-initdb.d/pg_config.conf
@@ -112,7 +112,7 @@ jobs:
       - name: Build and Save ARM64 Image
         run: |
           docker buildx build --platform linux/arm64 -t pgdbimage . --load
-          TAR_FILE="${{ inputs.db_schema }}-ARM.tar"
+          TAR_FILE="${{ inputs.new_schema }}-ARM.tar"
           sudo docker save -o $TAR_FILE pgdbimage
           sudo chmod +r $TAR_FILE
 
@@ -127,13 +127,13 @@ jobs:
           ARCHS=("ARM")
 
           for ARCH in "${ARCHS[@]}"; do
-            OLD_FILE="${{ inputs.db_schema }}-$ARCH.tar"
-            NEW_FILE="${{ inputs.db_schema }}-$ARCH-${TIMESTAMP}.tar"
+            OLD_FILE="${{ inputs.new_schema }}-$ARCH.tar"
+            NEW_FILE="${{ inputs.new_schema }}-$ARCH-${TIMESTAMP}.tar"
 
             if [[ -n "${{ inputs.client_name }}" ]]; then
-              S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.db_schema }}/${{ inputs.client_name }}"
+              S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.new_schema }}/${{ inputs.client_name }}"
             else
-              S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.db_schema }}"
+              S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.new_schema }}"
             fi
 
             if aws s3 ls "$S3_PATH/$OLD_FILE" 2>/dev/null | grep -q "$OLD_FILE"; then
@@ -149,14 +149,14 @@ jobs:
           aws configure set region $REGION --profile default
 
           if [[ -n "${{ inputs.client_name }}" ]]; then
-            S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.db_schema }}/${{ inputs.client_name }}"
+            S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.new_schema }}/${{ inputs.client_name }}"
           else
-            S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.db_schema }}"
+            S3_PATH="s3://genesis-cddev/qa-automation/${{ inputs.new_schema }}"
           fi
 
-          aws s3 cp ${{ inputs.db_schema }}-ARM.tar "$S3_PATH/" --region $REGION
+          aws s3 cp ${{ inputs.new_schema }}-ARM.tar "$S3_PATH/" --region $REGION
 
       - name: Clean up
         run: |
-          sudo rm -f ${{ inputs.db_schema }}.sql
-          sudo rm -f ${{ inputs.db_schema }}-ARM.tar
+          sudo rm -f ${{ inputs.new_schema }}.sql
+          sudo rm -f ${{ inputs.new_schema }}-ARM.tar
