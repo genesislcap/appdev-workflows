@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       new_schema:
-        required: true
+        required: false
         type: string
       db_user:
         required: false
