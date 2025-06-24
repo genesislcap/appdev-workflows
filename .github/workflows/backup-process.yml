@@ -7,6 +7,9 @@ on:
         required: false
         type: string
       db_schema:
+        required: true
+        type: string
+      new_schema:
         required: false
         type: string
       db_user:
@@ -18,10 +21,6 @@ on:
       client_name:
         required: false
         type: string
-
-    # secrets:
-    #   GRADLE_PROPERTIES:
-    #     required: true
 
 jobs:
   fetch-aws-credentials:
@@ -36,13 +35,6 @@ jobs:
       REGION: eu-west-2
 
     steps:
-      - name: Print Input Values
-        run: |
-          echo "db_host: ${{ inputs.db_host }}"
-          echo "db_schema: ${{ inputs.db_schema }}"
-          echo "db_user: ${{ inputs.db_user }}"
-          echo "db_name: ${{ inputs.db_name }}"
-
       - name: Install AWS CLI and jq
         run: |
           sudo dnf update -y
@@ -51,33 +43,24 @@ jobs:
       - name: Fetch and Assume AWS Role
         id: set-creds
         run: |
-          # Unset existing AWS credentials
           unset AWS_ACCESS_KEY_ID
           unset AWS_SECRET_ACCESS_KEY
           unset AWS_SESSION_TOKEN
 
-          # Fetch the AWS SSM parameter containing the role ARN
           aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
 
-          # Assume the IAM role using STS and extract the credentials
           aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
 
-          # Extract credentials and output them for the next job
-          AWS_ACCESS_KEY_ID=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.AccessKeyId)
-          AWS_SECRET_ACCESS_KEY=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SecretAccessKey)
-          AWS_SESSION_TOKEN=$(echo "$aws_credentials_json" | jq --exit-status --raw-output .Credentials.SessionToken)
-
-          # Set outputs for next jobs to use
-          echo "::set-output name=AWS_ACCESS_KEY_ID::$AWS_ACCESS_KEY_ID"
-          echo "::set-output name=AWS_SECRET_ACCESS_KEY::$AWS_SECRET_ACCESS_KEY"
-          echo "::set-output name=AWS_SESSION_TOKEN::$AWS_SESSION_TOKEN"
+          echo "AWS_ACCESS_KEY_ID=$(echo $aws_credentials_json | jq -r .Credentials.AccessKeyId)" >> $GITHUB_OUTPUT
+          echo "AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials_json | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_OUTPUT
+          echo "AWS_SESSION_TOKEN=$(echo $aws_credentials_json | jq -r .Credentials.SessionToken)" >> $GITHUB_OUTPUT
 
   postgres-dump:
     runs-on: [ appdev-selfhosted-al2023 ]
     needs: fetch-aws-credentials
 
     env:
-      DB_USER: ${{ github.event.inputs.db_user }}
+      DB_USER: ${{ inputs.db_user }}
       DB_PASSWORD: Password11*
       REGION: eu-west-2
       AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
@@ -95,67 +78,54 @@ jobs:
 
       - name: Create PostgreSQL database dump using Docker
         run: |
-          # Pull the PostgreSQL 17 Docker image
           sudo docker pull postgres:17
 
-          # Run a temporary PostgreSQL container to execute the pg_dump
           sudo docker run --rm \
             -e PGPASSWORD=$DB_PASSWORD \
             postgres:17 \
             pg_dump \
-            -h ${{ github.event.inputs.db_host }} \
-            -U ${{ github.event.inputs.db_user }} \
-            -d ${{ github.event.inputs.db_name }} \
-            -n ${{ github.event.inputs.db_schema }} > ${{ github.event.inputs.db_schema }}.sql
+            -h ${{ inputs.db_host }} \
+            -U ${{ inputs.db_user }} \
+            -d ${{ inputs.db_name }} \
+            -n ${{ inputs.db_schema }} > ${{ inputs.db_schema }}.sql
+
+      - name: Determine effective schema name
+        run: |
+          if [[ -z "${{ inputs.new_schema }}" ]]; then
+            echo "Using db_schema as new_schema since new_schema is empty"
+            echo "EFFECTIVE_SCHEMA=${{ inputs.db_schema }}" >> $GITHUB_ENV
+          else
+            echo "Using provided new_schema"
+            echo "EFFECTIVE_SCHEMA=${{ inputs.new_schema }}" >> $GITHUB_ENV
+          fi
+
+
+      - name: Replace schema name in SQL dump
+        run: |
+          echo "Replacing schema name from '${{ inputs.db_schema }}' to '$EFFECTIVE_SCHEMA'..."
+          sed -i "s/\\b${{ inputs.db_schema }}\\b/$EFFECTIVE_SCHEMA/g" ${{ inputs.db_schema }}.sql
 
       - name: Create Dockerfile
         run: |
-          echo '
+          cat <<EOF > Dockerfile
           FROM postgres:latest
           ENV POSTGRES_DB=postgres
-          ENV POSTGRES_USER=$DB_USER
-          ENV POSTGRES_PASSWORD=$DB_PASSWORD
-          COPY ${{ github.event.inputs.db_schema }}.sql /docker-entrypoint-initdb.d/
+          ENV POSTGRES_USER=${DB_USER}
+          ENV POSTGRES_PASSWORD=${DB_PASSWORD}
+          COPY ${{ inputs.db_schema }}.sql /docker-entrypoint-initdb.d/init.sql
 
-          # Modify max_connections directly in the postgresql.conf file inside the data directory
           RUN echo "max_connections = 2000" >> /usr/share/postgresql/postgresql.conf.sample
-
-          # Ensure that the correct postgresql.conf file is used during container initialization
-          RUN mkdir -p /docker-entrypoint-initdb.d && \
-              echo "max_connections = 2000" > /docker-entrypoint-initdb.d/pg_config.conf
+          RUN mkdir -p /docker-entrypoint-initdb.d && echo "max_connections = 2000" > /docker-entrypoint-initdb.d/pg_config.conf
 
           EXPOSE 5432
-          ' > Dockerfile
-
-
-      # - name: Build and Save AMD64 Image
-      #   run: |
-      #     docker buildx build --platform linux/amd64 -t pgdbimage . --load
-      #     TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
-      #     sudo docker save -o $TAR_FILE pgdbimage
-      #     sudo chmod +r $TAR_FILE
-      #     # docker save -o pgdbimage-amd64.tar pgdbimage
+          EOF
 
       - name: Build and Save ARM64 Image
         run: |
           docker buildx build --platform linux/arm64 -t pgdbimage . --load
-          TAR_FILE="${{ github.event.inputs.db_schema }}-ARM.tar"
+          TAR_FILE="$EFFECTIVE_SCHEMA-ARM.tar"
           sudo docker save -o $TAR_FILE pgdbimage
           sudo chmod +r $TAR_FILE
-          # docker save -o pgdbimage-arm64.tar pgdbimage
-
-
-      # - name: Save Docker AMD64 image to tar file
-      #   run: |
-      #     TAR_FILE="${{ github.event.inputs.db_schema }}-AMD.tar"
-      #     sudo docker save -o $TAR_FILE pgdbimage-amd64
-      #     sudo chmod +r $TAR_FILE
-
-      # - name: Save Docker ARM64 image to tar file
-      #   run: |
-      #     TAR_FILE="${{ github.event.inputs.db_schema }}-ARM.tar"
-      #     sudo docker save -o $TAR_FILE pgdbimage-arm64
-      #     sudo chmod +r $TAR_FILE
 
       - name: Rename existing S3 file
         run: |
@@ -165,30 +135,22 @@ jobs:
           aws configure set region $REGION --profile default
 
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          # ARCHS=("AMD","ARM")
           ARCHS=("ARM")
 
           for ARCH in "${ARCHS[@]}"; do
-            OLD_FILE="${{ github.event.inputs.db_schema }}-$ARCH.tar"
-            NEW_FILE="${{ github.event.inputs.db_schema }}-$ARCH-${TIMESTAMP}.tar"
+            OLD_FILE="$EFFECTIVE_SCHEMA-$ARCH.tar"
+            NEW_FILE="$EFFECTIVE_SCHEMA-$ARCH-${TIMESTAMP}.tar"
 
-            # Determine S3 path based on client_name input
-            if [[ -n "${{ github.event.inputs.client_name }}" ]]; then
-              S3_PATH="s3://genesis-cddev/qa-automation/${{ github.event.inputs.db_schema }}/${{ github.event.inputs.client_name }}"
+            if [[ -n "${{ inputs.client_name }}" ]]; then
+              S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
             else
-              S3_PATH="s3://genesis-cddev/qa-automation/${{ github.event.inputs.db_schema }}"
+              S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
             fi
 
-            echo "Checking if $S3_PATH/$OLD_FILE exists..."
             if aws s3 ls "$S3_PATH/$OLD_FILE" 2>/dev/null | grep -q "$OLD_FILE"; then
-              echo "Renaming $OLD_FILE to $NEW_FILE..."
               aws s3 mv "$S3_PATH/$OLD_FILE" "$S3_PATH/$NEW_FILE"
-            else
-              echo "No existing file to rename for $ARCH."
             fi
           done
-
-
 
       - name: Upload Docker image to S3
         run: |
@@ -197,25 +159,15 @@ jobs:
           aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
           aws configure set region $REGION --profile default
 
-          # Determine S3 path based on client_name input
-          if [[ -n "${{ github.event.inputs.client_name }}" ]]; then
-            S3_PATH="s3://genesis-cddev/qa-automation/${{ github.event.inputs.db_schema }}/${{ github.event.inputs.client_name }}"
+          if [[ -n "${{ inputs.client_name }}" ]]; then
+            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
           else
-            S3_PATH="s3://genesis-cddev/qa-automation/${{ github.event.inputs.db_schema }}"
+            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
           fi
 
-          echo "Uploading to $S3_PATH"
-
-          # Upload the AMD file to S3
-          # aws s3 cp ${{ github.event.inputs.db_schema }}-AMD.tar "$S3_PATH/" --region $REGION
-          # Upload the ARM file to S3
-          aws s3 cp ${{ github.event.inputs.db_schema }}-ARM.tar "$S3_PATH/" --region $REGION
-
-
-          # # Upload to S3
-          # aws s3 cp ${{ github.event.inputs.db_schema }}.tar s3://genesis-cddev/qa-automation/${{ github.event.inputs.db_schema }}/ --region $REGION
+          aws s3 cp $EFFECTIVE_SCHEMA-ARM.tar "$S3_PATH/" --region $REGION
 
       - name: Clean up
         run: |
-          sudo rm -f ${{ github.event.inputs.db_schema }}.sql
-          sudo rm -f $TAR_FILE
+          sudo rm -f ${{ inputs.db_schema }}.sql
+          sudo rm -f $EFFECTIVE_SCHEMA-ARM.tar
