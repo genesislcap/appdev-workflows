@@ -18,7 +18,10 @@ on:
       client_name:
         required: false
         type: string
-
+      region_name:
+        required: false
+        default: 'eu-west-2'
+        type: string
     # secrets:
     #   GRADLE_PROPERTIES:
     #     required: true
@@ -33,7 +36,7 @@ jobs:
 
     env:
       SSM_PARAM_NAME: githubrunner-cddev-policy
-      REGION: eu-west-2
+      REGION: ${{ inputs.region_name }}
 
     steps:
       - name: Print Input Values
@@ -42,6 +45,7 @@ jobs:
           echo "db_schema: ${{ inputs.db_schema }}"
           echo "db_user: ${{ inputs.db_user }}"
           echo "db_name: ${{ inputs.db_name }}"
+          echo "region_name: ${{ inputs.region_name }}"
 
       - name: Install AWS CLI and jq
         run: |
@@ -79,7 +83,7 @@ jobs:
     env:
       DB_USER: ${{ github.event.inputs.db_user }}
       DB_PASSWORD: Password11*
-      REGION: eu-west-2
+      REGION: ${{ inputs.region_name }}
       AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ needs.fetch-aws-credentials.outputs.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
