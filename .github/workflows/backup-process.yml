@@ -40,7 +40,7 @@ jobs:
 
     env:
       SSM_PARAM_NAME: githubrunner-cddev-policy
-      REGION: ${{ inputs.region_name }}
+      REGION: eu-west-2
 
     steps:
 
