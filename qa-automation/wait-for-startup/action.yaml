@@ -37,7 +37,7 @@ runs:
         command: |
           URL='http://genesis_app:${{ inputs.health_port }}/health/status'  # Use http inside Docker if not exposed externally
           INTERVAL=5                                                        # seconds between requests
-          TIMEOUT_MINUTES=2                                                 # timeout in minutes
+          TIMEOUT_MINUTES=${{ inputs.timeout }}                                                 # timeout in minutes
           DOCKER_NETWORK=docker-compose_${{ inputs.docker_network }}          # docker network name
 
           # CALCULATED
