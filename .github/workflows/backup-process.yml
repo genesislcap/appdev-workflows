@@ -118,10 +118,10 @@ jobs:
           fi
 
 
-      # - name: Replace schema name in SQL dump
-      #   run: |
-      #     echo "Replacing schema name from '${{ inputs.db_schema }}' to '$EFFECTIVE_SCHEMA'..."
-      #     sed -i "s/\\b${{ inputs.db_schema }}\\b/$EFFECTIVE_SCHEMA/g" ${{ inputs.db_schema }}.sql
+      - name: Replace schema name in SQL dump
+        run: |
+          echo "Replacing schema name from '${{ inputs.db_schema }}' to '$EFFECTIVE_SCHEMA'..."
+          sed -i "s/\\b${{ inputs.db_schema }}\\b/$EFFECTIVE_SCHEMA/g" ${{ inputs.db_schema }}.sql
 
       - name: Create Dockerfile
         run: |
