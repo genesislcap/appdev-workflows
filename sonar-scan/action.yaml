@@ -1,0 +1,33 @@
+name: sonar scan
+description: based on input data sonar scan data
+
+inputs:
+  working-directory:
+    type: string
+    default: .
+    required: false
+  sonar_enabled:
+    type: boolean
+    required: false
+    default: false
+
+
+secrets:
+  JENKINSGENESIS_SONAR:
+    required: false
+
+
+runs:
+  using: "composite"
+  steps:
+      - name: Test and Coverage
+        if: inputs.sonar_enabled
+        uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          arguments: >
+            test jacocoTestReport sonarqube --no-configuration-cache
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+          build-root-directory: "${{ inputs.working-directory }}/server"
+          cache-disabled: true

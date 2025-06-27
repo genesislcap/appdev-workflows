@@ -23,6 +23,12 @@ inputs:
     required: true
   config-path:
     required: false
+  sonar_enabled:
+    required: false
+
+secrets:
+  JENKINSGENESIS_SONAR:
+    required: false
 
 runs:
   using: "composite"
@@ -62,7 +68,7 @@ runs:
       run: |
         # sensible to customization
         project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
-        
+
         echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
       working-directory: ${{ inputs.working-directory }}/server/
 
@@ -78,7 +84,7 @@ runs:
           arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
           build-root-directory: ${{ inputs.working-directory }}/server/
           cache-disabled: true
-    
+
     - name: Push Image using bash
       shell: bash
       env:
@@ -88,6 +94,14 @@ runs:
       run: |
           docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
           docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+
+    - name: sonar scan
+      if: ${{ inputs.sonar_enabled }}
+      uses: genesislcap/appdev-workflows/sonar-scan@DCD-3158
+      with:
+        config-path: ${{ inputs.sonar_enabled }}
+      secrets:
+        JENKINSGENESIS_SONAR: ${{secrets.JENKINSGENESIS_SONAR}}
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
