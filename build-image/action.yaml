@@ -100,7 +100,6 @@ runs:
       uses: genesislcap/appdev-workflows/sonar-scan@DCD-3158
       with:
         config-path: ${{ inputs.sonar_enabled }}
-      secrets:
         JENKINSGENESIS_SONAR: ${{inputs.JENKINSGENESIS_SONAR}}
 
     - name: Upload Artifact
