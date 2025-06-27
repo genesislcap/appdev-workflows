@@ -10,11 +10,10 @@ inputs:
     type: boolean
     required: false
     default: false
-
-
-secrets:
   JENKINSGENESIS_SONAR:
-    required: false
+    required: true
+
+
 
 
 runs:
@@ -24,7 +23,7 @@ runs:
         if: inputs.sonar_enabled
         uses: gradle/gradle-build-action@v2
         env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+          SONAR_TOKEN: ${{ inputs.JENKINSGENESIS_SONAR }}
         with:
           arguments: >
             test jacocoTestReport sonarqube --no-configuration-cache
