@@ -78,28 +78,28 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
-    # - name: Build Image
-    #   uses: gradle/actions/setup-gradle@v3
-    #   with:
-    #       arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
-    #       build-root-directory: ${{ inputs.working-directory }}/server/
-    #       cache-disabled: true
+    - name: Build Image
+      uses: gradle/actions/setup-gradle@v3
+      with:
+          arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
+          build-root-directory: ${{ inputs.working-directory }}/server/
+          cache-disabled: true
 
-    # - name: Push Image using bash
-    #   shell: bash
-    #   env:
-    #     ECR_REGISTRY: ${{ inputs.ecr-registry }}
-    #     IMAGE_VERSION: ${{ inputs.version }}
-    #     APP_NAME: ${{ inputs.app-name }}
-    #   run: |
-    #       docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
-    #       docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+    - name: Push Image using bash
+      shell: bash
+      env:
+        ECR_REGISTRY: ${{ inputs.ecr-registry }}
+        IMAGE_VERSION: ${{ inputs.version }}
+        APP_NAME: ${{ inputs.app-name }}
+      run: |
+          docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+          docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
 
     - name: sonar scan
       if: ${{ inputs.sonar_enabled }}
       uses: genesislcap/appdev-workflows/sonar-scan@DCD-3158
       with:
-        config-path: ${{ inputs.sonar_enabled }}
+        sonar_enabled: ${{ inputs.sonar_enabled }}
         JENKINSGENESIS_SONAR: ${{inputs.JENKINSGENESIS_SONAR}}
 
     - name: Upload Artifact
