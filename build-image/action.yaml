@@ -23,6 +23,12 @@ inputs:
     required: true
   config-path:
     required: false
+  node-version:
+    required: false
+    default: "20"
+  server-path:
+    required: false
+    default: "server"
 
 runs:
   using: "composite"
@@ -36,7 +42,7 @@ runs:
     - name: Configure Node
       uses: actions/setup-node@v4
       with:
-          node-version: 20
+          node-version: ${{ inputs.node-version }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -54,7 +60,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" server/build.gradle.kts
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
     - name: Find product name
       id: find-app-build-type
@@ -62,9 +68,9 @@ runs:
       run: |
         # sensible to customization
         project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
-        
+
         echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
-      working-directory: ${{ inputs.working-directory }}/server/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
 
     - name: Read .env file for build
       if: ${{ inputs.config-path }}
@@ -75,10 +81,10 @@ runs:
     - name: Build Image
       uses: gradle/actions/setup-gradle@v3
       with:
-          arguments: buildImage --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
-          build-root-directory: ${{ inputs.working-directory }}/server/
+          arguments: buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
+          build-root-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
           cache-disabled: true
-    
+
     - name: Push Image using bash
       shell: bash
       env:
