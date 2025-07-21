@@ -29,6 +29,9 @@ inputs:
   server-path:
     required: false
     default: "server"
+  test-reports-suffix:
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -78,12 +81,24 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
-    - name: Build Image
-      uses: gradle/actions/setup-gradle@v3
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Run Tests
+      uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
-          arguments: buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}
-          build-root-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-          cache-disabled: true
+        version: ${{ inputs.version }}
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        test-reports-suffix: ${{ inputs.test-reports-suffix }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+
+    - name: Build Image
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Push Image using bash
       shell: bash
