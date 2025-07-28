@@ -1,0 +1,61 @@
+name: Upload Product zips to JFrog
+description: Upload giant zip and web zip to JFrog Artifactory
+
+inputs:
+  version:
+    required: false
+  repo-name:
+    required: false
+  product-name:
+    required: false
+  working-directory:
+    default: .
+    required: false
+  server-path:
+    default: server
+    required: false
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set env vars
+      shell: bash
+      working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/build/distributions/"
+      run: |
+        if [ -z "${{ inputs.repo-name }}" ]; then
+          echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+        else
+          echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+        fi
+        RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+        echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+    - name: Create Giant Server Zip
+      shell: bash
+      working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+      run: |
+        ./gradlew tasks -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Pversion="${{ env.RELEASE_VERSION }}" | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Pgenesis-home="../.genesis-home" -Pdeploy-plugin-mode=local -Pversion="${{ env.RELEASE_VERSION }}" {}
+        cd .genesis-home
+        pwd
+        ls -la
+        tar czvf ../build/distributions/genesis_${{ inputs.product-name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+
+    - name: Upload Server Package
+      shell: bash
+      working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/build/distributions/"
+      run: |
+        echo "${{ env.REPO_NAME }}"
+        curl -u ${{ inputs.jfrog-username }}:"${{inputs.jfrog-password}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product-name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+
+    - name: Upload Web Package
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
+          mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+          curl -u ${{ inputs.jfrog-username }}:"${{inputs.jfrog-password}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
+        fi
