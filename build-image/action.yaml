@@ -45,7 +45,7 @@ runs:
     - name: Install lmdb-devel
       shell: bash
       run: |
-          dnf install -y lmdb-devel
+          sudo dnf install -y lmdb-devel
 
     - name: Configure Node
       uses: actions/setup-node@v4
