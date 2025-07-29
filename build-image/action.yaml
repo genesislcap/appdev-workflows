@@ -42,6 +42,11 @@ runs:
           java-version: 17
           distribution: 'adopt'
 
+    - name: Install lmdb-devel
+      shell: bash
+      run: |
+          dnf install -y lmdb-devel
+
     - name: Configure Node
       uses: actions/setup-node@v4
       with:
