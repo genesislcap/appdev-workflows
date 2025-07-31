@@ -7,6 +7,13 @@ on:
         required: true
         type: string
         description: "Private hostname of EC2 "   
+      AWS_ACCESS_KEY_ID:
+        required: true
+        type: string
+    secrets:
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+        
 
 jobs:
   stop-ec2:
@@ -16,7 +23,7 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:        
-        aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+        aws-access-key-id: ${{ inputs.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-2
 
