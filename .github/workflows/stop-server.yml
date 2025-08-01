@@ -1,48 +1,104 @@
+       
 name: Stop EC2 by Hostname
 
 on:
   workflow_call:     
     inputs:
+    
       hostname:
+        description: "Private/public hostname or IP of EC2"
         required: true
         type: string
-        description: "Private hostname of EC2 "   
-      
-    secrets:
-      AWS_ACCESS_KEY_ID:
-        required: true        
-      AWS_SECRET_ACCESS_KEY:
-        required: true
-        
-        
 
 jobs:
   stop-ec2:
-    runs-on: [ appdev-selfhosted-al2023 ]
+    runs-on: [appdev-selfhosted-al2023]
+    env:
+      SSM_PARAM_NAME: githubrunner-cddev-policy
+      REGION: eu-west-2
 
     steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:        
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-west-2
+      - name: Install AWS CLI and jq
+        run: |
+          sudo dnf install -y awscli jq
 
-    - name: Find and stop EC2 instance by Name tag
-      run: |
-        HOSTNAME="${{ github.event.inputs.hostname }}"
-    
-        echo "Looking up EC2 instance with Name tag: $HOSTNAME"
-    
-        INSTANCE_ID=$(aws ec2 describe-instances \
-          --filters "Name=tag:Name,Values=$HOSTNAME" \
-          --query "Reservations[].Instances[].InstanceId" \
-          --output text)
-    
-        if [ -z "$INSTANCE_ID" ]; then
-          echo "❌ No EC2 instance found for Name tag: $HOSTNAME"
-          exit 1
-        fi
-    
-        echo "✅ Found EC2 instance ID: $INSTANCE_ID"
-        aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
+      - name: Fetch and Assume AWS Role
+        id: assume-role
+        run: |
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
+          ROLE_ARN=$(aws ssm get-parameter \
+            --name "$SSM_PARAM_NAME" \
+            --region "$REGION" \
+            --with-decryption \
+            --query "Parameter.Value" \
+            --output text)
+
+          CREDS=$(aws sts assume-role \
+            --role-arn "$ROLE_ARN" \
+            --role-session-name githubActionSession \
+            --duration-seconds 3600 \
+            --region "$REGION")
+
+          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
+
+      - name: Resolve Hostname or Use IP
+        id: resolve-ip
+        run: |
+          HOST="${{ inputs.hostname }}"
+          if [[ "$HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            IP="$HOST"
+          else
+            IP=$(getent hosts "$HOST" | awk '{print $1}')
+          fi
+
+          if [ -z "$IP" ]; then
+            echo "❌ Could not resolve hostname or IP: $HOST"
+            exit 1
+          fi
+
+          echo "✅ Resolved IP: $IP"
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Lookup EC2 Instance by IP
+        id: get-instance
+        run: |
+          IP=${{ steps.resolve-ip.outputs.ip }}
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=private-ip-address,Values=$IP" \
+            --region $REGION \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+
+          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+            INSTANCE_ID=$(aws ec2 describe-instances \
+              --filters "Name=public-ip-address,Values=$IP" \
+              --region $REGION \
+              --query "Reservations[0].Instances[0].InstanceId" \
+              --output text)
+          fi
+
+          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+            echo "❌ No EC2 instance found for IP $IP"
+            exit 1
+          fi
+
+          echo "✅ EC2 Instance ID: $INSTANCE_ID"
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+
+      - name: Stop EC2 Instance
+        run: |
+          INSTANCE_ID=${{ steps.get-instance.outputs.instance_id }}
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text)
+
+          echo "ℹ️ Current state of $INSTANCE_ID: $STATE"
+
+          aws ec2 stop-instances --instance-ids "$INSTANCE_ID" --region "$REGION"
+
+          echo "✅ Stop command issued for instance $INSTANCE_ID"
