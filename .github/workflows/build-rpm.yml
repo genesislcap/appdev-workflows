@@ -162,6 +162,16 @@ jobs:
       - name: GET  RPM NAME
         id: upload-rpm
         run: |
+          echo "Clear AWS credentials inherited from the environment"
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          unset AWS_PROFILE
+          unset AWS_DEFAULT_PROFILE
+          echo "Delete any credential/config files"
+          rm -f ~/.aws/credentials ~/.aws/config
+          
+          echo "Uploading files to s3 now...."
           cd ~/rpmbuild/RPMS/noarch/
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
