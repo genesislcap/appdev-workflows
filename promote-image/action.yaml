@@ -39,7 +39,7 @@ runs:
     - name: Get Docker Image
       shell: bash
       run: |
-        docker pull ${{ inputs.dev-ecr-registry }}/devops-test-app:${{ inputs.dev-version }}
+        docker pull ${{ inputs.dev-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.dev-version }}
 
     - name: Log into Prod ECR
       shell: bash
@@ -49,5 +49,5 @@ runs:
     - name: Tag and Push Image using bash
       shell: bash
       run: |
-          docker tag ${{ inputs.dev-ecr-registry }}/devops-test-app:${{ inputs.dev-version }} ${{ inputs.prod-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.prod-version }}
+          docker tag ${{ inputs.dev-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.dev-version }} ${{ inputs.prod-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.prod-version }}
           docker push ${{ inputs.prod-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.prod-version }}
