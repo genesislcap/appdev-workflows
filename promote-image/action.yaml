@@ -1,1 +1,53 @@
-test
+name: Promote Genesis Docker Image
+description: Copies a Genesis Docker image from dev
+
+inputs:
+  dev-ecr-registry:
+    required: true
+  prod-ecr-registry:
+    required: true
+  dev-version:
+    required: true
+  prod-version:
+    required: true
+  dev-region:
+    required: true
+  prod-region:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  app-name:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+          aws-access-key-id: ${{ inputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+          aws-region: eu-west-2
+
+    - name: Log into Dev ECR
+      shell: bash
+      run: |
+          aws ecr get-login-password --region ${{ inputs.dev-region }} | docker login --username AWS --password-stdin ${{ inputs.dev-ecr-registry }}
+
+    - name: Get Docker Image
+      shell: bash
+      run: |
+        docker pull ${{ inputs.dev-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.dev-version }}
+
+    - name: Log into Prod ECR
+      shell: bash
+      run: |
+          aws ecr get-login-password --region ${{ inputs.prod-region }} | docker login --username AWS --password-stdin ${{ inputs.prod-ecr-registry }}
+          
+    - name: Tag and Push Image using bash
+      shell: bash
+      run: |
+          docker tag ${{ inputs.dev-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.dev-version }} ${{ inputs.prod-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.prod-version }}
+          docker push ${{ inputs.prod-ecr-registry }}/${{ inputs.app-name }}:${{ inputs.prod-version }}
