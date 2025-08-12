@@ -20,12 +20,18 @@ jobs:
     steps:
       - name: Install AWS CLI and jq
         run: |
+          set -euo pipefail
           sudo dnf install -y awscli jq
 
-      - name: Fetch and Assume AWS Role
-        id: assume-role
+      - name: Fetch Role ARN from SSM (use base creds)
+        id: fetch-role
+        env:
+          REGION: ${{ env.REGION }}
+          SSM_PARAM_NAME: ${{ env.SSM_PARAM_NAME }}
         run: |
-          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+          set -euo pipefail
+          echo "Caller before assume:"
+          aws sts get-caller-identity --region "$REGION"
 
           ROLE_ARN=$(aws ssm get-parameter \
             --name "$SSM_PARAM_NAME" \
@@ -34,15 +40,35 @@ jobs:
             --query "Parameter.Value" \
             --output text)
 
+          if [ -z "${ROLE_ARN:-}" ] || [ "$ROLE_ARN" = "None" ]; then
+            echo "❌ Could not fetch role ARN from SSM parameter: $SSM_PARAM_NAME"
+            exit 1
+          fi
+
+          echo "role_arn=$ROLE_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Assume Target Role
+        id: assume-role
+        env:
+          REGION: ${{ env.REGION }}
+        run: |
+          set -euo pipefail
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_REGION AWS_REGION
+
           CREDS=$(aws sts assume-role \
-            --role-arn "$ROLE_ARN" \
+            --role-arn "${{ steps.fetch-role.outputs.role_arn }}" \
             --role-session-name githubActionSession \
             --duration-seconds 3600 \
             --region "$REGION")
 
-          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .Credentials.AccessKeyId)" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_ENV
-          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .Credentials.SessionToken)" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
+          echo "AWS_REGION=$REGION" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=$REGION" >> $GITHUB_ENV
+
+          echo "Caller after assume:"
+          aws sts get-caller-identity --region "$REGION"
 
       - name: Resolve Hostname or Use IP
         id: resolve-ip
