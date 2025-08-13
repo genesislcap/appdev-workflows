@@ -1,4 +1,4 @@
-name: Stop EC2 by Hostname
+name: Stop EC2 by Hostname (simple)
 
 on:
   workflow_call:
@@ -7,97 +7,41 @@ on:
         description: "Private/public hostname or IP of EC2"
         required: true
         type: string
-
-permissions:
-  actions: write      # required for rerun
-  contents: read
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_SESSION_TOKEN:    # optional, only if using temporary creds
+        required: false
 
 jobs:
   stop-ec2:
     runs-on: [appdev-selfhosted-al2023]
     env:
-      SSM_PARAM_NAME: githubrunner-cddev-policy
       REGION: eu-west-2
 
     steps:
-      - name: Ensure AWS CLI & jq (curl comes from curl-minimal)
-        run: |
-          set -euo pipefail
-          sudo dnf install -y awscli jq
-          command -v curl && curl --version || echo "ℹ️ curl not in PATH; will use Python fallback if needed"
+      - name: Configure AWS credentials (from secrets)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.REGION }}
+          # Pass session token only if you actually set it as a secret (temp creds)
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
 
-      # ---------- FETCH ROLE ARN with RETRY (uses base creds) ----------
-      - name: Fetch Role ARN from SSM (retry)
-        id: fetch-role
-        env:
-          REGION: ${{ env.REGION }}
-          SSM_PARAM_NAME: ${{ env.SSM_PARAM_NAME }}
-        run: |
-          set -euo pipefail
-          echo "Caller before assume:"
-          aws sts get-caller-identity --region "$REGION" || true
+      - name: Show caller (sanity check)
+        run: aws sts get-caller-identity
 
-          for i in {1..5}; do
-            set +e
-            ROLE_ARN=$(aws ssm get-parameter \
-              --name "$SSM_PARAM_NAME" \
-              --region "$REGION" \
-              --with-decryption \
-              --query "Parameter.Value" \
-              --output text)
-            rc=$?
-            set -e
-            [ $rc -eq 0 ] && [ -n "${ROLE_ARN:-}" ] && [ "$ROLE_ARN" != "None" ] && break
-            echo "ssm:GetParameter attempt $i failed; sleeping $((i*3))s..."
-            sleep $((i*3))
-          done
-
-          if [ -z "${ROLE_ARN:-}" ] || [ "$ROLE_ARN" = "None" ]; then
-            echo "❌ Could not fetch role ARN from SSM parameter: $SSM_PARAM_NAME"
-            exit 1
-          fi
-
-          echo "role_arn=$ROLE_ARN" >> "$GITHUB_OUTPUT"
-
-      # ---------- ASSUME ROLE with RETRY ----------
-      - name: Assume Target Role (retry)
-        id: assume-role
-        env:
-          REGION: ${{ env.REGION }}
-        run: |
-          set -euo pipefail
-          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_REGION AWS_REGION
-
-          for i in {1..3}; do
-            set +e
-            CREDS=$(aws sts assume-role \
-              --role-arn "${{ steps.fetch-role.outputs.role_arn }}" \
-              --role-session-name githubActionSession \
-              --duration-seconds 3600 \
-              --region "$REGION")
-            rc=$?
-            set -e
-            [ $rc -eq 0 ] && break
-            echo "sts:AssumeRole attempt $i failed; sleeping $((i*3))s..."
-            sleep $((i*3))
-          done
-
-          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
-          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
-          echo "AWS_REGION=$REGION" >> $GITHUB_ENV
-          echo "AWS_DEFAULT_REGION=$REGION" >> $GITHUB_ENV
-
-          echo "Caller after assume:"
-          aws sts get-caller-identity --region "$REGION"
-
-      # ---------- RESOLVE HOST/IP ----------
       - name: Resolve Hostname or Use IP
         id: resolve-ip
+        shell: bash
         run: |
           set -euo pipefail
           HOST="${{ inputs.hostname }}"
 
+          # If already IPv4, use as-is. Otherwise resolve first IPv4.
           if [[ "$HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             IP="$HOST"
           else
@@ -109,57 +53,49 @@ jobs:
           fi
 
           if [ -z "${IP:-}" ]; then
-            echo "❌ Could not resolve hostname or IP: $HOST"
+            echo "Could not resolve hostname or IP: $HOST" >&2
             exit 1
           fi
 
-          echo "✅ Resolved IP: $IP"
           echo "ip=$IP" >> "$GITHUB_OUTPUT"
+          echo "Resolved IP: $IP"
 
-      # ---------- LOOKUP INSTANCE with RETRY ----------
-      - name: Lookup EC2 Instance by IP (retry)
+      - name: Lookup EC2 Instance by IP
         id: get-instance
         env:
           REGION: ${{ env.REGION }}
+        shell: bash
         run: |
           set -euo pipefail
           IP=${{ steps.resolve-ip.outputs.ip }}
 
-          INSTANCE_IDS=""
-          for i in {1..3}; do
-            set +e
-            IDS_PRIVATE=$(aws ec2 describe-instances \
-              --filters "Name=private-ip-address,Values=$IP" \
-              --region "$REGION" \
-              --query "Reservations[].Instances[].InstanceId" \
-              --output text)
-            IDS_PUBLIC=$(aws ec2 describe-instances \
-              --filters "Name=ip-address,Values=$IP" \
-              --region "$REGION" \
-              --query "Reservations[].Instances[].InstanceId" \
-              --output text)
-            set -e
+          # Try private IP first, then public (filter is ip-address for public)
+          IDS_PRIVATE=$(aws ec2 describe-instances \
+            --filters "Name=private-ip-address,Values=$IP" \
+            --region "$REGION" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
 
-            INSTANCE_IDS="$(echo "$IDS_PRIVATE $IDS_PUBLIC" | xargs)"
-            [ -n "$INSTANCE_IDS" ] && break
+          IDS_PUBLIC=$(aws ec2 describe-instances \
+            --filters "Name=ip-address,Values=$IP" \
+            --region "$REGION" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
 
-            echo "describe-instances attempt $i found none; sleeping $((i*3))s..."
-            sleep $((i*3))
-          done
-
+          INSTANCE_IDS="$(echo "$IDS_PRIVATE $IDS_PUBLIC" | xargs)"
           if [ -z "$INSTANCE_IDS" ]; then
-            echo "❌ No EC2 instance found for IP $IP in region $REGION"
+            echo "No EC2 instance found for IP $IP in $REGION" >&2
             exit 1
           fi
 
           INSTANCE_ID=$(echo "$INSTANCE_IDS" | awk '{print $1}')
-          echo "✅ EC2 Instance ID: $INSTANCE_ID"
           echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+          echo "Found instance: $INSTANCE_ID"
 
-      # ---------- STOP + WAIT ----------
-      - name: Stop EC2 Instance and wait
+      - name: Stop EC2 instance (and wait for stopped)
         env:
           REGION: ${{ env.REGION }}
+        shell: bash
         run: |
           set -euo pipefail
           INSTANCE_ID=${{ steps.get-instance.outputs.instance_id }}
@@ -169,45 +105,17 @@ jobs:
             --region "$REGION" \
             --query "Reservations[].Instances[].State.Name" \
             --output text)
-
-          echo "ℹ️ Current state of $INSTANCE_ID: $STATE"
+          echo "Current state: $STATE"
 
           if [ "$STATE" != "stopped" ]; then
-            echo "Stopping $INSTANCE_ID ..."
             aws ec2 stop-instances --instance-ids "$INSTANCE_ID" --region "$REGION" >/dev/null
-            echo "Waiting for instance to reach 'stopped' ..."
+            echo "Waiting for 'stopped'..."
             aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID" --region "$REGION"
-            echo "✅ Instance $INSTANCE_ID is now stopped."
-          else
-            echo "⚠️ Instance $INSTANCE_ID is already stopped."
           fi
 
-      # ---------- AUTO-RERUN ON FAILURE (once), runs even if earlier step failed ----------
-      - name: Auto-rerun this workflow once if it failed
-        if: ${{ always() && failure() && github.run_attempt < 2 }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          echo "🔁 Auto re-running this workflow (attempt ${{ github.run_attempt }} of 2)..."
-          if command -v curl >/dev/null 2>&1; then
-            curl -sS -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun"
-          else
-            python - <<'PY'
-            import json, os, sys, urllib.request
-            token = os.environ.get("GH_TOKEN")
-            repo = os.environ.get("GITHUB_REPOSITORY")
-            run_id = os.environ.get("GITHUB_RUN_ID")
-            if not (token and repo and run_id):
-                print("Missing GH_TOKEN/GITHUB_REPOSITORY/GITHUB_RUN_ID", file=sys.stderr); sys.exit(1)
-            req = urllib.request.Request(
-                f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/rerun",
-                method="POST",
-                headers={"Accept":"application/vnd.github+json","Authorization":f"Bearer {token}"}
-            )
-            with urllib.request.urlopen(req) as resp:
-                print(resp.status, resp.read().decode())
-            PY
+          FINAL=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Reservations[].Instances[].State.Name" \
+            --output text)
+          echo "Final state: $FINAL"
