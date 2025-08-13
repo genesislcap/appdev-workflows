@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  actions: write      # needed for auto-rerun
+  actions: write      # required for rerun
   contents: read
 
 jobs:
@@ -20,10 +20,11 @@ jobs:
       REGION: eu-west-2
 
     steps:
-      - name: Install AWS CLI, jq, curl
+      - name: Ensure AWS CLI & jq (curl comes from curl-minimal)
         run: |
           set -euo pipefail
-          sudo dnf install -y awscli jq curl
+          sudo dnf install -y awscli jq
+          command -v curl && curl --version || echo "ℹ️ curl not in PATH; will use Python fallback if needed"
 
       # ---------- FETCH ROLE ARN with RETRY (uses base creds) ----------
       - name: Fetch Role ARN from SSM (retry)
@@ -37,12 +38,16 @@ jobs:
           aws sts get-caller-identity --region "$REGION" || true
 
           for i in {1..5}; do
+            set +e
             ROLE_ARN=$(aws ssm get-parameter \
               --name "$SSM_PARAM_NAME" \
               --region "$REGION" \
               --with-decryption \
               --query "Parameter.Value" \
-              --output text) && break || true
+              --output text)
+            rc=$?
+            set -e
+            [ $rc -eq 0 ] && [ -n "${ROLE_ARN:-}" ] && [ "$ROLE_ARN" != "None" ] && break
             echo "ssm:GetParameter attempt $i failed; sleeping $((i*3))s..."
             sleep $((i*3))
           done
@@ -64,11 +69,15 @@ jobs:
           unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_REGION AWS_REGION
 
           for i in {1..3}; do
+            set +e
             CREDS=$(aws sts assume-role \
               --role-arn "${{ steps.fetch-role.outputs.role_arn }}" \
               --role-session-name githubActionSession \
               --duration-seconds 3600 \
-              --region "$REGION") && break || true
+              --region "$REGION")
+            rc=$?
+            set -e
+            [ $rc -eq 0 ] && break
             echo "sts:AssumeRole attempt $i failed; sleeping $((i*3))s..."
             sleep $((i*3))
           done
@@ -118,20 +127,21 @@ jobs:
 
           INSTANCE_IDS=""
           for i in {1..3}; do
+            set +e
             IDS_PRIVATE=$(aws ec2 describe-instances \
               --filters "Name=private-ip-address,Values=$IP" \
               --region "$REGION" \
               --query "Reservations[].Instances[].InstanceId" \
-              --output text) || true
-
+              --output text)
             IDS_PUBLIC=$(aws ec2 describe-instances \
               --filters "Name=ip-address,Values=$IP" \
               --region "$REGION" \
               --query "Reservations[].Instances[].InstanceId" \
-              --output text) || true
+              --output text)
+            set -e
 
             INSTANCE_IDS="$(echo "$IDS_PRIVATE $IDS_PUBLIC" | xargs)"
-            [ -n "$INSTANCE_IDS" ] && break || true
+            [ -n "$INSTANCE_IDS" ] && break
 
             echo "describe-instances attempt $i found none; sleeping $((i*3))s..."
             sleep $((i*3))
@@ -172,15 +182,32 @@ jobs:
             echo "⚠️ Instance $INSTANCE_ID is already stopped."
           fi
 
-      # ---------- AUTO-RERUN ON FAILURE (once) ----------
-      - name: Auto-rerun this workflow once if it failed (via REST API)
-        if: ${{ failure() && github.run_attempt < 2 }}
+      # ---------- AUTO-RERUN ON FAILURE (once), runs even if earlier step failed ----------
+      - name: Auto-rerun this workflow once if it failed
+        if: ${{ always() && failure() && github.run_attempt < 2 }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           echo "🔁 Auto re-running this workflow (attempt ${{ github.run_attempt }} of 2)..."
-          curl -sS -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun"
+          if command -v curl >/dev/null 2>&1; then
+            curl -sS -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun"
+          else
+            python - <<'PY'
+            import json, os, sys, urllib.request
+            token = os.environ.get("GH_TOKEN")
+            repo = os.environ.get("GITHUB_REPOSITORY")
+            run_id = os.environ.get("GITHUB_RUN_ID")
+            if not (token and repo and run_id):
+                print("Missing GH_TOKEN/GITHUB_REPOSITORY/GITHUB_RUN_ID", file=sys.stderr); sys.exit(1)
+            req = urllib.request.Request(
+                f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/rerun",
+                method="POST",
+                headers={"Accept":"application/vnd.github+json","Authorization":f"Bearer {token}"}
+            )
+            with urllib.request.urlopen(req) as resp:
+                print(resp.status, resp.read().decode())
+            PY
