@@ -20,88 +20,77 @@ on:
     #   GRADLE_PROPERTIES:
     #     required: true
 
-
 jobs:
-  fetch-aws-credentials:
-    runs-on: [ appdev-selfhosted-al2023 ]
-    outputs:
-      AWS_ACCESS_KEY_ID: ${{ steps.set-creds.outputs.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ steps.set-creds.outputs.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ steps.set-creds.outputs.AWS_SESSION_TOKEN }}
-
-    env:
-      SSM_PARAM_NAME: githubrunner-cddev-policy
-      REGION: eu-west-2
-
-    steps:
-
-      - name: Print Input Values
-        run: |
-         
-          echo "db_schema: ${{ inputs.db_schema }}"
-          echo "client_name: ${{ inputs.client_name }}"          
-          echo "region_name: ${{ inputs.region_name }}"
-
-
-      - name: Install AWS CLI and jq
-        run: |
-          sudo dnf update -y
-          sudo dnf install -y awscli jq
-
-      - name: Fetch and Assume AWS Role
-        id: set-creds
-        run: |
-          unset AWS_ACCESS_KEY_ID
-          unset AWS_SECRET_ACCESS_KEY
-          unset AWS_SESSION_TOKEN
-
-          aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-
-          aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
-
-          echo "AWS_ACCESS_KEY_ID=$(echo $aws_credentials_json | jq -r .Credentials.AccessKeyId)" >> $GITHUB_OUTPUT
-          echo "AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials_json | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_OUTPUT
-          echo "AWS_SESSION_TOKEN=$(echo $aws_credentials_json | jq -r .Credentials.SessionToken)" >> $GITHUB_OUTPUT
-
   postgres-dump:
-    runs-on: [ appdev-selfhosted-al2023 ]
+    runs-on: [appdev-selfhosted-al2023]
     needs: fetch-aws-credentials
+    env:
+      AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ needs.fetch-aws-credentials.outputs.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
+      REGION: ${{ inputs.region_name }}
+      SCHEMA: ${{ inputs.db_schema }}
+      IN_VERSION: ${{ inputs.version }}
+      IN_CLIENT_NAME: ${{ inputs.client_name }}
+
     steps:
-      - name: Determine effective schema name
-        run: |          
-            echo "EFFECTIVE_SCHEMA=${{ inputs.db_schema }}" >> $GITHUB_ENV
-          
-      - name: Tag S3 artifact (on Git tag)        
-        env:
-          REGION: ${{ inputs.region_name }}
-          AWS_ACCESS_KEY_ID: ${{ needs.fetch-aws-credentials.outputs.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ needs.fetch-aws-credentials.outputs.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ needs.fetch-aws-credentials.outputs.AWS_SESSION_TOKEN }}
+      - name: Resolve version and client_name (use inputs as-is)
+        id: resolve
         run: |
-          # Configure AWS (idempotent)
+          set -euo pipefail
+
+          # version must be present (either input or tag context)
+          VERSION="${IN_VERSION:-${GITHUB_REF_NAME:-}}"
+          if [ -z "${VERSION}" ]; then
+            echo "::error::No version provided; pass inputs.version or call from a tag context."
+            exit 1
+          fi
+
+          # client_name: use exactly what caller passed (normalize to lowercase/trim)
+          CLIENT_NAME_RAW="${IN_CLIENT_NAME:-}"
+          CLIENT_NAME="$(printf '%s' "$CLIENT_NAME_RAW" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          echo "EFFECTIVE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "EFFECTIVE_CLIENT=$CLIENT_NAME" >> "$GITHUB_ENV"
+
+          echo "Using VERSION=$VERSION"
+          echo "Using CLIENT_NAME=${CLIENT_NAME:-<none>}"
+
+      - name: Configure AWS CLI
+        run: |
+          set -euo pipefail
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID" --profile default
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY" --profile default
           aws configure set aws_session_token "$AWS_SESSION_TOKEN" --profile default
           aws configure set region "$REGION" --profile default
+          export AWS_DEFAULT_REGION="$REGION"
+          aws sts get-caller-identity >/dev/null
 
-          # Resolve S3 path (handles optional client_name)
-          if [[ -n "${{ inputs.client_name }}" ]]; then
-            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
+      - name: Tag/copy S3 artifact and apply object tags
+        run: |
+          set -euo pipefail
+
+          if [ -n "${EFFECTIVE_CLIENT:-}" ]; then
+            S3_PATH="s3://genesis-cddev/qa-automation/${SCHEMA}/${EFFECTIVE_CLIENT}"
+            S3_KEY_PREFIX="qa-automation/${SCHEMA}/${EFFECTIVE_CLIENT}"
           else
-            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
+            S3_PATH="s3://genesis-cddev/qa-automation/${SCHEMA}"
+            S3_KEY_PREFIX="qa-automation/${SCHEMA}"
           fi
 
-          # Tag from the ref, e.g. v1.2.3
-          TAG="${{ inputs.version }}"
+          SRC="${S3_PATH}/${SCHEMA}-ARM.tar"
+          DST="${S3_PATH}/${SCHEMA}-ARM-${EFFECTIVE_VERSION}.tar"
 
-          SRC="$S3_PATH/$EFFECTIVE_SCHEMA-ARM.tar"
-          DST="$S3_PATH/$EFFECTIVE_SCHEMA-ARM-${TAG}.tar"
+          echo "Copying ${SRC} -> ${DST}"
+          if aws s3 ls "${SRC}" >/dev/null 2>&1; then
+            aws s3 cp "${SRC}" "${DST}"
 
-          echo "Copying $SRC -> $DST"
-          if aws s3 ls "$SRC" >/dev/null 2>&1; then
-            aws s3 cp "$SRC" "$DST" --region "$REGION"
-            echo "Tagged artifact created: $DST"
+            aws s3api put-object-tagging \
+              --bucket genesis-cddev \
+              --key "${S3_KEY_PREFIX}/${SCHEMA}-ARM-${EFFECTIVE_VERSION}.tar" \
+              --tagging "TagSet=[{Key=Version,Value=${EFFECTIVE_VERSION}},{Key=Schema,Value=${SCHEMA}}${EFFECTIVE_CLIENT:+,{Key=Client,Value=${EFFECTIVE_CLIENT}}}]"
+
+            echo "Tagged artifact created: ${DST}"
           else
-            echo "::warning::Source tar not found at $SRC; skipping tag copy."
+            echo "::warning::Source tar not found at ${SRC}; skipping tag copy."
           fi
-
