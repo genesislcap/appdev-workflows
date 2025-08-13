@@ -1,14 +1,16 @@
-       
 name: Stop EC2 by Hostname
 
 on:
-  workflow_call:     
+  workflow_call:
     inputs:
-    
       hostname:
         description: "Private/public hostname or IP of EC2"
         required: true
         type: string
+
+permissions:
+  actions: write     # needed for auto-rerun
+  contents: read
 
 jobs:
   stop-ec2:
@@ -18,12 +20,13 @@ jobs:
       REGION: eu-west-2
 
     steps:
-      - name: Install AWS CLI and jq
+      - name: Install AWS CLI, jq, and gh
         run: |
           set -euo pipefail
-          sudo dnf install -y awscli jq
+          sudo dnf install -y awscli jq gh curl
 
-      - name: Fetch Role ARN from SSM (use base creds)
+      # ---------- FETCH ROLE ARN with RETRY (uses base creds) ----------
+      - name: Fetch Role ARN from SSM (retry)
         id: fetch-role
         env:
           REGION: ${{ env.REGION }}
@@ -31,14 +34,18 @@ jobs:
         run: |
           set -euo pipefail
           echo "Caller before assume:"
-          aws sts get-caller-identity --region "$REGION"
+          aws sts get-caller-identity --region "$REGION" || true
 
-          ROLE_ARN=$(aws ssm get-parameter \
-            --name "$SSM_PARAM_NAME" \
-            --region "$REGION" \
-            --with-decryption \
-            --query "Parameter.Value" \
-            --output text)
+          for i in {1..5}; do
+            ROLE_ARN=$(aws ssm get-parameter \
+              --name "$SSM_PARAM_NAME" \
+              --region "$REGION" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text) && break || true
+            echo "ssm:GetParameter attempt $i failed; sleeping $((i*3))s..."
+            sleep $((i*3))
+          done
 
           if [ -z "${ROLE_ARN:-}" ] || [ "$ROLE_ARN" = "None" ]; then
             echo "❌ Could not fetch role ARN from SSM parameter: $SSM_PARAM_NAME"
@@ -47,7 +54,8 @@ jobs:
 
           echo "role_arn=$ROLE_ARN" >> "$GITHUB_OUTPUT"
 
-      - name: Assume Target Role
+      # ---------- ASSUME ROLE with RETRY ----------
+      - name: Assume Target Role (retry)
         id: assume-role
         env:
           REGION: ${{ env.REGION }}
@@ -55,11 +63,15 @@ jobs:
           set -euo pipefail
           unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_REGION AWS_REGION
 
-          CREDS=$(aws sts assume-role \
-            --role-arn "${{ steps.fetch-role.outputs.role_arn }}" \
-            --role-session-name githubActionSession \
-            --duration-seconds 3600 \
-            --region "$REGION")
+          for i in {1..3}; do
+            CREDS=$(aws sts assume-role \
+              --role-arn "${{ steps.fetch-role.outputs.role_arn }}" \
+              --role-session-name githubActionSession \
+              --duration-seconds 3600 \
+              --region "$REGION") && break || true
+            echo "sts:AssumeRole attempt $i failed; sleeping $((i*3))s..."
+            sleep $((i*3))
+          done
 
           echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
@@ -70,61 +82,105 @@ jobs:
           echo "Caller after assume:"
           aws sts get-caller-identity --region "$REGION"
 
+      # ---------- RESOLVE HOST/IP ----------
       - name: Resolve Hostname or Use IP
         id: resolve-ip
         run: |
+          set -euo pipefail
           HOST="${{ inputs.hostname }}"
+
           if [[ "$HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             IP="$HOST"
           else
-            IP=$(getent hosts "$HOST" | awk '{print $1}')
+            if getent ahostsv4 "$HOST" >/dev/null 2>&1; then
+              IP=$(getent ahostsv4 "$HOST" | awk 'NR==1{print $1}')
+            else
+              IP=$(getent hosts "$HOST" | awk '/^[0-9]+\./{print $1; exit}')
+            fi
           fi
 
-          if [ -z "$IP" ]; then
+          if [ -z "${IP:-}" ]; then
             echo "❌ Could not resolve hostname or IP: $HOST"
             exit 1
           fi
 
           echo "✅ Resolved IP: $IP"
-          echo "ip=$IP" >> $GITHUB_OUTPUT
+          echo "ip=$IP" >> "$GITHUB_OUTPUT"
 
-      - name: Lookup EC2 Instance by IP
+      # ---------- LOOKUP INSTANCE with RETRY ----------
+      - name: Lookup EC2 Instance by IP (retry)
         id: get-instance
+        env:
+          REGION: ${{ env.REGION }}
         run: |
+          set -euo pipefail
           IP=${{ steps.resolve-ip.outputs.ip }}
-          INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters "Name=private-ip-address,Values=$IP" \
-            --region $REGION \
-            --query "Reservations[0].Instances[0].InstanceId" \
-            --output text)
 
-          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
-            INSTANCE_ID=$(aws ec2 describe-instances \
-              --filters "Name=public-ip-address,Values=$IP" \
-              --region $REGION \
-              --query "Reservations[0].Instances[0].InstanceId" \
-              --output text)
-          fi
+          INSTANCE_IDS=""
+          for i in {1..3}; do
+            IDS_PRIVATE=$(aws ec2 describe-instances \
+              --filters "Name=private-ip-address,Values=$IP" \
+              --region "$REGION" \
+              --query "Reservations[].Instances[].InstanceId" \
+              --output text) || true
 
-          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
-            echo "❌ No EC2 instance found for IP $IP"
+            IDS_PUBLIC=$(aws ec2 describe-instances \
+              --filters "Name=ip-address,Values=$IP" \
+              --region "$REGION" \
+              --query "Reservations[].Instances[].InstanceId" \
+              --output text) || true
+
+            INSTANCE_IDS="$(echo "$IDS_PRIVATE $IDS_PUBLIC" | xargs)"
+            [ -n "$INSTANCE_IDS" ] && break || true
+
+            echo "describe-instances attempt $i found none; sleeping $((i*3))s..."
+            sleep $((i*3))
+          done
+
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "❌ No EC2 instance found for IP $IP in region $REGION"
             exit 1
           fi
 
+          INSTANCE_ID=$(echo "$INSTANCE_IDS" | awk '{print $1}')
           echo "✅ EC2 Instance ID: $INSTANCE_ID"
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Stop EC2 Instance
+      # ---------- STOP + WAIT ----------
+      - name: Stop EC2 Instance and wait
+        env:
+          REGION: ${{ env.REGION }}
         run: |
+          set -euo pipefail
           INSTANCE_ID=${{ steps.get-instance.outputs.instance_id }}
+
           STATE=$(aws ec2 describe-instances \
             --instance-ids "$INSTANCE_ID" \
             --region "$REGION" \
-            --query "Reservations[0].Instances[0].State.Name" \
+            --query "Reservations[].Instances[].State.Name" \
             --output text)
 
           echo "ℹ️ Current state of $INSTANCE_ID: $STATE"
 
-          aws ec2 stop-instances --instance-ids "$INSTANCE_ID" --region "$REGION"
+          if [ "$STATE" != "stopped" ]; then
+            echo "Stopping $INSTANCE_ID ..."
+            aws ec2 stop-instances --instance-ids "$INSTANCE_ID" --region "$REGION" >/dev/null
+            echo "Waiting for instance to reach 'stopped' ..."
+            aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID" --region "$REGION"
+            echo "✅ Instance $INSTANCE_ID is now stopped."
+          else
+            echo "⚠️ Instance $INSTANCE_ID is already stopped."
+          fi
 
-          echo "✅ Stop command issued for instance $INSTANCE_ID"
+      # ---------- AUTO-RERUN ON FAILURE (once) ----------
+      - name: Auto-rerun this workflow once if it failed
+        if: ${{ failure() && github.run_attempt < 2 }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "🔁 Auto re-running this workflow (attempt ${{ github.run_attempt }} of 2)..."
+          gh api \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun
