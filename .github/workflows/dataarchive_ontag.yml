@@ -20,6 +20,7 @@ on:
     #   GRADLE_PROPERTIES:
     #     required: true
 
+
 jobs:
   postgres-dump:
     runs-on: [appdev-selfhosted-al2023]
