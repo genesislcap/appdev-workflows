@@ -1,4 +1,4 @@
-name: Data Archive
+name: Data Archive based on TAG
 
 on:
   workflow_call:
