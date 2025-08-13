@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  actions: write     # needed for auto-rerun
+  actions: write      # needed for auto-rerun
   contents: read
 
 jobs:
@@ -20,10 +20,10 @@ jobs:
       REGION: eu-west-2
 
     steps:
-      - name: Install AWS CLI, jq, and gh
+      - name: Install AWS CLI, jq, curl
         run: |
           set -euo pipefail
-          sudo dnf install -y awscli jq gh curl
+          sudo dnf install -y awscli jq curl
 
       # ---------- FETCH ROLE ARN with RETRY (uses base creds) ----------
       - name: Fetch Role ARN from SSM (retry)
@@ -173,14 +173,14 @@ jobs:
           fi
 
       # ---------- AUTO-RERUN ON FAILURE (once) ----------
-      - name: Auto-rerun this workflow once if it failed
+      - name: Auto-rerun this workflow once if it failed (via REST API)
         if: ${{ failure() && github.run_attempt < 2 }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           echo "🔁 Auto re-running this workflow (attempt ${{ github.run_attempt }} of 2)..."
-          gh api \
-            -X POST \
+          curl -sS -X POST \
             -H "Accept: application/vnd.github+json" \
-            repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/rerun"
