@@ -25,10 +25,12 @@ on:
         required: false
         default: 'eu-west-2'
         type: string
+      tag_version:             # <-- NEW
+        required: false
+        type: string
     # secrets:
     #   GRADLE_PROPERTIES:
     #     required: true
-
 
 jobs:
   fetch-aws-credentials:
@@ -43,7 +45,6 @@ jobs:
       REGION: eu-west-2
 
     steps:
-
       - name: Print Input Values
         run: |
           echo "db_host: ${{ inputs.db_host }}"
@@ -51,7 +52,8 @@ jobs:
           echo "db_user: ${{ inputs.db_user }}"
           echo "db_name: ${{ inputs.db_name }}"
           echo "region_name: ${{ inputs.region_name }}"
-
+          echo "client_name: ${{ inputs.client_name }}"
+          echo "tag_version: ${{ inputs.tag_version }}"
 
       - name: Install AWS CLI and jq
         run: |
@@ -66,7 +68,6 @@ jobs:
           unset AWS_SESSION_TOKEN
 
           aws_ssm_param_arn=$(aws ssm get-parameter --name $SSM_PARAM_NAME --region=$REGION --with-decryption --query "Parameter.Value")
-
           aws_credentials_json=$(aws sts assume-role --role-arn ${aws_ssm_param_arn//\"/} --role-session-name githubActionSession --duration 3600 --region $REGION)
 
           echo "AWS_ACCESS_KEY_ID=$(echo $aws_credentials_json | jq -r .Credentials.AccessKeyId)" >> $GITHUB_OUTPUT
@@ -97,7 +98,6 @@ jobs:
       - name: Create PostgreSQL database dump using Docker
         run: |
           sudo docker pull postgres:17
-
           sudo docker run --rm \
             -e PGPASSWORD=$DB_PASSWORD \
             postgres:17 \
@@ -116,7 +116,6 @@ jobs:
             echo "Using provided new_schema"
             echo "EFFECTIVE_SCHEMA=${{ inputs.new_schema }}" >> $GITHUB_ENV
           fi
-
 
       - name: Replace schema name in SQL dump
         run: |
@@ -155,15 +154,21 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           ARCHS=("ARM")
 
+          # Build S3_PATH (supports client_name and optional tag_version folder)
+          if [[ -n "${{ inputs.client_name }}" ]]; then
+            BASE_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
+          else
+            BASE_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
+          fi
+          if [[ -n "${{ inputs.tag_version }}" ]]; then
+            S3_PATH="${BASE_PATH}/${{ inputs.tag_version }}"
+          else
+            S3_PATH="${BASE_PATH}"
+          fi
+
           for ARCH in "${ARCHS[@]}"; do
             OLD_FILE="$EFFECTIVE_SCHEMA-$ARCH.tar"
             NEW_FILE="$EFFECTIVE_SCHEMA-$ARCH-${TIMESTAMP}.tar"
-
-            if [[ -n "${{ inputs.client_name }}" ]]; then
-              S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
-            else
-              S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
-            fi
 
             if aws s3 ls "$S3_PATH/$OLD_FILE" 2>/dev/null | grep -q "$OLD_FILE"; then
               aws s3 mv "$S3_PATH/$OLD_FILE" "$S3_PATH/$NEW_FILE"
@@ -177,13 +182,20 @@ jobs:
           aws configure set aws_session_token $AWS_SESSION_TOKEN --profile default
           aws configure set region $REGION --profile default
 
+          # Build S3_PATH (supports client_name and optional tag_version folder)
           if [[ -n "${{ inputs.client_name }}" ]]; then
-            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
+            BASE_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA/${{ inputs.client_name }}"
           else
-            S3_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
+            BASE_PATH="s3://genesis-cddev/qa-automation/$EFFECTIVE_SCHEMA"
+          fi
+          if [[ -n "${{ inputs.tag_version }}" ]]; then
+            S3_PATH="${BASE_PATH}/${{ inputs.tag_version }}"
+          else
+            S3_PATH="${BASE_PATH}"
           fi
 
-          aws s3 cp $EFFECTIVE_SCHEMA-ARM.tar "$S3_PATH/" --region $REGION
+          echo "Uploading to: $S3_PATH/"
+          aws s3 cp "$EFFECTIVE_SCHEMA-ARM.tar" "$S3_PATH/" --region "$REGION"
 
       - name: Clean up
         run: |
