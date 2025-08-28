@@ -32,6 +32,9 @@ inputs:
   test-reports-suffix:
     required: false
     default: ""
+  push-image:
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -106,6 +109,7 @@ runs:
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Push Image using bash
+      if: inputs.push-image == 'true'
       shell: bash
       env:
         ECR_REGISTRY: ${{ inputs.ecr-registry }}
