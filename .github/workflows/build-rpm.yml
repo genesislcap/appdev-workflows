@@ -152,6 +152,15 @@ jobs:
 
       - name: Upload RPMs to S3
         run: |
+          echo "Clear AWS credentials inherited from the environment"
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          unset AWS_PROFILE
+          unset AWS_DEFAULT_PROFILE
+          echo "Delete any credential/config files"
+          rm -f ~/.aws/credentials ~/.aws/config
+          
           cd ~/rpmbuild/SRPMS/
           ls -al
           IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
