@@ -6,8 +6,9 @@ inputs:
     required: true
     description: The image version to deploy
   dbversion:
-    required: true
+    required: false
     description: The db image version to deploy
+    default: "latest"
   environment:
     required: true
     description: The environment tag used to identify the servers to deploy to
