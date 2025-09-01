@@ -23,6 +23,10 @@ inputs:
     description: Use Genesis DumpIt and copy to S3 (Should not be used in Prod)
     required: false
     default: "false"
+  custom_env_vars:
+    description: Cutom env vars that will be passed to the Docker Compose command. Provide as multiline key/value pair.
+    required: false
+    default: ""
   app_name:
     required: true
   ecr_registry:
@@ -81,11 +85,26 @@ runs:
     - name: Populate secrets & Docker Compose env vars
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
-        command:
-          source /root/.bashrc && populate_secrets &&
-          grep -q '^export GENESIS_VERSION=' ~/.bashrc && sed -i 's/^export GENESIS_VERSION=.*/export GENESIS_VERSION=${{ inputs.version }}/' ~/.bashrc || echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc &&
-          grep -q '^export APP_NAME=' ~/.bashrc && sed -i 's/^export APP_NAME=.*/export APP_NAME=${{ inputs.app_name }}/' ~/.bashrc || echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc &&
-          grep -q '^export AWS_ECR_REGISTRY=' ~/.bashrc && sed -i 's/^export AWS_ECR_REGISTRY=.*/export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}/' ~/.bashrc || echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
+        command: |
+          source /root/.bashrc
+          populate_secrets
+
+          # Remove old lines
+          sed -i '/GENESIS_VERSION/d' ~/.bashrc
+          sed -i '/APP_NAME/d' ~/.bashrc
+          sed -i '/AWS_ECR_REGISTRY/d' ~/.bashrc
+          sed -i '/DEPLOY_ENV_VAR/d' ~/.bashrc
+
+          echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc
+          echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc
+          echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
+
+          echo '${{ inputs.custom_env_vars }}' | while IFS='=' read -r key value; do
+            if [[ -n $key ]]; then
+              printf 'export %s=%s #DEPLOY_ENV_VAR\n' $key $value >> ~/.bashrc
+            fi
+          done
+
         app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}

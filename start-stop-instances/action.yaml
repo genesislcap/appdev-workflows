@@ -60,10 +60,12 @@ runs:
         # Step 2: Start or Stop the instances
         if [ "$COMMAND_LOWER" == "start" ]; then
           aws ec2 start-instances --instance-ids $INSTANCE_IDS
+          sleep 5
           aws ec2 wait instance-status-ok --instance-ids $INSTANCE_IDS
           echo "Command executed successfully. All instances RUNNING"
         elif [ "$COMMAND_LOWER" == "stop" ]; then
           aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+          sleep 5
           aws ec2 wait instance-stopped --instance-ids $INSTANCE_IDS
           echo "Command executed successfully. All instances STOPPED"
         fi
