@@ -5,6 +5,9 @@ inputs:
   version:
     required: true
     description: The image version to deploy
+  dbversion:
+    required: true
+    description: The db image version to deploy
   environment:
     required: true
     description: The environment tag used to identify the servers to deploy to
@@ -84,6 +87,7 @@ runs:
         command:
           source /root/.bashrc && populate_secrets &&
           grep -q '^export GENESIS_VERSION=' ~/.bashrc && sed -i 's/^export GENESIS_VERSION=.*/export GENESIS_VERSION=${{ inputs.version }}/' ~/.bashrc || echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc &&
+           grep -q '^export DB_VERSION=' ~/.bashrc && sed -i 's/^export DB_VERSION=.*/export DB_VERSION=${{ inputs.dbversion }}/' ~/.bashrc || echo 'export DB_VERSION=${{ inputs.dbversion }}' >> ~/.bashrc &&
           grep -q '^export APP_NAME=' ~/.bashrc && sed -i 's/^export APP_NAME=.*/export APP_NAME=${{ inputs.app_name }}/' ~/.bashrc || echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc &&
           grep -q '^export AWS_ECR_REGISTRY=' ~/.bashrc && sed -i 's/^export AWS_ECR_REGISTRY=.*/export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}/' ~/.bashrc || echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
         app_name: ${{ inputs.app_name }}
