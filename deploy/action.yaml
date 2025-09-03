@@ -71,6 +71,18 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+
+    - name: RDS Snapshot step
+      if: inputs.snapshot_rds == 'true'
+      uses: genesislcap/appdev-workflows/rds-snapshot@develop
+      with:
+        app_name: ${{ inputs.app_name }}
+        customer: ${{ inputs.customer }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
     - name: Sync config files
       uses: genesislcap/appdev-workflows/sync-files@develop
       with:
