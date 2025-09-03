@@ -86,9 +86,6 @@ runs:
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: |
-          source /root/.bashrc
-          populate_secrets
-
           # Remove old lines
           sed -i '/GENESIS_VERSION/d' ~/.bashrc
           sed -i '/APP_NAME/d' ~/.bashrc
@@ -104,6 +101,9 @@ runs:
               printf 'export %s=%s #DEPLOY_ENV_VAR\n' $key $value >> ~/.bashrc
             fi
           done
+
+          source /root/.bashrc
+          populate_secrets
 
         app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
