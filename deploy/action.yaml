@@ -47,7 +47,25 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Start instance if not running
+      uses: genesislcap/appdev-workflows/start-stop-instances@develop
+      with:
+        command: "start"
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
 
+    - name: Stop Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: "cd /data/docker-compose && docker compose down || exit 0"
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
 
     - name: RDS Snapshot step
       if: inputs.snapshot_rds == 'true'
@@ -60,3 +78,105 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - name: Backup DB
+      if: inputs.backup_db == 'true'
+      uses: genesislcap/appdev-workflows/backup-db@develop
+      with:
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Sync config files
+      uses: genesislcap/appdev-workflows/sync-files@develop
+      with:
+        local-path: ${{ inputs.config-path }}
+        remote-path: "/data/docker-compose"
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Populate secrets & Docker Compose env vars
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: |
+          # Remove old lines
+          sed -i '/GENESIS_VERSION/d' ~/.bashrc
+          sed -i '/APP_NAME/d' ~/.bashrc
+          sed -i '/AWS_ECR_REGISTRY/d' ~/.bashrc
+          sed -i '/DEPLOY_ENV_VAR/d' ~/.bashrc
+
+          echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc
+          echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc
+          echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
+
+          echo '${{ inputs.custom_env_vars }}' | while IFS='=' read -r key value; do
+            if [[ -n $key ]]; then
+              printf 'export %s=%s #DEPLOY_ENV_VAR\n' $key $value >> ~/.bashrc
+            fi
+          done
+
+          source /root/.bashrc
+          populate_secrets
+
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Initiate the DB
+      if: inputs.initial_deploy == 'true'
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          docker compose run --rm -e GENESIS_DB_INSTALL=true genesis_app
+        app_name: ${{ inputs.app_name }}
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Run DB Migration
+      if: inputs.migrate_db == 'true'
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          docker compose run --rm -e GENESIS_DB_UPGRADE=true genesis_app
+        app_name: ${{ inputs.app_name }}
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Start Genesis
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command:
+          source /root/.bashrc &&
+          cd /data/docker-compose &&
+          docker compose up -d
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Prune Docker
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: docker system prune -af && docker volume prune -af
+        app_name: ${{ inputs.app_name }}
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
