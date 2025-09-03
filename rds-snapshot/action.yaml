@@ -76,8 +76,8 @@ runs:
 
         # sleep for a few seconds before the snapshot is visible to the cli
         sleep 5
-        aws rds wait db-snapshot-available \
-         --db-snapshot-identifier "$SNAP_ID"
+        aws rds wait db-cluster-snapshot-available --region $REGION \
+         --db-cluster-snapshot-identifier "$SNAP_ID"
 
         if [ $? -eq 0 ]; then
           echo "✅ Snapshot $SNAP_ID is now available."
