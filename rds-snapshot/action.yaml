@@ -30,7 +30,8 @@ runs:
       shell: bash
       run: |
         # Find RDS by tags
-        ENVIRONMENT="${{ inputs.environment^^ }}"
+        ENVIRONMENT="${{ inputs.environment }}"
+        ENVIRONMENT="${ENVIRONMENT^^}"
         APP_NAME="${{ inputs.app_name }}"
         CUSTOMER="${{ inputs.customer }}"
         REGION="${{ inputs.aws-region }}"
