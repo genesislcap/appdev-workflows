@@ -31,8 +31,6 @@ inputs:
     description: Cutom env vars that will be passed to the Docker Compose command. Provide as multiline key/value pair.
     required: false
     default: ""
-  customer:
-    required: false
   app_name:
     required: true
   ecr_registry:
@@ -43,6 +41,8 @@ inputs:
     required: true
   aws-region:
     required: true
+  customer:
+    required: false
 
 runs:
   using: "composite"
