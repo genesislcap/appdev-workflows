@@ -23,6 +23,10 @@ inputs:
     description: Use Genesis DumpIt and copy to S3 (Should not be used in Prod)
     required: false
     default: "false"
+  snapshot_rds:
+    description: Whether to initiate the rds snapshot creation
+    required: false
+    default: "false"
   custom_env_vars:
     description: Cutom env vars that will be passed to the Docker Compose command. Provide as multiline key/value pair.
     required: false
@@ -61,23 +65,22 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Backup DB
-      if: inputs.backup_db == 'true'
-      uses: genesislcap/appdev-workflows/backup-db@develop
+    - name: RDS Snapshot step
+      if: inputs.snapshot_rds == 'true'
+      uses: genesislcap/appdev-workflows/rds-snapshot@DCD-3464
       with:
         app_name: ${{ inputs.app_name }}
+        customer: ${{ inputs.customer }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-
-    - name: RDS Snapshot step
-      if: inputs.snapshot_rds == 'true'
-      uses: genesislcap/appdev-workflows/rds-snapshot@develop
+    - name: Backup DB
+      if: inputs.backup_db == 'true'
+      uses: genesislcap/appdev-workflows/backup-db@develop
       with:
         app_name: ${{ inputs.app_name }}
-        customer: ${{ inputs.customer }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
