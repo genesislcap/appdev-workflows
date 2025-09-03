@@ -38,7 +38,7 @@ runs:
         # Fetch resources with the specified tag key and value
         RDS_ARN=$(aws resourcegroupstaggingapi get-resources \
           --resource-type-filters rds:db \
-          --tag-filters Key=Application,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=Environment,Value=$ENVIRONMENT \
+          --tag-filters Key=Application,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=Environment,Values=$ENVIRONMENT \
           --query "ResourceTagMappingList[].ResourceARN" --region $REGION  \
           --output text | sed '/^$/d')
 
