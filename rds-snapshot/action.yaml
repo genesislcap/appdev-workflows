@@ -1,5 +1,5 @@
-name: DB Backup
-description: Backup the DB and sync the files to S3
+name: RDS Snapshot Creation
+description: trigger the rds db cluster snapshot process
 
 inputs:
   environment:
@@ -67,6 +67,22 @@ runs:
         
         DB_ID=${{ steps.find-rds-bytags.outputs.db-name }}
         SNAP_ID=$DB_ID-$(date +%Y%m%d%H%M)
+
+        echo "🔍 Checking status of cluster: $CLUSTER_ID ..."
+        STATUS=$(aws rds describe-db-clusters \
+         --db-cluster-identifier "$DB_ID" \
+         --query "DBClusters[0].Status" \
+         --region "$REGION" \
+         --output text)
+
+        echo "Current status: $STATUS"
+
+        if [[ "$STATUS" != "available" ]]; then
+          echo "❌ Cluster is not available (status=$STATUS). Exiting."
+          exit 1
+        fi
+
+        echo "✅ Cluster is available. Creating snapshot: $SNAP_ID ..."
 
         aws rds create-db-cluster-snapshot \
          --db-cluster-snapshot-identifier "$SNAP_ID" \
