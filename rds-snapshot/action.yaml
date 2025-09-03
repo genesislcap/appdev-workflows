@@ -25,12 +25,12 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - name: Find S3 bucket by tags
+    - name: Find RDS Instance by tags
       id: find-rds-bytags
       shell: bash
       run: |
         # Find RDS by tags
-        ENVIRONMENT="${{ inputs.environment }}"
+        ENVIRONMENT="${{ inputs.environment^^ }}"
         APP_NAME="${{ inputs.app_name }}"
         CUSTOMER="${{ inputs.customer }}"
         REGION="${{ inputs.aws-region }}"
