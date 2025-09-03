@@ -74,6 +74,8 @@ runs:
          --region ${{ inputs.aws-region }} \
          --tags Key=Application,Value=$APP_NAME Key=Environment,Value=$ENVIRONMENT Key=Customer,Value=$CUSTOMER
 
+        # sleep for a few seconds before the snapshot is visible to the cli
+        sleep 5
         aws rds wait db-snapshot-available \
          --db-snapshot-identifier "$SNAP_ID"
 
