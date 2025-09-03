@@ -40,7 +40,7 @@ runs:
           --resource-type-filters rds:db \
           --tag-filters Key=Application,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=Environment,Value=$ENVIRONMENT \
           --query "ResourceTagMappingList[].ResourceARN" --region $REGION  \
-          --output text | sed '/^$/d'
+          --output text | sed '/^$/d')
 
         if [ "$RDS_ARN" == "None" ]; then
           echo "Error: No rds instance found with the specified tags."
