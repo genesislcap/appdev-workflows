@@ -59,14 +59,20 @@ runs:
       shell: bash
       run: |
         # Run RDS snapshot cli using the instance indentifier got above
+        ENVIRONMENT="${{ inputs.environment }}"
+        ENVIRONMENT="${ENVIRONMENT^^}"
+        APP_NAME="${{ inputs.app_name }}"
+        CUSTOMER="${{ inputs.customer }}"
+        REGION="${{ inputs.aws-region }}"
         
         DB_ID=${{ steps.find-rds-bytags.outputs.db-name }}
         SNAP_ID=$DB_ID-$(date +%Y%m%d%H%M)
 
-        aws rds create-db-snapshot \
-         --db-snapshot-identifier "$SNAP_ID" \
-         --db-instance-identifier "$DB_ID" \
-         --region ${{ inputs.aws-region }}
+        aws rds create-db-cluster-snapshot \
+         --db-cluster-snapshot-identifier "$SNAP_ID" \
+         --db-cluster-identifier "$DB_ID" \
+         --region ${{ inputs.aws-region }} \
+         --tags Key=Application,Value=$APP_NAME Key=Environment,Value=$ENVIRONMENT Key=Customer,Value=$CUSTOMER
 
         aws rds wait db-snapshot-available \
          --db-snapshot-identifier "$SNAP_ID"
