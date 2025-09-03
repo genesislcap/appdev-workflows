@@ -67,12 +67,12 @@ runs:
          --db-instance-identifier "$DB_ID" \
          --region ${{ inputs.aws-region }}
 
-       aws rds wait db-snapshot-available \
+        aws rds wait db-snapshot-available \
          --db-snapshot-identifier "$SNAP_ID"
 
-       if [ $? -eq 0 ]; then
-         echo "✅ Snapshot $SNAP_ID is now available."
-       else
-         echo "❌ Snapshot $SNAP_ID failed to become available."
-         exit 1
-       fi
+        if [ $? -eq 0 ]; then
+          echo "✅ Snapshot $SNAP_ID is now available."
+        else
+          echo "❌ Snapshot $SNAP_ID failed to become available."
+          exit 1
+        fi
