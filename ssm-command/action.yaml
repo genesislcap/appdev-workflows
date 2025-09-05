@@ -39,7 +39,7 @@ runs:
       run: |
         # Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
-            --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" "Name=tag:AppName,Values=$APP_NAME" "Name=tag:ServerType,Values=Genesis" "Name=instance-state-name,Values=running" \
+            --filters "Name=tag:EnvironmentName,Values=$ENVIRONMENT_TAG" "Name=tag:AppName,Values=$APP_NAME" "Name=tag:ServerType,Values=Genesis" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
 

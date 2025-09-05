@@ -37,7 +37,7 @@ runs:
 
         # Fetch resources with the specified tag key and value
         BUCKET_ARN=$(aws resourcegroupstaggingapi get-resources \
-          --tag-filters Key=Environment,Values=$ENVIRONMENT Key=AppName,Values=$APP_NAME Key=Type,Values=configs\
+          --tag-filters Key=EnvironmentName,Values=$ENVIRONMENT Key=AppName,Values=$APP_NAME Key=Type,Values=configs\
           --resource-type-filters s3 \
           --query 'ResourceTagMappingList[0].ResourceARN' \
           --output text)

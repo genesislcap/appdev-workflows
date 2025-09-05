@@ -43,7 +43,7 @@ runs:
 
         # Step 1: Get instance IDs with the specified Environment tag
         INSTANCE_IDS=$(aws ec2 describe-instances \
-          --filters "Name=tag:Environment,Values=$ENVIRONMENT_TAG" \
+          --filters "Name=tag:EnvironmentName,Values=$ENVIRONMENT_TAG" \
                     "Name=tag:AppName,Values=$APP_NAME" \
                     "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" \
           --query "Reservations[].Instances[].InstanceId" \
