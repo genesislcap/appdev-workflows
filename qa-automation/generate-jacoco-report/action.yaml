@@ -61,7 +61,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.app_name }}-jacoco-report-html
-        path: /app/web/jacoco/${{ steps.ts.outputs.ts }}/html
+        path: /app/web/jacoco/2025-09-08_09-29-03/html
 
     - name: Start Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
