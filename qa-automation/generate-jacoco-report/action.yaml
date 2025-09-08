@@ -48,6 +48,12 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+    
+    - name: Upload JaCoCo Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.app_name }}-jacoco-report-html
+        path: /app/web/jacoco/$timestamp/html
 
     - name: Start Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
