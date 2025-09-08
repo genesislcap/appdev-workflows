@@ -43,7 +43,7 @@ runs:
         command: |
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          timestamp="${{ steps.ts.outputs.ts }}"         
+          timestamp=${{ steps.ts.outputs.ts }}        
           mkdir -p /data/jacoco/$timestamp/
           chmod -R 777 /data/jacoco/$timestamp/
           docker compose run --rm genesis_app \
