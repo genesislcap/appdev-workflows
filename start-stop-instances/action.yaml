@@ -45,6 +45,7 @@ runs:
         INSTANCE_IDS=$(aws ec2 describe-instances \
           --filters "Name=tag:EnvironmentName,Values=$ENVIRONMENT_TAG" \
                     "Name=tag:AppName,Values=$APP_NAME" \
+                    "Name=tag:ServerType,Values=Genesis" \
                     "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" \
           --query "Reservations[].Instances[].InstanceId" \
           --output text)
