@@ -41,7 +41,7 @@ runs:
         command: |
           source /root/.bashrc &&
           cd /data/docker-compose &&
-          timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
+          # timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
           timestamp="${{ steps.ts.outputs.ts }}"
           
           mkdir -p /data/jacoco/$timestamp/
