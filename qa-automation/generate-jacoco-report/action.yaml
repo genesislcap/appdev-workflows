@@ -44,13 +44,13 @@ runs:
           source /root/.bashrc &&
           cd /data/docker-compose &&
           timestamp=${{ steps.ts.outputs.ts }}        
-          mkdir -p /data/jacoco/$timestamp/
-          chmod -R 777 /data/jacoco/$timestamp/
+          mkdir -p /data/jacoco/${{ steps.ts.outputs.ts }}/
+          chmod -R 777 /data/jacoco/${{ steps.ts.outputs.ts }}/
           docker compose run --rm genesis_app \
             java -jar /home/genesis/jacoco/lib/jacococli.jar report /app/run/runtime/jacoco/jacoco.exec \
             --classfiles /app/run/genesis/bin \
-            --xml /app/web/jacoco/$timestamp/genesis.xml \
-            --html /app/web/jacoco/$timestamp/html
+            --xml /app/web/jacoco/${{ steps.ts.outputs.ts }}/genesis.xml \
+            --html /app/web/jacoco/${{ steps.ts.outputs.ts }}/html
         app_name: ${{ inputs.app_name }}
         environment: ${{ inputs.environment }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
