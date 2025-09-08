@@ -19,12 +19,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - id: ts
-      shell: bash
-      run: |
-        timestamp="$(date +'%Y-%m-%d_%H-%M-%S')"
-        echo "ts=$timestamp" >> "$GITHUB_OUTPUT"
-      
     - name: Stop Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
@@ -36,20 +30,16 @@ runs:
         aws-region: ${{ inputs.aws-region }}
 
     - name: Generate the Report
-      id: ts1
+      id: generate_report
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: |
           source /root/.bashrc &&
           cd /data/docker-compose &&
           timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
-          # timestamp="${{ steps.ts.outputs.ts }}"
-          
+          echo "ts=$timestamp" >> $GITHUB_OUTPUT
           mkdir -p /data/jacoco/$timestamp/
           chmod -R 777 /data/jacoco/$timestamp/
-
-          echo "ts=$timestamp" >> "$GITHUB_OUTPUT"
-          
           docker compose run --rm genesis_app \
             java -jar /home/genesis/jacoco/lib/jacococli.jar report /app/run/runtime/jacoco/jacoco.exec \
             --classfiles /app/run/genesis/bin \
@@ -65,8 +55,8 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.app_name }}-jacoco-report-html
-        path: /app/web/jacoco/${{ steps.ts1.outputs.ts }}/html
-       
+        path: /app/web/jacoco/${{ steps.generate_report.outputs.ts }}/html
+
     - name: Start Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
