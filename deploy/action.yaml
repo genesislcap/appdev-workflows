@@ -86,23 +86,20 @@ runs:
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
         command: |
-          # Remove old lines
-          sed -i '/GENESIS_VERSION/d' ~/.bashrc
-          sed -i '/APP_NAME/d' ~/.bashrc
-          sed -i '/AWS_ECR_REGISTRY/d' ~/.bashrc
-          sed -i '/DEPLOY_ENV_VAR/d' ~/.bashrc
+          rm -rf /etc/profile.d/deploy.sh # Remove old config
 
-          echo 'export GENESIS_VERSION=${{ inputs.version }}' >> ~/.bashrc
-          echo 'export APP_NAME=${{ inputs.app_name }}' >> ~/.bashrc
-          echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> ~/.bashrc
+          echo 'export GENESIS_VERSION=${{ inputs.version }}' >> /etc/profile.d/deploy.sh
+          echo 'export APP_NAME=${{ inputs.app_name }}' >> /etc/profile.d/deploy.sh
+          echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> /etc/profile.d/deploy.sh
 
           echo '${{ inputs.custom_env_vars }}' | while IFS='=' read -r key value; do
             if [[ -n $key ]]; then
-              printf 'export %s=%s #DEPLOY_ENV_VAR\n' $key $value >> ~/.bashrc
+              printf 'export %s=%s #DEPLOY_ENV_VAR\n' $key $value >> /etc/profile.d/deploy.sh
             fi
           done
 
           source /root/.bashrc
+          source /etc/profile.d/deploy.sh
           populate_secrets
 
         app_name: ${{ inputs.app_name }}
