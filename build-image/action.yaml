@@ -63,6 +63,7 @@ runs:
           aws-region: eu-west-2
 
     - name: Log into ECR
+      if: inputs.push-image == 'true'
       shell: bash
       run: |
           aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr-registry }}
@@ -103,6 +104,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Build Image
+      if: inputs.push-image == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
