@@ -1,0 +1,103 @@
+name: RDS Snapshot Creation
+description: trigger the rds db cluster snapshot process
+
+inputs:
+  environment:
+    required: true
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+  app_name:
+    required: true
+  customer:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Find RDS Instance by tags
+      id: find-rds-bytags
+      shell: bash
+      run: |
+        # Find RDS by tags
+        ENVIRONMENT="${{ inputs.environment }}"
+        ENVIRONMENT="${ENVIRONMENT^^}"
+        APP_NAME="${{ inputs.app_name }}"
+        CUSTOMER="${{ inputs.customer }}"
+        REGION="${{ inputs.aws-region }}"
+
+        # Fetch resources with the specified tag key and value
+        RDS_ARN=$(aws resourcegroupstaggingapi get-resources \
+          --resource-type-filters rds:cluster \
+          --tag-filters Key=Application,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=Environment,Values=$ENVIRONMENT \
+          --query "ResourceTagMappingList[].ResourceARN" --region $REGION  \
+          --output text | sed '/^$/d')
+
+        if [ "$RDS_ARN" == "None" ]; then
+          echo "Error: No rds instance found with the specified tags."
+          exit 1
+        fi
+
+        # Extract rds name from ARN (arn:aws:db:::db-name)
+        RDS_NAME=$(echo $RDS_ARN |awk -F: '{print $NF}')
+        echo "RDS DB instance found: $RDS_NAME"
+
+        # Set the bucket name as an output
+        echo "db-name=$RDS_NAME" >> $GITHUB_OUTPUT
+
+    - name: Snapshot DB
+      shell: bash
+      run: |
+        # Run RDS snapshot cli using the instance indentifier got above
+        ENVIRONMENT="${{ inputs.environment }}"
+        ENVIRONMENT="${ENVIRONMENT^^}"
+        APP_NAME="${{ inputs.app_name }}"
+        CUSTOMER="${{ inputs.customer }}"
+        REGION="${{ inputs.aws-region }}"
+        
+        DB_ID=${{ steps.find-rds-bytags.outputs.db-name }}
+        SNAP_ID=$DB_ID-$(date +%Y%m%d%H%M)
+
+        echo "🔍 Checking status of cluster: $CLUSTER_ID ..."
+        STATUS=$(aws rds describe-db-clusters \
+         --db-cluster-identifier "$DB_ID" \
+         --query "DBClusters[0].Status" \
+         --region "$REGION" \
+         --output text)
+
+        echo "Current status: $STATUS"
+
+        if [[ "$STATUS" != "available" ]]; then
+          echo "❌ Cluster is not available (status=$STATUS). Exiting."
+          exit 1
+        fi
+
+        echo "✅ Cluster is available. Creating snapshot: $SNAP_ID ..."
+
+        aws rds create-db-cluster-snapshot \
+         --db-cluster-snapshot-identifier "$SNAP_ID" \
+         --db-cluster-identifier "$DB_ID" \
+         --region ${{ inputs.aws-region }} \
+         --tags Key=Application,Value=$APP_NAME Key=Environment,Value=$ENVIRONMENT Key=Customer,Value=$CUSTOMER
+
+        # sleep for a few seconds before the snapshot is visible to the cli
+        sleep 5
+        aws rds wait db-cluster-snapshot-available --region $REGION \
+         --db-cluster-snapshot-identifier "$SNAP_ID"
+
+        if [ $? -eq 0 ]; then
+          echo "✅ Snapshot $SNAP_ID is now available."
+        else
+          echo "❌ Snapshot $SNAP_ID failed to become available."
+          exit 1
+        fi
