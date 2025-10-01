@@ -57,6 +57,10 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - shell: bash
+      run: |
+        echo "- ✅ Instances Started" >> $GITHUB_STEP_SUMMARY
+
     - name: Stop Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
@@ -66,6 +70,10 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      run: |
+        echo "- ✅ Genesis Stopped" >> $GITHUB_STEP_SUMMARY
 
     - name: RDS Snapshot step
       if: inputs.snapshot_rds == 'true'
@@ -78,6 +86,11 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - shell: bash
+      if: inputs.snapshot_rds == 'true'
+      run: |
+        echo "- ✅ RDS Snapshot Completed" >> $GITHUB_STEP_SUMMARY
+
     - name: Backup DB
       if: inputs.backup_db == 'true'
       uses: genesislcap/appdev-workflows/backup-db@develop
@@ -87,6 +100,11 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      if: inputs.backup_db == 'true'
+      run: |
+        echo "- ✅ Genesis DumpIt Completed" >> $GITHUB_STEP_SUMMARY
 
     - name: Sync config files
       uses: genesislcap/appdev-workflows/sync-files@develop
@@ -98,6 +116,10 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      run: |
+        echo "- ✅ Environment Synced" >> $GITHUB_STEP_SUMMARY
 
     - name: Populate secrets & Docker Compose env vars
       uses: genesislcap/appdev-workflows/ssm-command@develop
@@ -125,6 +147,10 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - shell: bash
+      run: |
+        echo "- ✅ Secrets Populated" >> $GITHUB_STEP_SUMMARY
+
     - name: Initiate the DB
       if: inputs.initial_deploy == 'true'
       uses: genesislcap/appdev-workflows/ssm-command@develop
@@ -139,6 +165,11 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      if: inputs.initial_deploy == 'true'
+      run: |
+        echo "- ✅ DB Initialisation Completed (remap and mark install hooks as completed)" >> $GITHUB_STEP_SUMMARY
 
     - name: Run DB Migration
       if: inputs.migrate_db == 'true'
@@ -155,6 +186,11 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - shell: bash
+      if: inputs.migrate_db == 'true'
+      run: |
+        echo "- ✅ DB Migration Completed (remap)" >> $GITHUB_STEP_SUMMARY
+
     - name: Start Genesis
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
@@ -168,6 +204,10 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
+    - shell: bash
+      run: |
+        echo "- ✅ Genesis Started" >> $GITHUB_STEP_SUMMARY
+
     - name: Prune Docker
       uses: genesislcap/appdev-workflows/ssm-command@develop
       with:
@@ -177,3 +217,7 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      run: |
+        echo "- ✅ Docker Pruned" >> $GITHUB_STEP_SUMMARY
