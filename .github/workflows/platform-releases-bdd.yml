@@ -1,0 +1,375 @@
+# This workflow will release a version for a product using a given branch.
+# It will create a tag on the release branch for the version, and roll to the next development version on the same branch.
+
+# It assumes that the version is set in one place globally for the whole project, inside a build.gradle.kts file under the allProjects {} block.
+name: Ω Workflow - Gradle - Release
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Owner and name of repository to release e.g. genesislcap/platform-auth'
+        required: true
+        type: string
+      release-version:
+        description: 'Version being released'
+        required: true
+        type: string
+      new-dev-version:
+        description: 'Next development version to roll to'
+        required: false
+        default: ''
+        type: string
+      release-branch:
+        description: 'The branch with the version to be released'
+        required: true
+        default: 'master'
+        type: string
+      fork-branch:
+        description: 'The branch to create as a fork from this release, used when a new minor version is created. No branch will be created if not provided'
+        required: false
+        default: ''
+        type: string
+      release-directory:
+        description: 'Working directory for the artifactory publish command, if not the project root directory'
+        required : false
+        default: './'
+        type: string
+      version-directory:
+        description: 'Working directory for the version update command, if not the project root directory'
+        required : false
+        default: './'
+        type: string
+      version-file:
+        description: 'File containing the project version to update'
+        required : false
+        type: string
+      custom-gradle-props:
+        description: 'Additional custom properties to pass to the artifactoryPublish command'
+        required : false
+        default: ''
+        type: string
+      add-tag:
+        description: 'Whether to tag the release version'
+        required: false
+        default: true
+        type: boolean
+      notify-slack:
+        description: 'Send slack notification'
+        required: false
+        default: true
+        type: boolean
+      pbc-version-increment-strategy:
+        description: 'How the package version must be incremented, using semver convention: patch/minor/major'
+        required: false
+        default: patch
+        type: string
+      override-pbc-webui-version:
+        description: 'Use this version of the pbc webui artifact rather than the last one published'
+        required: false
+        type: string
+      update-meta-data:
+        description: 'If this release should update the server meta data'
+        type: boolean
+        required: false
+        default: true
+
+    secrets:
+      JFROG_USERNAME:
+        description: 'Credentials passed from the calling workflow, user to authenticate with artifactory'
+        required: true
+      JFROG_PASSWORD:
+        description: 'Credentials passed from the calling workflow, password to authenticate with artifactory'
+        required: true
+      JENKINSGENESIS_TOKEN:
+        description: 'Token passed from the calling workflow, token for priviliged user to allow direct pushes to protected branches'
+        required: true
+      NOTION_TOKEN:
+        description: 'Token passed from the calling workflow, token for priviliged user to allow publication to Notion'
+        required: true
+      JIRA_TOKEN:
+        description: 'Token passed from the calling workflow, token for priviliged user to allow API access to Jira'
+        required: true
+      SLACK_WEBHOOK:
+        description: 'The slack webhook URL'
+        required: true
+      NPM_PUBLISH_TOKEN:
+        description: 'token to access NPM registry via Jfrog proxy'
+        required: false
+
+    outputs:
+      release-candidate: 
+        description: "If the released version is a beta / release candidate"
+        value: ${{ jobs.build.outputs.release-candidate }}
+
+jobs:
+  build:
+    name: 'Build ${{ inputs.repository }}'
+    runs-on: [ self-hosted, selfhosted-services ]
+    outputs:
+      release-candidate: ${{ env.RELEASE_CANDIDATE }}
+      pbc-release: ${{ steps.check-pbc-structure.outputs.has-genx == 'true' }}
+    env:
+      genesisArtifactoryUser: ${{ secrets.JFROG_USERNAME }}
+      genesisArtifactoryPassword: ${{ secrets.JFROG_PASSWORD }}
+      RELEASE_VERSION: ${{ inputs.release-version }}
+      NEW_DEVELOPMENT_VERSION: ${{ inputs.new-dev-version }}
+      RELEASE_BRANCH: ${{ inputs.release-branch }}
+      FORK_BRANCH: ${{ inputs.fork-branch }}
+      VERSION_FILE: ${{ inputs.version-file }}
+      CUSTOM_GRADLE_PROPS: ${{ inputs.custom-gradle-props }}
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -XX:+UseStringDeduplication -XX:ReservedCodeCacheSize=512m -Dkotlin.daemon.jvm.options=-Xmx2g -Dfile.encoding=UTF-8 -XX:ErrorFile=~/hs_err_pid<pid>.log"
+      RELEASE_CANDIDATE: ${{ contains(inputs.release-version, 'RC') || contains(inputs.release-version, 'beta') }}
+      JF_URL: https://genesisglobal.jfrog.io/
+      JF_USER: ${{ secrets.JFROG_USERNAME }}
+      JF_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+    steps:
+    - name: Checkout project
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+        ref: ${{ env.RELEASE_BRANCH }}
+        fetch-depth: 0
+        path: ./project
+    - name: Checkout release scripts
+      uses: actions/checkout@v4
+      with:
+        repository: genesislcap/platform-releases
+        token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+        fetch-depth: 0
+        path: ./tools
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install Python dependencies
+      uses: py-actions/py-dependency-install@v4
+      with:
+        path: "tools/release-scripts/requirements.txt"
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - name: Install Node.js dependencies
+      run: npm i @tryfabric/martian arg
+    - name: Set up Jfrog CLI
+      uses: jfrog/setup-jfrog-cli@v4
+    - name: Check JFrog setup and connectivity
+      run: | 
+        jf --version
+        jf rt ping
+    - name: Check if has pbc structure
+      id: check-pbc-structure
+      uses: ./tools/.github/actions/check-pbc-structure
+    - name: Check if web-ui package exists
+      uses: ./tools/.github/actions/find-npm-package
+      if: ${{ steps.check-pbc-structure.outputs.has-genx-and-webui }}
+      id: find-webui-package
+      with:
+        fail-if-not-found: ${{ inputs.override-pbc-webui-version && true || false }}
+        working-directory: ./project/client
+    - name: Configure git settings for automated commits
+      working-directory: ./project
+      run: |
+        git config user.name auto-release
+        git config user.email auto.release@genesis.global
+    - name: Update and commit release version
+      working-directory: ./project/${{ inputs.version-directory }}
+      env:
+        NEW_VERSION: ${{ env.RELEASE_VERSION }}
+      run: |
+        . ${GITHUB_WORKSPACE}/tools/release-scripts/update-project-version.bash
+        updateVersion  
+      
+        git commit -am "chore(release): Updating version to ${RELEASE_VERSION} for release"
+    - name: Check no beta dependencies (official release)
+      if: env.RELEASE_CANDIDATE == 'false'
+      run: |
+        . ./tools/release-scripts/full-platform-server-release.bash
+
+        beta_dependencies=$(checkForBetaDependencies)
+
+        if [ -n "$beta_dependencies" ] ; then
+          echo -e "❌ project contains declared beta dependencies in an official release"
+          echo -e "$beta_dependencies"
+          exit 1
+        fi
+    - name: Add tag
+      if: inputs.add-tag
+      working-directory: ./project/${{ inputs.version-directory }}
+      run : |
+        git tag v${RELEASE_VERSION}
+    - name: Fork release branch
+      working-directory: ./project
+      if: env.FORK_BRANCH != ''
+      run : |
+        git branch ${FORK_BRANCH}
+    - name: Create gradle.properties File
+      working-directory: ./project
+      env:
+        genesisArtifactoryUser: ${{ secrets.JFROG_USERNAME }}
+        genesisArtifactoryPassword: ${{ secrets.JFROG_PASSWORD }}
+      run: |
+        ./init_gradle.sh
+    - name: Artifactory Publish
+      uses: gradle/gradle-build-action@v3
+      with:
+        arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false ${{ inputs.custom-gradle-props }}
+        build-root-directory: ./project/${{ inputs.release-directory }}
+        cache-disabled: true
+    - name: Roll version (server)
+      if: github.event.inputs.new-dev-version != ''
+      working-directory: ./project/${{ inputs.version-directory }}
+      env:
+        NEW_VERSION: ${{ env.NEW_DEVELOPMENT_VERSION }}
+      run: |
+        . ${GITHUB_WORKSPACE}/tools/release-scripts/update-project-version.bash
+        updateVersion
+        
+        git commit -am "chore(release): Updating version to ${NEW_DEVELOPMENT_VERSION} for new development"
+    - name: Roll version (pbc seed)
+      if: env.FORK_BRANCH != '' && steps.check-pbc-structure.outputs.has-genx == 'true'
+      working-directory: ./project/genx
+      env:
+        VERSION_INCREMENT: ${{ inputs.pbc-version-increment-strategy }}
+      run: |
+        release_version=$(npm version ${VERSION_INCREMENT} --no-git-tag-version)
+        
+        git commit -am "chore(release): Updating seed version to ${release_version}"
+    - name: Roll version (projects sub seeds)
+      if: env.FORK_BRANCH != '' && steps.check-pbc-structure.outputs.has-multi-genx == 'true'
+      working-directory: ./project
+      env:
+        VERSION_INCREMENT: ${{ inputs.pbc-version-increment-strategy }}
+      run: |
+        find . -name "genx" -type d -maxdepth 2 | while read line; do
+          pushd $line
+          release_version=$(npm version ${VERSION_INCREMENT} --no-git-tag-version)
+          git commit -am "chore(release): Updating seed version to ${release_version}"
+          popd
+        done
+    - name: Push release branch
+      working-directory: ./project
+      run: |
+        git push origin ${RELEASE_BRANCH} --tags
+    - name: Push forked release branch
+      working-directory: ./project
+      if: env.FORK_BRANCH != ''
+      run : |
+        git push origin ${FORK_BRANCH}
+    - name: Run artifactory scripts (if present)
+      working-directory: ./project
+      if: env.RELEASE_CANDIDATE == 'false'
+      run: | 
+        if [ -f ./cicd/artifactory_copy.sh ]; then ./cicd/artifactory_copy.sh ${RELEASE_VERSION}; fi
+    - name: Copy artifacts to libs-release-client repo
+      if: env.RELEASE_CANDIDATE == 'false'
+      run: | 
+        find ./project/ -name "build-info.json" | xargs python tools/release-scripts/generate_artifactory_script.py --files
+        ./artifactory_copy.sh
+    - name: Copy artifacts to product repo
+      if: env.RELEASE_CANDIDATE == 'false' && inputs.repository != 'genesislcap/genesis-server' && inputs.repository != 'genesislcap/platform-integrations' && inputs.repository != 'genesislcap/platform-qa-automation'
+      run: |
+        rm -rf ./jfrog
+        find ./project/ -name "genesisproduct*-bin.zip" | xargs python tools/release-scripts/copy_to_product.py --files
+        pushd ./jfrog
+        jfrog rt upload "*" product
+        popd
+    - name: Generate release notes
+      id: generate-release-notes
+      if: env.RELEASE_CANDIDATE == 'false'
+      uses: ./tools/.github/actions/generate-release-notes
+      with:
+        repository: ${{ inputs.repository }}
+        release-version: ${{ env.RELEASE_VERSION }}
+        github-token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+        jira-token: ${{ secrets.JIRA_TOKEN }}
+    - name: Publish release notes
+      uses: ./tools/.github/actions/publish-release-notes
+      if: env.RELEASE_CANDIDATE == 'false'
+      with:
+        repository: ${{ inputs.repository }}
+        version: ${{ env.RELEASE_VERSION }}
+        release-notes-txt: ${{ steps.generate-release-notes.outputs.release-notes-txt }}
+        release-notes-md: ${{ steps.generate-release-notes.outputs.release-notes-md }}
+        publish-to-jfrog: true
+        github-token: ${{ secrets.JENKINSGENESIS_TOKEN }}
+        jira-token: ${{ secrets.JIRA_TOKEN }}
+        notion-token: ${{ secrets.NOTION_TOKEN }}
+        slack-web-hook: ${{ inputs.notify-slack && secrets.SLACK_WEBHOOK || '' }}
+  set-platform-versions:
+    if: inputs.update-meta-data
+    uses: ./.github/workflows/server-update-meta-data.yaml
+    needs: build
+    name: server meta-data ${{ inputs.repository }}
+    with:
+      repository: ${{ inputs.repository }}
+      release-version: ${{ inputs.release-version }}
+      new-dev-version: ${{ inputs.new-dev-version }}
+      release-type: ${{ needs.build.outputs.release-candidate == 'true' && 'beta' || 'stable' }}
+    secrets:
+      JENKINSGENESIS_TOKEN: ${{ secrets.JENKINSGENESIS_TOKEN }}
+  publish-pbc-metadata:
+    needs: build
+    name: pbc meta-data ${{ inputs.repository }}
+    if: needs.build.outputs.pbc-release == 'true'
+    uses: ./.github/workflows/webui-branch-workflow.yml
+    with:
+      package-type: metadata
+      release-branch: ${{ inputs.release-branch }}
+      repository: ${{ inputs.repository }}
+      version-increment-strategy: ${{ inputs.pbc-version-increment-strategy }}
+      override-server-version: ${{ inputs.release-version }}
+      dist-tag: ${{ needs.build.outputs.release-candidate == 'true' && 'pre-release' || '' }}
+    secrets:
+      JFROG_USERNAME : ${{ secrets.JFROG_USERNAME }}
+      JFROG_PASSWORD : ${{ secrets.JFROG_PASSWORD }}
+      NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      GITHUB_REPO_READ_TOKEN: ${{ secrets.JENKINSGENESIS_TOKEN }}
+      GITHUB_REPO_WRITE_TOKEN: ${{ secrets.JENKINSGENESIS_TOKEN }}
+  update-pbc-catalog:
+    needs: [build, publish-pbc-metadata]
+    if: inputs.release-branch == 'master' && needs.build.outputs.pbc-release == 'true' && needs.build.outputs.release-candidate == 'false'
+    uses: ./.github/workflows/pbc-update-meta-data.yaml
+    with:
+      pbc: ${{ needs.publish-pbc-metadata.outputs.released-package }}
+      pbc-version: ${{ needs.publish-pbc-metadata.outputs.released-version }}
+      server-dependency-version: ${{ needs.publish-pbc-metadata.outputs.pbc-server-dependency }}
+      webui-dependency-version: ${{ needs.publish-pbc-metadata.outputs.pbc-webui-dependency }}
+    secrets:
+      JENKINSGENESIS_TOKEN: ${{ secrets.JENKINSGENESIS_TOKEN }}
+  update-forked-branch-to-next-snapshot:
+    needs: build
+    if: inputs.fork-branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tools
+      - name: Set next beta version
+        id: set-next-beta
+        run: |
+          . ./tools/release-scripts/full-platform-server-release.bash
+          
+          NEXT_VERSION=$(nextSnapshotVersion)
+
+          echo "Next beta version: ${NEXT_VERSION}"
+
+          echo "next-beta-version=$NEXT_VERSION" >> $GITHUB_OUTPUT 
+        env:
+          RELEASE_VERSION: ${{ inputs.release-version }}
+          NEW_PLATFORM_DEV_VERSION: ${{ inputs.new-dev-version }}
+      - uses: ./tools/.github/actions/update-project-version
+        with:
+          repository: ${{ inputs.repository }}
+          branch: ${{ inputs.fork-branch }}
+          target-version: ${{ steps.set-next-beta.outputs.next-beta-version }}
+          version-directory: ${{ inputs.version-directory }}
+          version-file: ${{ inputs.version-file }}
+          token: ${{ secrets.JENKINSGENESIS_TOKEN }}
