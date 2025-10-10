@@ -224,13 +224,13 @@ jobs:
       run: |
         apt update
         apt install -y git
-    # - name: Get Allure history
-    #   if: always()
-    #   uses: actions/checkout@v3
-    #   continue-on-error: true
-    #   with:
-    #     ref: gh-pages
-    #     path: gh-pages
+    - name: Get Allure history
+      if: always()
+      uses: actions/checkout@v3
+      continue-on-error: true
+      with:
+        ref: gh-pages
+        path: gh-pages
     - name: Generate Allure report
       uses: simple-elf/allure-report-action@master
       if: always()
