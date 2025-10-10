@@ -253,7 +253,11 @@ jobs:
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.PAGES_TOKEN }}
-        publish_dir: allure-history
+        publish_dir: allure-history/${{ inputs.profile }}
+        destination_dir: ${{ inputs.profile }}              # <= deploy under /<client>/
+        keep_files: true                                    # <= do not delete other clients
+        enable_jekyll: false 
+        
     - name: Notify failure on Slack
       uses: bryannice/gitactions-slack-notification@2.0.0
       if: failure()
