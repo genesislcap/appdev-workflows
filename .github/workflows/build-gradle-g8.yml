@@ -96,7 +96,7 @@ on:
         required: true
       GPR_READ_TOKEN:
         required: true
-      SLACK_WEBHOOK:
+      SLACK_WEBHOOK_URL:
         required: false
       JFROG_NPM_AUTH_TOKEN:
         required: false
@@ -301,7 +301,7 @@ jobs:
         if: failure()
         uses: slackapi/slack-github-action@v1
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK }}
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
@@ -321,7 +321,7 @@ jobs:
         if: success()
         uses: slackapi/slack-github-action@v1
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK }}   # 🔴 This MUST be populated
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}   # 🔴 This MUST be populated
           webhook-type: incoming-webhook
           payload: |
             {
