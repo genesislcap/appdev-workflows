@@ -106,6 +106,8 @@ on:
         required: false
       SENTRY_AUTH_TOKEN:
         required: false
+      SLACK_BOT_TOKEN:
+         required: false
 
 
 env:
@@ -134,186 +136,190 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
-        if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ inputs.node_version }}
-          registry-url: ${{ inputs.REGISTRY_URL }}
-          scope: ${{ inputs.SCOPE }}
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+      # - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
+      #   if: ${{ inputs.REGISTRY_URL }}
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: ${{ inputs.node_version }}
+      #     registry-url: ${{ inputs.REGISTRY_URL }}
+      #     scope: ${{ inputs.SCOPE }}
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
-      - name: Restore gradle.properties and setup
-        env:
-          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "${{ inputs.working-directory }}"
-        shell: bash
-        run: |
-          mkdir -p ~/.gradle/
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+      # - name: Restore gradle.properties and setup
+      #   env:
+      #     GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+      #   working-directory: "${{ inputs.working-directory }}"
+      #   shell: bash
+      #   run: |
+      #     mkdir -p ~/.gradle/
+      #     echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+      #     echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+      #     echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
-          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
-          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+      #     echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+      #     echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
 
-          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
-          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
-          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
-          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+      #     echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+      #     echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+      #     echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+      #     echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
 
-          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
-          sudo chmod +x ./gradlew
-          sudo chmod +x ./server/gradlew
+      #     echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+      #     echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+      #     sudo chmod +x ./gradlew
+      #     sudo chmod +x ./server/gradlew
 
-          cat ~/.gradle/gradle.properties >>  ./gradle.properties
-          if [ -z "${{ inputs.repo-name }}" ]; then
-            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
-          else
-            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
-          fi
-          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
+      #     cat ~/.gradle/gradle.properties >>  ./gradle.properties
+      #     if [ -z "${{ inputs.repo-name }}" ]; then
+      #       echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+      #     else
+      #       echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+      #     fi
+      #     RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+      #     echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+      #     sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
           
-          echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      #     echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: 'Create .npmrc'
-        shell: bash
-        run: |
-          npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-          echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+      # - name: 'Create .npmrc'
+      #   shell: bash
+      #   run: |
+      #     npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+      #     echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+      #     echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
 
-      - name: Read .env file for build
-        if: ${{ inputs.config-path }}
-        uses: genesislcap/appdev-workflows/read-dot-env@develop
-        with:
-          config-path: ${{ inputs.config-path }}
+      # - name: Read .env file for build
+      #   if: ${{ inputs.config-path }}
+      #   uses: genesislcap/appdev-workflows/read-dot-env@develop
+      #   with:
+      #     config-path: ${{ inputs.config-path }}
 
-      - name: Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: true
+      # - name: Build
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
+      #     build-root-directory: "${{ inputs.working-directory }}"
+      #     cache-disabled: true
+      #   env:
+      #     SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      # - name: Test and Coverage
+      #   if: inputs.sonar_enabled
+      #   uses: gradle/gradle-build-action@v2
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+      #   with:
+      #     arguments: >
+      #       test jacocoTestReport sonarqube --no-configuration-cache
+      #       -Dsonar.token=${{ env.SONAR_TOKEN }}
+      #     build-root-directory: "${{ inputs.working-directory }}/server"
+      #     cache-disabled: true
+
+      # - name: Upload Test Reports
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-reports${{ inputs.test-reports-suffix }}
+      #     path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
+      #   if: always()
+
+      # - name: Publish All Test Results
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   if: always()
+      #   with:
+      #     files: |
+      #       ./**/surefire-reports/**/*.xml
+      #       ./**/build/test-results/**/*.xml
+      #     fail_on: nothing
+      #     report_suite_logs: any
+
+      # - name: Docker Build Image
+      #   if: inputs.build_docker
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
+      #     build-root-directory: "${{ inputs.working-directory }}/"
+      #     cache-disabled: true
+
+      # - name: Docker Push Image
+      #   if: inputs.build_docker
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
+      #     build-root-directory: "${{ inputs.working-directory }}/"
+      #     cache-disabled: true
+
+      # - name: Create Giant Server Zip
+      #   if: inputs.upload
+      #   shell: bash
+      #   working-directory: "${{ inputs.working-directory }}/server"
+      #   run: |
+      #     ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
+      #     cd .genesis-home
+      #     pwd
+      #     ls -la
+      #     tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+
+      # - name: Upload Server Package
+      #   if: inputs.upload
+      #   working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
+      #   run: |
+      #     echo "${{ env.REPO_NAME }}"
+      #     curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+
+      # - name: Upload Web Package
+      #   if: inputs.upload
+      #   working-directory: ${{ inputs.working-directory }}
+      #   run: |
+      #     if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
+      #       mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+      #       curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
+      #     fi
+
+      # - name: Artifactory Publish
+      #   if: inputs.publish-to-artifactory
+      #   uses: gradle/gradle-build-action@v2
+      #   with:
+      #     arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
+      #     build-root-directory: "${{ inputs.working-directory }}/server"
+      #     cache-disabled: true
+
+      # - name: Update Jira tickets with fix version
+      #   if: inputs.update-jira
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: genesislcap/appdev-workflows
+      #     path: ./appdev-workflows
+
+      - name: Notify Slack (success)        
+        uses: slackapi/slack-github-action@v1
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      - name: Test and Coverage
-        if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+          channel-id: C062K33HUJU
+          payload: |
+            {
+              "blocks": [
+                { "type": "section",
+                  "text": { "type": "mrkdwn",
+                    "text": ":white_check_mark: *Build succeeded*\n*Repo:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}" } },
+                { "type": "actions",
+                  "elements": [
+                    { "type": "button", "text": { "type": "plain_text", "text": "Open run" },
+                      "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
+                  ] }
+              ]
+            }
 
-      - name: Upload Test Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports${{ inputs.test-reports-suffix }}
-          path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
-        if: always()
-
-      - name: Publish All Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            ./**/surefire-reports/**/*.xml
-            ./**/build/test-results/**/*.xml
-          fail_on: nothing
-          report_suite_logs: any
-
-      - name: Docker Build Image
-        if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
-
-      - name: Docker Push Image
-        if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
-
-      - name: Create Giant Server Zip
-        if: inputs.upload
-        shell: bash
-        working-directory: "${{ inputs.working-directory }}/server"
-        run: |
-          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
-          cd .genesis-home
-          pwd
-          ls -la
-          tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
-
-      - name: Upload Server Package
-        if: inputs.upload
-        working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
-        run: |
-          echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
-
-      - name: Upload Web Package
-        if: inputs.upload
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
-            mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
-          fi
-
-      - name: Artifactory Publish
-        if: inputs.publish-to-artifactory
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
-
-      - name: Update Jira tickets with fix version
-        if: inputs.update-jira
-        uses: actions/checkout@v4
-        with:
-          repository: genesislcap/appdev-workflows
-          path: ./appdev-workflows
-
-      - name: Notify failure on Slack
-        uses: bryannice/gitactions-slack-notification@1.1.0
-        if: failure() && env.SLACK_INCOMING_WEBHOOK
-        env:
-         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-         SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
-         SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
-
-      - name: Notify success on Slack
-        uses: bryannice/gitactions-slack-notification@1.1.0
-        if: success() && env.SLACK_INCOMING_WEBHOOK
-        env:
-         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-         SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
-         SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+      
 
   tag-jiras:
     needs: build-server
