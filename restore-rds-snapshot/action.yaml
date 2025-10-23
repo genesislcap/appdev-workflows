@@ -2,6 +2,11 @@ name: RDS Snapshot Creation
 description: trigger the rds db cluster snapshot process
 
 inputs:
+  snapshot-id:
+    required: false
+  delete-old-cluster:
+    required: false
+    default: "false"
   environment:
     required: true
   aws-access-key-id:
@@ -39,6 +44,7 @@ runs:
 
         # Fetch resources with the specified tag key and value
         RDS_ARNS=$(aws resourcegroupstaggingapi get-resources \
+          --region $REGION \
           --resource-type-filters rds:cluster \
           --tag-filters Key=AppName,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=EnvironmentName,Values=$ENVIRONMENT \
           --query "ResourceTagMappingList[].ResourceARN" --region $REGION  \
@@ -59,7 +65,7 @@ runs:
           exit 1
         fi
 
-        # Extract rds name from ARN (arn:aws:db:::db-name)
+        # Extract rds name from ARN (arn:aws:db:::cluster-id)
         CLUSTER_ID=$(echo $RDS_ARN |awk -F: '{print $NF}')
         echo "RDS DB instance found: $CLUSTER_ID"
 
@@ -68,48 +74,34 @@ runs:
         # Set the bucket name as an output
         echo "cluster-id=$CLUSTER_ID" >> $GITHUB_OUTPUT
 
-    - name: Snapshot DB
+    - name: Get latest snapshot
+      if: inputs.snapshot-id == ''
+      id: find-snapshot-id
       shell: bash
       run: |
-        # Run RDS snapshot cli using the instance indentifier got above
-        ENVIRONMENT="${{ inputs.environment }}"
-        APP_NAME="${{ inputs.app_name }}"
-        CUSTOMER="${{ inputs.customer }}"
         REGION="${{ inputs.aws-region }}"
 
-        CLUSTER_ID=${{ steps.find-rds-bytags.outputs.cluster-id }}
-        SNAP_ID=$CLUSTER_ID-$(date +%Y%m%d%H%M)
+        LATEST_SNAPSHOT=$(aws rds describe-db-cluster-snapshots \
+          --region $REGION \
+          --db-cluster-identifier ${{ steps.find-rds-bytags.outputs.cluster-id }} \
+          --snapshot-type manual \
+          --query 'DBClusterSnapshots | sort_by(@, &SnapshotCreateTime)[-1].DBClusterSnapshotIdentifier' \
+          --output text)
 
-        echo "🔍 Checking status of cluster: $CLUSTER_ID ..."
-        STATUS=$(aws rds describe-db-clusters \
-         --db-cluster-identifier "$CLUSTER_ID" \
-         --query "DBClusters[0].Status" \
-         --region "$REGION" \
-         --output text)
+        echo "snapshot-id=$LATEST_SNAPSHOT" >> $GITHUB_OUTPUT
 
-        echo "Current status: $STATUS"
+    - name: Checkout script
+      uses: actions/checkout@v5
+      with:
+        repository: genesislcap/appdev-workflows
+        ref: rds-snapshot
+        path: "appdev-workflows"
 
-        if [[ "$STATUS" != "available" ]]; then
-          echo "❌ Cluster is not available (status=$STATUS). Exiting."
-          exit 1
-        fi
-
-        echo "✅ Cluster is available. Creating snapshot: $SNAP_ID ..."
-
-        aws rds create-db-cluster-snapshot \
-         --db-cluster-snapshot-identifier "$SNAP_ID" \
-         --db-cluster-identifier "$CLUSTER_ID" \
-         --region ${{ inputs.aws-region }} \
-         --tags Key=AppName,Value=$APP_NAME Key=EnvironmentName,Value=$ENVIRONMENT Key=Customer,Value=$CUSTOMER
-
-        # sleep for a few seconds before the snapshot is visible to the cli
-        sleep 5
-        aws rds wait db-cluster-snapshot-available --region $REGION \
-         --db-cluster-snapshot-identifier "$SNAP_ID"
-
-        if [ $? -eq 0 ]; then
-          echo "✅ Snapshot $SNAP_ID is now available."
-        else
-          echo "❌ Snapshot $SNAP_ID failed to become available."
-          exit 1
-        fi
+    - name: Restore Snapshot
+      shell: bash
+      run: |
+        cd ./appdev-workflows/restore-rds-snapshot
+        python3 -m venv venv
+        source venv/bin/activate
+        pip3 install boto3
+        python3 -u ./src/restore-db.py ${{ steps.find-rds-bytags.outputs.cluster-id }} ${{ inputs.snapshot-id || steps.find-snapshot-id.outputs.snapshot-id }} ${{ inputs.delete-old-cluster == 'true' && '--delete-old' || '' }}
