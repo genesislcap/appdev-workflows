@@ -166,8 +166,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: genesisglobal-docker-remote.jfrog.io
-          username: ${{ secrets.JFROG_RO_USER }}
-          password: ${{ secrets.JFROG_RO_PASSWORD }}
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
