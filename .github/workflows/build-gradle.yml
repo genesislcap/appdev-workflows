@@ -162,6 +162,13 @@ jobs:
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
           sed -E -i "s/^version=.+/version=${RELEASE_VERSION}/g" ${{ inputs.server-path }}/gradle.properties
 
+      - name: Login to Genesis Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: genesisglobal-docker-remote.jfrog.io
+          username: ${{ secrets.JFROG_RO_USER }}
+          password: ${{ secrets.JFROG_RO_PASSWORD }}
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
