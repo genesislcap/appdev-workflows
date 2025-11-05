@@ -445,7 +445,7 @@ jobs:
           PACKAGE_JSON_PATH="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
           INPUT_FILE_PATH="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
           # Change to devDependencies or peerDependencies if you prefer
-          ADD_TO_SECTION:  "dependencies"
+          ADD_TO_SECTION=  "dependencies"
         
           set -euo pipefail
           # if [ ! -f "${PACKAGE_JSON_PATH}" ]; then
