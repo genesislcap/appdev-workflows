@@ -442,8 +442,8 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}"
         run: |
-          PACKAGE_JSON="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+          PACKAGE_JSON_PATH="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
+          INPUT_FILE_PATH="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
           # Change to devDependencies or peerDependencies if you prefer
           ADD_TO_SECTION:    "dependencies"
         run: |
