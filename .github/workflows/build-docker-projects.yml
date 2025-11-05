@@ -448,14 +448,14 @@ jobs:
           ADD_TO_SECTION:    "dependencies"
         run: |
           set -euo pipefail
-          if [ ! -f "${PACKAGE_JSON_PATH}" ]; then
-            echo "package.json not found at ${PACKAGE_JSON_PATH}" >&2
-            exit 1
-          fi
-          if [ ! -f "${INPUT_FILE_PATH}" ]; then
-            echo "additional_file not found at ${INPUT_FILE_PATH}; skipping."
-            exit 0
-          fi
+          # if [ ! -f "${PACKAGE_JSON_PATH}" ]; then
+          #   echo "package.json not found at ${PACKAGE_JSON_PATH}" >&2
+          #   exit 1
+          # fi
+          # if [ ! -f "${INPUT_FILE_PATH}" ]; then
+          #   echo "additional_file not found at ${INPUT_FILE_PATH}; skipping."
+          #   exit 0
+          # fi
 
           tmpfile="$(mktemp)"
           cp "${PACKAGE_JSON_PATH}" "${tmpfile}"
