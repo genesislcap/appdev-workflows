@@ -437,12 +437,13 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Update versions from version.properties into package.json (add missing too)
+      - name: Update @genesislcap versions in package.json
+        # if: steps.web_exists.outputs.client_folder_exists == 'true'
         shell: bash
         working-directory: "${{ inputs.working-directory }}"
-        env:
-          PACKAGE_JSON_PATH: "${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE_PATH:   "${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+        run: |
+          PACKAGE_JSON="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
+          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
           # Change to devDependencies or peerDependencies if you prefer
           ADD_TO_SECTION:    "dependencies"
         run: |
