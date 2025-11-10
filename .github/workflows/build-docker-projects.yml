@@ -494,7 +494,7 @@ jobs:
           set -euo pipefail
 
           echo "Updating devDependencies in: $PACKAGE_JSON"
-          echo "Reading from version.properties: $INPUT_FILE"
+          echo "Reading from webversion.properties: $INPUT_FILE"
 
           # Clean JSON: remove trailing commas inside blocks
           SANITIZED="$(mktemp)"
@@ -508,11 +508,11 @@ jobs:
               | sed -E '1s/.*\{/{/; $s/\}.*/}/' \
               > "$DEV_JSON"
           else
-            echo "No devDependencies block found in version.properties, skipping."
+            echo "No devDependencies block found in webversion.properties, skipping."
             exit 0
           fi
 
-          echo "Extracted devDependencies block from version.properties:"
+          echo "Extracted devDependencies block from webversion.properties:"
           cat "$DEV_JSON"
 
           # Merge the extracted devDependencies into package.json.devDependencies
