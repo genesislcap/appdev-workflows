@@ -537,6 +537,10 @@ jobs:
           echo "Final devDependencies in package.json:"
           jq '.devDependencies' "$PACKAGE_JSON"
 
+          # Print the updated package.json
+          echo "Updated package.json:"
+          cat "$PACKAGE_JSON"
+
 
       - name: Login to Genesis Container Registry
         uses: docker/login-action@v3
