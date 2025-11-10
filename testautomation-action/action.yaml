@@ -195,58 +195,41 @@ runs:
         echo "Final updated package.json:"
         cat package.json
 
-    - name: Update versions from version.properties into package.json (add missing too)
+    - name: Update @genesislcap versions in package.json
+      # if: steps.web_exists.outputs.client_folder_exists == 'true'
       shell: bash
-      working-directory: "${{ inputs.working-directory }}"
-      env:
-        PACKAGE_JSON_PATH: "${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-        INPUT_FILE_PATH:   "${{ inputs.working-directory }}/${{ inputs.additional_file }}"
-        # Change to devDependencies or peerDependencies if you prefer
-        ADD_TO_SECTION:    "dependencies"
+      working-directory: "./"
       run: |
-        set -euo pipefail
-        if [ ! -f "${PACKAGE_JSON_PATH}" ]; then
-          echo "package.json not found at ${PACKAGE_JSON_PATH}" >&2
-          exit 1
-        fi
-        if [ ! -f "${INPUT_FILE_PATH}" ]; then
-          echo "additional_file not found at ${INPUT_FILE_PATH}; skipping."
-          exit 0
-        fi
+        PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
+        INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
 
-        tmpfile="$(mktemp)"
-        cp "${PACKAGE_JSON_PATH}" "${tmpfile}"
-
+        # Read and update dependencies from version.properties
         while IFS= read -r line; do
+          # Skip empty lines or comments
           [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-          if [[ "$line" =~ ^\"(.+)\":\ *\"(.+)\"$ ]]; then
-            key="${BASH_REMATCH[1]}"; value="${BASH_REMATCH[2]}"
+          # Process JSON-like entries
+          if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
           else
-            key="$(echo "$line" | cut -d'=' -f1 | xargs || true)"
-            value="$(echo "$line" | cut -d'=' -f2- | xargs || true)"
+            # Process key=value pairs
+            key=$(echo "$line" | cut -d'=' -f1 | xargs)
+            value=$(echo "$line" | cut -d'=' -f2 | xargs)
           fi
 
-          [ -z "${key}" ] && continue
-          [ -z "${value}" ] && continue
+          # Update the package.json file
+          jq --arg dep "$key" --arg version "$value" '
+            walk(
+              if type == "object" and has($dep) then
+                .[$dep] = $version
+              else
+                .
+              end
+            )
+          ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+        done < "$INPUT_FILE"
 
-          # If the key exists anywhere, update all occurrences; else add to ADD_TO_SECTION
-          if jq -e --arg dep "$key" 'path(.. | objects | select(has($dep)))' "${tmpfile}" >/dev/null; then
-            jq --arg dep "$key" --arg v "$value" '
-              walk(
-                if type=="object" and has($dep) then .[$dep]=$v else . end
-              )
-            ' "${tmpfile}" > "${tmpfile}.next"
-          else
-            jq --arg dep "$key" --arg v "$value" --arg section "$ADD_TO_SECTION" '
-              if .[$section] == null then .[$section] = {} else . end
-              | .[$section][$dep] = $v
-            ' "${tmpfile}" > "${tmpfile}.next"
-          fi
-          mv "${tmpfile}.next" "${tmpfile}"
-        done < "${INPUT_FILE_PATH}"
-
-        mv "${tmpfile}" "${PACKAGE_JSON_PATH}"
+        # Print the updated package.json
         echo "Updated package.json:"
-        cat "${PACKAGE_JSON_PATH}"
-
+        cat "$PACKAGE_JSON"
