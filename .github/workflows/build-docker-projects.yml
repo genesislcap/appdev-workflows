@@ -32,6 +32,10 @@ on:
         required: false
         type: string
         default: 'main-repo/.github/workflows/version.properties'
+      additional_webfile:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/webversion.properties'
       testautobranch:
         required: false
         type: string
@@ -384,8 +388,8 @@ jobs:
             # Extract FOUNDATION_VERSION from the additional file
             pwd
             ls -l
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_webfile }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_webfile }} | cut -d'=' -f2)
               echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
               echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
             else
@@ -443,7 +447,7 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         run: |
           PACKAGE_JSON="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
           echo "Using package.json: $PACKAGE_JSON"
           echo "Using input file: $INPUT_FILE"
 
