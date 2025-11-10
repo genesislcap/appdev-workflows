@@ -484,111 +484,62 @@ jobs:
           cat "$PACKAGE_JSON"
 
 
-      - name: Merge webversion.properties into package.json (deps + devDeps)
+      - name: Merge devDependencies from version.properties into package.json
         shell: bash
         working-directory: "${{ inputs.working-directory }}"
         env:
-          PKG: "${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          WEBVER: "${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"  # path to webversion.properties
+          PACKAGE_JSON: "${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
+          INPUT_FILE:   "${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
         run: |
           set -euo pipefail
 
-          echo "Updating package.json: $PKG"
-          echo "Reading from webversion.properties: $WEBVER"
+          echo "Updating devDependencies in: $PACKAGE_JSON"
+          echo "Reading from webversion.properties: $INPUT_FILE"
 
-          [ -f "$PKG" ] || { echo "package.json not found at $PKG" >&2; exit 1; }
-          [ -f "$WEBVER" ] || { echo "webversion.properties not found at $WEBVER" >&2; exit 1; }
+          # Clean JSON: remove trailing commas inside blocks
+          SANITIZED="$(mktemp)"
+          sed -E 's/,(\s*[}\]])/\1/g' "$INPUT_FILE" > "$SANITIZED"
 
-          # Prepare empty maps
-          DEP_JSON="$(mktemp)"
+          # Extract devDependencies block as pure JSON
           DEV_JSON="$(mktemp)"
-          printf '{}' > "$DEP_JSON"
-          printf '{}' > "$DEV_JSON"
-          FOUNDATION_VERSION=""
+          if grep -q '"devDependencies"' "$SANITIZED"; then
+            # Extract block content
+            awk '/"devDependencies"/,/\}/' "$SANITIZED" \
+              | sed -E '1s/.*\{/{/; $s/\}.*/}/' \
+              > "$DEV_JSON"
+          else
+            echo "No devDependencies block found in webversion.properties, skipping."
+            exit 0
+          fi
 
-          # Simple state machine to capture blocks
-          state="none"
-          # Normalize line endings and strip BOM if any
-          awk 'BEGIN{RS="\r?\n"}{print}' "$WEBVER" | sed '1s/^\xEF\xBB\xBF//' | while IFS= read -r raw; do
-            line="$(echo "$raw" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-            # skip empties / comments
-            [[ -z "$line" ]] && continue
-            [[ "$line" =~ ^# ]] && continue
+          echo "Extracted devDependencies block from webversion.properties:"
+          cat "$DEV_JSON"
 
-            # FOUNDATION_VERSION=
-            if [[ "$line" =~ ^FOUNDATION_VERSION= ]]; then
-              FOUNDATION_VERSION="${line#FOUNDATION_VERSION=}"
-              continue
-            fi
-
-            # Enter/exit blocks
-            if [[ "$line" =~ ^\"devDependencies\"[[:space:]]*:\s*\{ ]]; then
-              state="in_dev"
-              continue
-            fi
-            if [[ "$line" =~ ^\"dependencies\"[[:space:]]*:\s*\{ ]]; then
-              state="in_dep"
-              continue
-            fi
-            if [[ "$line" == "}" || "$line" == "}," ]]; then
-              state="none"
-              continue
-            fi
-
-            # Key/value lines like:  "pkg": "ver"   (with optional trailing comma)
-            if [[ "$line" =~ ^\"([^\"]+)\"[[:space:]]*:[[:space:]]*\"([^\"]+)\"[[:space:]]*,?$ ]]; then
-              key="${BASH_REMATCH[1]}"
-              val="${BASH_REMATCH[2]}"
-
-              if [[ "$state" == "in_dev" ]]; then
-                tmp=$(mktemp)
-                jq --arg k "$key" --arg v "$val" '. + {($k): $v}' "$DEV_JSON" > "$tmp" && mv "$tmp" "$DEV_JSON"
-              else
-                # default and "in_dep" both go to dependencies
-                tmp=$(mktemp)
-                jq --arg k "$key" --arg v "$val" '. + {($k): $v}' "$DEP_JSON" > "$tmp" && mv "$tmp" "$DEP_JSON"
-              fi
-              continue
-            fi
-
-            # Any other line types are ignored safely
-          done
-
-          echo "Parsed dependencies:"
-          jq '.' "$DEP_JSON"
-          echo "Parsed devDependencies:"
-          jq '.' "$DEV_JSON"
-
-          # Merge into package.json, creating blocks if absent
+          # Merge the extracted devDependencies into package.json.devDependencies
           OUT="$(mktemp)"
           jq -s '
             def obj(x): if x==null then {} else x end;
+
+            # files: [ package.json, incoming.devdeps ]
             .[0] as $pkg
-            | .[1] as $deps
-            | .[2] as $devs
-            | $pkg
-            | .dependencies   = (obj(.dependencies)   + obj($deps))
-            | .devDependencies= (obj(.devDependencies)+ obj($devs))
-          ' "$PKG" "$DEP_JSON" "$DEV_JSON" > "$OUT"
+            | .[1] as $incoming
 
-          mv "$OUT" "$PKG"
+            | $pkg * {
+                devDependencies: (
+                  obj($pkg.devDependencies)
+                  + obj($incoming)
+                )
+              }
+          ' "$PACKAGE_JSON" "$DEV_JSON" > "$OUT"
 
-          echo "✅ Updated package.json:"
-          cat "$PKG"
+          mv "$OUT" "$PACKAGE_JSON"
 
-          echo "-----"
-          echo "Dependencies after merge:"
-          jq '.dependencies' "$PKG"
-          echo "-----"
-          echo "DevDependencies after merge:"
-          jq '.devDependencies' "$PKG"
+          echo "Final devDependencies in package.json:"
+          jq '.devDependencies' "$PACKAGE_JSON"
 
-    
-
-          echo "Final package.json:"
-          cat "$PACKAGE_JSON" | jq .
-
-
+          # Print the updated package.json
+          echo "Updated package.json:"
+          cat "$PACKAGE_JSON"
 
 
       - name: Login to Genesis Container Registry
