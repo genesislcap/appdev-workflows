@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: 'main-repo/.github/workflows/version.properties'
+      additional_webfile:
+        required: false
+        type: string
+        default: 'main-repo/.github/workflows/webversion.properties'
+
       testautobranch:
         required: false
         type: string
@@ -384,8 +389,8 @@ jobs:
             # Extract FOUNDATION_VERSION from the additional file
             pwd
             ls -l
-            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+            if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_webfile }}; then
+              FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_webfile }} | cut -d'=' -f2)
               echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
               echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
             else
@@ -443,9 +448,9 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         run: |
           PACKAGE_JSON_PATH="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE_PATH="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+          INPUT_FILE_PATH="${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
           # Change to devDependencies or peerDependencies if you prefer
-          ADD_TO_SECTION="dependencies"
+          # ADD_TO_SECTION="dependencies"
         
           set -euo pipefail
           # if [ ! -f "${PACKAGE_JSON_PATH}" ]; then
@@ -453,7 +458,7 @@ jobs:
           #   exit 1
           # fi
           # if [ ! -f "${INPUT_FILE_PATH}" ]; then
-          #   echo "additional_file not found at ${INPUT_FILE_PATH}; skipping."
+          #   echo "additional_webfile not found at ${INPUT_FILE_PATH}; skipping."
           #   exit 0
           # fi
 
