@@ -484,102 +484,95 @@ jobs:
           cat "$PACKAGE_JSON"
 
 
-      - name: Merge version.properties into package.json (deps + devDeps) and print full JSON
+      - name: Merge devDependencies & dependencies from webversion.properties
         shell: bash
-        working-directory: "${{ inputs.working-directory }}"
         env:
-          PACKAGE_JSON: "${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          PROP_FILE:    "${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
+          PKG: "./howto-auditing/client/package.json"
+          PROPS: "./main-repo/.github/workflows/webversion.properties"
         run: |
           set -euo pipefail
 
-          echo "Updating package.json: $PACKAGE_JSON"
-          echo "Reading from webversion.properties: $PROP_FILE"
+          echo "Updating package.json: $PKG"
+          echo "Reading from webversion.properties: $PROPS"
+          [ -f "$PKG" ] || { echo "package.json not found at $PKG" >&2; exit 1; }
+          [ -f "$PROPS" ] || { echo "webversion.properties not found at $PROPS" >&2; exit 1; }
 
-          [ -f "$PACKAGE_JSON" ] || { echo "package.json not found at $PACKAGE_JSON" >&2; exit 1; }
-          [ -f "$PROP_FILE" ] || { echo "webversion.properties not found at $PROP_FILE" >&2; exit 1; }
-
-          tmpdir="$(mktemp -d)"
-          dev_json="$tmpdir/dev.json"
-          deps_json="$tmpdir/deps.json"
-
-          # Initialize empty objects
-          echo '{}' > "$dev_json"
-          echo '{}' > "$deps_json"
-
-          sanitize() {
-            # remove trailing commas before } or ]
-            sed -E 's/,\s*([}\]])/\1/g'
+          # --- helper: extract a JSON block by name from a loose file ---
+          extract_block () {
+            local name="$1" ; local file="$2"
+            awk -v name="\"${name}\":" '
+              BEGIN{found=0; depth=0}
+              {
+                if (!found) {
+                  # start when we see: "name": {
+                  if ($0 ~ "^\\s*" name "\\s*\\{") {
+                    found=1
+                    # strip up to first { and start accumulating
+                    sub(/^[^{]*\{/, "{")
+                    acc=$0 ORS
+                    depth= gsub(/\{/, "{") - gsub(/\}/, "}")
+                    next
+                  }
+                } else {
+                  acc=acc $0 ORS
+                  depth += gsub(/\{/, "{") - gsub(/\}/, "}")
+                  if (depth==0) { print acc; exit 0 }
+                }
+              }
+              END{ if (!found) exit 1 }
+            ' "$file"
           }
 
-          # --- Extract devDependencies block ---
-          if grep -q '"devDependencies"[[:space:]]*:' "$PROP_FILE"; then
-            awk '
-              /"devDependencies"[[:space:]]*:/ {capture=1}
-              capture {print}
-              capture && /\}/ {exit}
-            ' "$PROP_FILE" \
-            | sed -E '1s/.*\{/{/' \
-            | sanitize > "$dev_json"
-            echo "Extracted devDependencies block from version.properties:"
-            cat "$dev_json" | jq .
+          # --- helper: sanitize a JSON object (remove trailing commas before } or ]) ---
+          sanitize_obj () {
+            sed -E '
+              :again
+              s/,\s*([}\]])/\1/g; t again
+            '
+          }
+
+          # Try to extract devDependencies block
+          DEV_BLOCK_RAW="$(extract_block devDependencies "$PROPS" || true)"
+          DEP_BLOCK_RAW="$(extract_block dependencies "$PROPS" || true)"
+
+          # Clean up and validate or default to {}
+          if [ -n "${DEV_BLOCK_RAW:-}" ]; then
+            DEV_OBJ="$(printf '%s' "$DEV_BLOCK_RAW" | sanitize_obj)"
+            # ensure it’s a JSON object
+            echo "$DEV_OBJ" | jq -e . >/dev/null
           else
-            echo "No devDependencies block found in version.properties; using {}"
+            DEV_OBJ="{}"
           fi
 
-          # --- Extract dependencies block ---
-          if grep -q '"dependencies"[[:space:]]*:' "$PROP_FILE"; then
-            awk '
-              /"dependencies"[[:space:]]*:/ {capture=1}
-              capture {print}
-              capture && /\}/ {exit}
-            ' "$PROP_FILE" \
-            | sed -E '1s/.*\{/{/' \
-            | sanitize > "$deps_json"
-            echo "Extracted dependencies block from version.properties:"
-            cat "$deps_json" | jq .
+          if [ -n "${DEP_BLOCK_RAW:-}" ]; then
+            DEP_OBJ="$(printf '%s' "$DEP_BLOCK_RAW" | sanitize_obj)"
+            echo "$DEP_OBJ" | jq -e . >/dev/null
           else
-            echo "No dependencies block found in version.properties; using {}"
+            DEP_OBJ="{}"
           fi
 
-          # --- Merge deps + devDeps into package.json ---
-          merged1="$tmpdir/merged1.json"
-          jq -s '
-            def obj(x): if x==null then {} else x end;
-            (.[0]) as $pkg
-            | (.[1]) as $deps_in
-            | (.[2]) as $dev_in
-            | $pkg
-            | .dependencies = (obj(.dependencies) + obj($deps_in))
-            | .devDependencies = (obj(.devDependencies) + obj($dev_in))
-          ' "$PACKAGE_JSON" "$deps_json" "$dev_json" > "$merged1"
+          echo "Extracted devDependencies block from webversion.properties:"
+          echo "$DEV_OBJ" | jq .
+          echo "Extracted dependencies block from webversion.properties:"
+          echo "$DEP_OBJ" | jq .
 
-          # --- Update existing keys using top-level "pkg": "ver" lines (do not add new ones) ---
-          # Matches lines like:  "@genesislcap/xxx": "14.343.0"
-          updated="$merged1"
-          while IFS= read -r line; do
-            # Skip empty lines, comments, and blocks
-            [[ -z "$line" || "$line" =~ ^# ]] && continue
-            [[ "$line" =~ ^FOUNDATION_VERSION= ]] && continue
-            [[ "$line" =~ ^\"(dependencies|devDependencies)\"\ *: ]] && continue
+          # Merge into package.json (create blocks if missing)
+          TMP_OUT="$(mktemp)"
+          jq --argjson dev "$DEV_OBJ" --argjson dep "$DEP_OBJ" '
+            . as $pkg
+            | .devDependencies = (($pkg.devDependencies // {}) + $dev)
+            | .dependencies    = (($pkg.dependencies    // {}) + $dep)
+          ' "$PKG" > "$TMP_OUT"
 
-            if [[ "$line" =~ ^\"([^\"]+)\"\ *:\ *\"([^\"]+)\" ]]; then
-              key="${BASH_REMATCH[1]}"
-              val="${BASH_REMATCH[2]}"
-              tmp="$(mktemp)"
-              jq --arg k "$key" --arg v "$val" '
-                walk(
-                  if type=="object" and has($k) then .[$k]=$v else . end
-                )
-              ' "$updated" > "$tmp"
-              mv "$tmp" "$updated"
-            fi
-          done < "$PROP_FILE"
+          mv "$TMP_OUT" "$PKG"
 
-          mv "$updated" "$PACKAGE_JSON"
-
+          echo "Final devDependencies in package.json:"
+          jq '.devDependencies' "$PKG"
+          echo "Final dependencies in package.json:"
+          jq '.dependencies' "$PKG"
           echo "Final package.json:"
           cat "$PACKAGE_JSON" | jq .
+
 
 
 
