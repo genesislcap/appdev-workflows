@@ -215,7 +215,7 @@ jobs:
 
   build:
     needs: detect-paths
-    runs-on: [ self-hosted, selfhosted-services ]
+    runs-on: [ appdev-selfhosted-al2023 ]
     strategy:
       matrix:
         project: ${{ fromJson(needs.detect-paths.outputs.projects) }}
