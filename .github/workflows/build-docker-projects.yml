@@ -441,46 +441,49 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Update @genesislcap versions across ALL blocks (upsert)
+      - name: Upsert versions across ALL blocks from webversion.properties (no scope)
         working-directory: "${{ matrix.project }}/${{ inputs.web-path }}"
         shell: bash
         env:
-          PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}" # webversion.properties
+          PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}" # e.g. main-repo/.github/workflows/webversion.properties
           PACKAGE_JSON: "package.json"
-          SCOPE_PREFIX: "@genesislcap/"  # change if needed
-          PIN_TO_FOUNDATION: "false"     # set to "true" to pin everything under SCOPE_PREFIX to FOUNDATION_VERSION
         run: |
           set -euo pipefail
-          cat > update-genesis.mjs <<'EOF'
+          cat > update-all-deps.mjs <<'EOF'
           import fs from "fs";
 
           const propsPath = process.env.PROPS_FILE || "webversion.properties";
           const pkgPath   = process.env.PACKAGE_JSON || "package.json";
-          const scope     = process.env.SCOPE_PREFIX || "@genesislcap/";
-          const pinToFoundation = (process.env.PIN_TO_FOUNDATION || "false").toLowerCase() === "true";
 
           const propsText = fs.readFileSync(propsPath, "utf8");
           const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-          const ensure = (o,k) => (o[k] && typeof o[k]==="object") ? o[k] : (o[k] = {});
-          const deps  = ensure(pkg, "dependencies");
-          const dev   = ensure(pkg, "devDependencies");
-          const over  = ensure(pkg, "overrides");
+          // Ensure blocks exist
+          const ensureObj = (o,k) => (o[k] && typeof o[k]==="object") ? o[k] : (o[k] = {});
+          const deps  = ensureObj(pkg, "dependencies");
+          const dev   = ensureObj(pkg, "devDependencies");
+          const over  = ensureObj(pkg, "overrides");
 
+          // Parse webversion.properties:
+          //  - KEY=VAL (we ignore FOUNDATION_VERSION here)
+          //  - JSON-like lines: "pkg": "ver"
+          //  - Optional blocks: "dependencies": { ... }, "devDependencies": { ... }
           function parseProps(text) {
-            const lines = text.split(/\r?\n/);
-            const pairs = {}; // pkg -> version
-            let foundation = null;
+            const general = {};               // pkg -> ver (from loose lines)
+            const bySection = {               // explicit section blocks
+              dependencies: {},
+              devDependencies: {}
+            };
+            let section = null;
 
-            let section = null; // "dependencies" | "devDependencies" | null
-            for (const raw of lines) {
+            for (const raw of text.split(/\r?\n/)) {
               const line = raw.trim();
               if (!line || line.startsWith("#")) continue;
 
-              // FOUNDATION_VERSION=...
-              const mF = line.match(/^FOUNDATION_VERSION\s*=\s*(.+)$/);
-              if (mF) { foundation = mF[1].trim(); continue; }
+              // Ignore FOUNDATION_VERSION=...
+              if (/^FOUNDATION_VERSION\s*=/.test(line)) continue;
 
+              // Enter/exit sections
               if (/^"devDependencies"\s*:\s*\{/.test(line)) { section = "devDependencies"; continue; }
               if (/^"dependencies"\s*:\s*\{/.test(line))     { section = "dependencies";   continue; }
               if (line.startsWith("}")) { section = null; continue; }
@@ -489,7 +492,8 @@ jobs:
               const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
               if (mJson) {
                 const [, k, v] = mJson;
-                pairs[k] = v;
+                if (section && bySection[section]) bySection[section][k] = v;
+                else general[k] = v;
                 continue;
               }
 
@@ -497,52 +501,48 @@ jobs:
               const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
               if (mKV) {
                 const [, k, v] = mKV;
-                // Only keep as a pair if it looks like a package name (has / or @)
-                if (k.includes("/") || k.startsWith("@")) pairs[k] = v.trim();
+                // keep only entries that look like package names (contain @ or / or letters+digits)
+                if (k !== "FOUNDATION_VERSION") general[k] = v.trim();
               }
             }
-            return { pairs, foundation };
+            return { general, bySection };
           }
 
-          const { pairs, foundation } = parseProps(propsText);
+          const { general, bySection } = parseProps(propsText);
 
-          // Decide version for a package:
-          // - if pinToFoundation and package matches scope, use FOUNDATION_VERSION
-          // - else use the version defined for that package in props, if present
-          function targetVersion(pkgName) {
-            if (pinToFoundation && foundation && pkgName.startsWith(scope)) return foundation;
-            return pairs[pkgName] ?? null;
+          // Build candidate set of every package we saw anywhere
+          const candidates = new Set([
+            ...Object.keys(general),
+            ...Object.keys(bySection.dependencies),
+            ...Object.keys(bySection.devDependencies),
+          ]);
+
+          // Decide version for a given package:
+          // precedence: explicit section value > general value
+          function versionFor(name) {
+            if (name in bySection.dependencies)   return bySection.dependencies[name];
+            if (name in bySection.devDependencies) return bySection.devDependencies[name];
+            if (name in general)                  return general[name];
+            return null;
           }
 
-          // Collect candidate package names:
-          // 1) All keys from properties that start with scope
-          // 2) If pinning, also include every existing key in package.json that starts with scope
-          const candidate = new Set(
-            Object.keys(pairs).filter(k => k.startsWith(scope))
-          );
-          if (pinToFoundation && foundation) {
-            for (const k of [...Object.keys(deps), ...Object.keys(dev), ...Object.keys(over)]) {
-              if (k.startsWith(scope)) candidate.add(k);
-            }
-          }
-
-          // Upsert across ALL blocks for each candidate
-          for (const name of candidate) {
-            const ver = targetVersion(name) ?? (pinToFoundation ? foundation : null);
-            if (!ver) continue; // no version info, skip
-
+          // Upsert into ALL blocks
+          for (const name of candidates) {
+            const ver = versionFor(name);
+            if (!ver) continue;
             deps[name] = ver;
             dev[name]  = ver;
             over[name] = ver;
           }
 
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-          console.log(`✅ Upserted ${candidate.size} ${scope} packages across dependencies/devDependencies/overrides.`);
+          console.log(`✅ Upserted ${candidates.size} packages across dependencies/devDependencies/overrides.`);
           EOF
 
-          node update-genesis.mjs
+          node update-all-deps.mjs
           echo "Resulting package.json:"
           cat package.json
+
 
 
 
