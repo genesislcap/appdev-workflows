@@ -319,7 +319,7 @@ jobs:
       #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
       #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
 
-      #     # Read and update dependencies from version.properties
+      #     # Read and update dependencies from serverversion.properties
       #     while IFS= read -r line; do
       #       # Skip empty lines or comments
       #       [[ -z "$line" || "$line" =~ ^# ]] && continue

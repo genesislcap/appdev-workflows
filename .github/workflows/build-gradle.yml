@@ -84,7 +84,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'
+        default: 'main-repo/.github/workflows/serverversion.properties'
 
     secrets:
       GRADLE_PROPERTIES:
@@ -161,9 +161,9 @@ jobs:
       #     path: main-repo
       #     fetch-depth: 0
 
-      # - name: Print version.properties file
+      # - name: Print serverversion.properties file
       #   if: inputs.testautomation_build
-      #   run: cat main-repo/.github/workflows/version.properties
+      #   run: cat main-repo/.github/workflows/serverversion.properties
 
       - name: Restore gradle.properties and setup
         env:
@@ -395,9 +395,9 @@ jobs:
       #     path: main-repo
       #     fetch-depth: 0
 
-      # - name: Print version.properties file
+      # - name: Print serverversion.properties file
       #   if: inputs.testautomation_build
-      #   run: cat main-repo/.github/workflows/version.properties
+      #   run: cat main-repo/.github/workflows/serverversion.properties
 
       - name: Set up JDK
         uses: actions/setup-java@v2
