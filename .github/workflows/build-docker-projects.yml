@@ -441,7 +441,7 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Upsert versions across ALL blocks from webversion.properties (no scope)
+      - name: Upsert versions into blocks from webversion.properties (driven by `block=`)
         working-directory: "${{ matrix.project }}/${{ inputs.web-path }}"
         shell: bash
         env:
@@ -449,7 +449,7 @@ jobs:
           PACKAGE_JSON: "package.json"
         run: |
           set -euo pipefail
-          cat > update-all-deps.mjs <<'EOF'
+          cat > update-by-block.mjs <<'EOF'
           import fs from "fs";
 
           const propsPath = process.env.PROPS_FILE || "webversion.properties";
@@ -458,90 +458,123 @@ jobs:
           const propsText = fs.readFileSync(propsPath, "utf8");
           const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-          // Ensure blocks exist
           const ensureObj = (o,k) => (o[k] && typeof o[k]==="object") ? o[k] : (o[k] = {});
-          const deps  = ensureObj(pkg, "dependencies");
-          const dev   = ensureObj(pkg, "devDependencies");
-          const over  = ensureObj(pkg, "overrides");
 
-          // Parse webversion.properties:
-          //  - KEY=VAL (we ignore FOUNDATION_VERSION here)
-          //  - JSON-like lines: "pkg": "ver"
-          //  - Optional blocks: "dependencies": { ... }, "devDependencies": { ... }
+          // Parse blocks list from multiple possible syntaxes
+          function parseBlocks(text) {
+            let blocks = null;
+
+            // helpers
+            const cleanCSV = (s) =>
+              s.split(",").map(x => x.trim()).filter(Boolean);
+
+            for (const raw of text.split(/\r?\n/)) {
+              const line = raw.trim();
+              if (!line || line.startsWith("#")) continue;
+
+              // block=... / blocks=... / UPDATE_BLOCKS=...
+              let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
+              if (m) {
+                let val = m[2].trim().replace(/^"(.*)"$/, "$1"); // strip surrounding quotes if any
+                blocks = cleanCSV(val);
+                continue;
+              }
+
+              // "updateBlocks": ["a","b","c"]
+              m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
+              if (m) {
+                const inner = m[1].trim();
+                blocks = inner
+                  .split(",")
+                  .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
+                  .filter(Boolean);
+                continue;
+              }
+            }
+
+            // default when not set or set to empty string
+            if (!blocks || blocks.length === 0) {
+              blocks = ["dependencies","devDependencies","overrides"];
+            }
+            return blocks;
+          }
+
           function parseProps(text) {
-            const general = {};               // pkg -> ver (from loose lines)
-            const bySection = {               // explicit section blocks
-              dependencies: {},
-              devDependencies: {}
-            };
+            const general = {};       // pkg -> ver from loose lines
+            const bySection = {};     // sectionName -> { pkg -> ver }
             let section = null;
 
             for (const raw of text.split(/\r?\n/)) {
               const line = raw.trim();
               if (!line || line.startsWith("#")) continue;
 
-              // Ignore FOUNDATION_VERSION=...
+              // Ignore FOUNDATION_VERSION
               if (/^FOUNDATION_VERSION\s*=/.test(line)) continue;
 
-              // Enter/exit sections
-              if (/^"devDependencies"\s*:\s*\{/.test(line)) { section = "devDependencies"; continue; }
-              if (/^"dependencies"\s*:\s*\{/.test(line))     { section = "dependencies";   continue; }
+              // Enter section:  "sectionName": {
+              const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
+              if (mSec) { section = mSec[1]; bySection[section] ??= {}; continue; }
+
+              // Exit section
               if (line.startsWith("}")) { section = null; continue; }
 
-              // JSON-like:  "pkg": "ver"
+              // JSON-like pair: "pkg": "ver"
               const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
               if (mJson) {
                 const [, k, v] = mJson;
-                if (section && bySection[section]) bySection[section][k] = v;
+                if (section) bySection[section][k] = v;
                 else general[k] = v;
                 continue;
               }
 
-              // KEY=VAL
+              // KEY=VAL (treat as general pair if it looks like a package)
               const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
               if (mKV) {
                 const [, k, v] = mKV;
-                // keep only entries that look like package names (contain @ or / or letters+digits)
                 if (k !== "FOUNDATION_VERSION") general[k] = v.trim();
               }
             }
             return { general, bySection };
           }
 
+          const updateBlocks = parseBlocks(propsText);
           const { general, bySection } = parseProps(propsText);
 
-          // Build candidate set of every package we saw anywhere
+          // Ensure all target blocks exist in package.json
+          for (const blk of updateBlocks) ensureObj(pkg, blk);
+
+          // Gather every package mentioned anywhere
           const candidates = new Set([
             ...Object.keys(general),
-            ...Object.keys(bySection.dependencies),
-            ...Object.keys(bySection.devDependencies),
+            ...Object.values(bySection).flatMap(obj => Object.keys(obj)),
           ]);
 
-          // Decide version for a given package:
-          // precedence: explicit section value > general value
+          // Version precedence: explicit section value > general value
           function versionFor(name) {
-            if (name in bySection.dependencies)   return bySection.dependencies[name];
-            if (name in bySection.devDependencies) return bySection.devDependencies[name];
-            if (name in general)                  return general[name];
+            for (const [sec, obj] of Object.entries(bySection)) {
+              if (name in obj) return obj[name];
+            }
+            if (name in general) return general[name];
             return null;
           }
 
-          // Upsert into ALL blocks
+          // Upsert each package into each declared block
           for (const name of candidates) {
             const ver = versionFor(name);
             if (!ver) continue;
-            deps[name] = ver;
-            dev[name]  = ver;
-            over[name] = ver;
+            for (const blk of updateBlocks) {
+              pkg[blk][name] = ver;
+            }
           }
 
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-          console.log(`✅ Upserted ${candidates.size} packages across dependencies/devDependencies/overrides.`);
+          console.log(`✅ Upserted ${candidates.size} packages into blocks: ${updateBlocks.join(", ")}`);
           EOF
 
-          node update-all-deps.mjs
+          node update-by-block.mjs
           echo "Resulting package.json:"
           cat package.json
+
 
 
 
