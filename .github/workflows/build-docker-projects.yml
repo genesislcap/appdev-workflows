@@ -31,7 +31,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'
+        default: 'main-repo/.github/workflows/serverversion.properties'
       additional_webfile:
         required: false
         type: string
@@ -441,105 +441,197 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Update @genesislcap versions in package.json
-        # if: steps.web_exists.outputs.client_folder_exists == 'true'
+      - name: Update package.json using section-aware webversion.properties
+        working-directory: "${{ matrix.project }}/${{ inputs.web-path }}"
         shell: bash
-        working-directory: "${{ inputs.working-directory }}"
-        run: |
-          PACKAGE_JSON="${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
-          echo "Using package.json: $PACKAGE_JSON"
-          echo "Using input file: $INPUT_FILE"
-
-
-          # Read and update dependencies from version.properties
-          while IFS= read -r line; do
-            # Skip empty lines or comments
-            [[ -z "$line" || "$line" =~ ^# ]] && continue
-
-            # Process JSON-like entries
-            if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-              key="${BASH_REMATCH[1]}"
-              value="${BASH_REMATCH[2]}"
-            else
-              # Process key=value pairs
-              key=$(echo "$line" | cut -d'=' -f1 | xargs)
-              value=$(echo "$line" | cut -d'=' -f2 | xargs)
-            fi
-
-            # Update the package.json file
-            jq --arg dep "$key" --arg version "$value" '
-              walk(
-                if type == "object" and has($dep) then
-                  .[$dep] = $version
-                else
-                  .
-                end
-              )
-            ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-          done < "$INPUT_FILE"
-
-          # Print the updated package.json
-          echo "Updated package.json:"
-          cat "$PACKAGE_JSON"
-
-
-      - name: Merge devDependencies from version.properties into package.json
-        shell: bash
-        working-directory: "${{ inputs.working-directory }}"
         env:
-          PACKAGE_JSON: "${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
-          INPUT_FILE:   "${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
+          PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"
+          PACKAGE_JSON: "package.json"
         run: |
           set -euo pipefail
+          cat > update-section-aware.mjs <<'EOF'
+          import fs from "fs";
 
-          echo "Updating devDependencies in: $PACKAGE_JSON"
-          echo "Reading from webversion.properties: $INPUT_FILE"
+          const propsPath = process.env.PROPS_FILE || "webversion.properties";
+          const pkgPath   = process.env.PACKAGE_JSON || "package.json";
 
-          # Clean JSON: remove trailing commas inside blocks
-          SANITIZED="$(mktemp)"
-          sed -E 's/,(\s*[}\]])/\1/g' "$INPUT_FILE" > "$SANITIZED"
+          const RESERVED_KEYS = new Set([
+            "FOUNDATION_VERSION",
+            "block","blocks","UPDATE_BLOCKS","updateBlocks"
+          ]);
 
-          # Extract devDependencies block as pure JSON
-          DEV_JSON="$(mktemp)"
-          if grep -q '"devDependencies"' "$SANITIZED"; then
-            # Extract block content
-            awk '/"devDependencies"/,/\}/' "$SANITIZED" \
-              | sed -E '1s/.*\{/{/; $s/\}.*/}/' \
-              > "$DEV_JSON"
-          else
-            echo "No devDependencies block found in webversion.properties, skipping."
-            exit 0
-          fi
+          const propsText = fs.readFileSync(propsPath, "utf8");
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-          echo "Extracted devDependencies block from webversion.properties:"
-          cat "$DEV_JSON"
+          // Ensure ONLY top-level dependency blocks are touched/created
+          function ensureTopBlock(o, k) {
+            if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
+              o[k] = {};
+            }
+            return o[k];
+          }
 
-          # Merge the extracted devDependencies into package.json.devDependencies
-          OUT="$(mktemp)"
-          jq -s '
-            def obj(x): if x==null then {} else x end;
+          // Parse block list config
+          function parseBlocks(text) {
+            let blocks = null;
+            const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
 
-            # files: [ package.json, incoming.devdeps ]
-            .[0] as $pkg
-            | .[1] as $incoming
+            for (const raw of text.split(/\r?\n/)) {
+              const line = raw.trim();
+              if (!line || line.startsWith("#")) continue;
 
-            | $pkg * {
-                devDependencies: (
-                  obj($pkg.devDependencies)
-                  + obj($incoming)
-                )
+              let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
+              if (m) {
+                let val = m[2].trim().replace(/^"(.*)"$/, "$1");
+                blocks = csv(val);
+                continue;
               }
-          ' "$PACKAGE_JSON" "$DEV_JSON" > "$OUT"
+              m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
+              if (m) {
+                blocks = m[1]
+                  .split(",")
+                  .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
+                  .filter(Boolean);
+                continue;
+              }
+            }
+            if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
+            return blocks;
+          }
 
-          mv "$OUT" "$PACKAGE_JSON"
+          // Parse properties: general pairs + explicit section maps
+          function parseProps(text) {
+            const general = {};
+            const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
+            let section = null;
 
-          echo "Final devDependencies in package.json:"
-          jq '.devDependencies' "$PACKAGE_JSON"
+            for (const raw of text.split(/\r?\n/)) {
+              const line = raw.trim();
+              if (!line || line.startsWith("#")) continue;
 
-          # Print the updated package.json
-          echo "Updated package.json:"
-          cat "$PACKAGE_JSON"
+              if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
+
+              // Enter any JSON-like section: "sectionName": {
+              const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
+              if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
+
+              // Exit section
+              if (line.startsWith("}")) { section = null; continue; }
+
+              // JSON-like pair: "pkg": "ver"
+              const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
+              if (mJson) {
+                const [, k, v] = mJson;
+                if (RESERVED_KEYS.has(k)) continue;
+                if (section) sections[section][k] = v;
+                else general[k] = v;
+                continue;
+              }
+
+              // KEY=VAL (treat as general if looks like a package key)
+              const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
+              if (mKV) {
+                const [, k, v] = mKV;
+                if (RESERVED_KEYS.has(k)) continue;
+                if (/[\/@]/.test(k)) general[k] = v.trim();
+              }
+            }
+            return { general, sections };
+          }
+
+          const targetBlocks = parseBlocks(propsText);
+          const { general, sections } = parseProps(propsText);
+
+          // 1) Apply explicit sections ONLY to their matching top-level blocks
+          for (const [secName, map] of Object.entries(sections)) {
+            if (!["dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"].includes(secName)) {
+              // ignore unknown sections for safety
+              continue;
+            }
+            const blk = ensureTopBlock(pkg, secName);
+            for (const [name, ver] of Object.entries(map)) {
+              blk[name] = ver;
+            }
+          }
+
+          // 2) Apply general pairs to each configured target block
+          for (const blkName of targetBlocks) {
+            const blk = ensureTopBlock(pkg, blkName);
+            for (const [name, ver] of Object.entries(general)) {
+              blk[name] = ver;
+            }
+          }
+
+          fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+          console.log("✅ Updated package.json with section-aware logic.");
+          EOF
+
+          node update-section-aware.mjs
+          echo "Resulting package.json:"
+          cat package.json
+
+
+
+
+
+
+
+      # - name: Merge devDependencies from serverversion.properties into package.json
+      #   shell: bash
+      #   working-directory: "${{ inputs.working-directory }}"
+      #   env:
+      #     PACKAGE_JSON: "${{ inputs.working-directory }}/${{ matrix.project }}/${{ inputs.web-path }}/package.json"
+      #     INPUT_FILE:   "${{ inputs.working-directory }}/${{ inputs.additional_webfile }}"
+      #   run: |
+      #     set -euo pipefail
+
+      #     echo "Updating devDependencies in: $PACKAGE_JSON"
+      #     echo "Reading from webversion.properties: $INPUT_FILE"
+
+      #     # Clean JSON: remove trailing commas inside blocks
+      #     SANITIZED="$(mktemp)"
+      #     sed -E 's/,(\s*[}\]])/\1/g' "$INPUT_FILE" > "$SANITIZED"
+
+      #     # Extract devDependencies block as pure JSON
+      #     DEV_JSON="$(mktemp)"
+      #     if grep -q '"devDependencies"' "$SANITIZED"; then
+      #       # Extract block content
+      #       awk '/"devDependencies"/,/\}/' "$SANITIZED" \
+      #         | sed -E '1s/.*\{/{/; $s/\}.*/}/' \
+      #         > "$DEV_JSON"
+      #     else
+      #       echo "No devDependencies block found in webversion.properties, skipping."
+      #       exit 0
+      #     fi
+
+      #     echo "Extracted devDependencies block from webversion.properties:"
+      #     cat "$DEV_JSON"
+
+      #     # Merge the extracted devDependencies into package.json.devDependencies
+      #     OUT="$(mktemp)"
+      #     jq -s '
+      #       def obj(x): if x==null then {} else x end;
+
+      #       # files: [ package.json, incoming.devdeps ]
+      #       .[0] as $pkg
+      #       | .[1] as $incoming
+
+      #       | $pkg * {
+      #           devDependencies: (
+      #             obj($pkg.devDependencies)
+      #             + obj($incoming)
+      #           )
+      #         }
+      #     ' "$PACKAGE_JSON" "$DEV_JSON" > "$OUT"
+
+      #     mv "$OUT" "$PACKAGE_JSON"
+
+      #     echo "Final devDependencies in package.json:"
+      #     jq '.devDependencies' "$PACKAGE_JSON"
+
+      #     # Print the updated package.json
+      #     echo "Updated package.json:"
+      #     cat "$PACKAGE_JSON"
 
 
       - name: Login to Genesis Container Registry
