@@ -441,7 +441,7 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Upsert versions into blocks from webversion.properties (skip block keys)
+      - name: Update package.json using section-aware webversion.properties
         working-directory: "${{ matrix.project }}/${{ inputs.web-path }}"
         shell: bash
         env:
@@ -449,29 +449,32 @@ jobs:
           PACKAGE_JSON: "package.json"
         run: |
           set -euo pipefail
-          cat > update-by-block.mjs <<'EOF'
+          cat > update-section-aware.mjs <<'EOF'
           import fs from "fs";
 
           const propsPath = process.env.PROPS_FILE || "webversion.properties";
           const pkgPath   = process.env.PACKAGE_JSON || "package.json";
 
+          const RESERVED_KEYS = new Set([
+            "FOUNDATION_VERSION",
+            "block","blocks","UPDATE_BLOCKS","updateBlocks"
+          ]);
+
           const propsText = fs.readFileSync(propsPath, "utf8");
           const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-          const ensureObj = (o,k) => (o[k] && typeof o[k]==="object") ? o[k] : (o[k] = {});
+          // Ensure ONLY top-level dependency blocks are touched/created
+          function ensureTopBlock(o, k) {
+            if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
+              o[k] = {};
+            }
+            return o[k];
+          }
 
-          // Keys we should NEVER copy into package.json as packages
-          const RESERVED_KEYS = new Set([
-            "FOUNDATION_VERSION",
-            "block",
-            "blocks",
-            "UPDATE_BLOCKS",
-            "updateBlocks"
-          ]);
-
+          // Parse block list config
           function parseBlocks(text) {
             let blocks = null;
-            const cleanCSV = (s) => s.split(",").map(x => x.trim()).filter(Boolean);
+            const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
 
             for (const raw of text.split(/\r?\n/)) {
               const line = raw.trim();
@@ -480,104 +483,93 @@ jobs:
               let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
               if (m) {
                 let val = m[2].trim().replace(/^"(.*)"$/, "$1");
-                blocks = cleanCSV(val);
+                blocks = csv(val);
                 continue;
               }
-
               m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
               if (m) {
-                const inner = m[1].trim();
-                blocks = inner
+                blocks = m[1]
                   .split(",")
                   .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
                   .filter(Boolean);
                 continue;
               }
             }
-
-            if (!blocks || blocks.length === 0) {
-              blocks = ["dependencies","devDependencies","overrides"];
-            }
+            if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
             return blocks;
           }
 
+          // Parse properties: general pairs + explicit section maps
           function parseProps(text) {
             const general = {};
-            const bySection = {};
+            const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
             let section = null;
 
             for (const raw of text.split(/\r?\n/)) {
               const line = raw.trim();
               if (!line || line.startsWith("#")) continue;
 
-              // Ignore FOUNDATION_VERSION
-              if (/^FOUNDATION_VERSION\s*=/.test(line)) continue;
+              if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
 
-              // Enter section:  "sectionName": {
+              // Enter any JSON-like section: "sectionName": {
               const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
-              if (mSec) { section = mSec[1]; bySection[section] ??= {}; continue; }
+              if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
 
               // Exit section
               if (line.startsWith("}")) { section = null; continue; }
 
-              // JSON-like: "key": "value"
+              // JSON-like pair: "pkg": "ver"
               const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
               if (mJson) {
                 const [, k, v] = mJson;
-                if (RESERVED_KEYS.has(k)) continue;            // ⬅️ skip block keys
-                if (section) bySection[section][k] = v;
+                if (RESERVED_KEYS.has(k)) continue;
+                if (section) sections[section][k] = v;
                 else general[k] = v;
                 continue;
               }
 
-              // KEY=VAL
+              // KEY=VAL (treat as general if looks like a package key)
               const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
               if (mKV) {
                 const [, k, v] = mKV;
-                if (RESERVED_KEYS.has(k)) continue;            // ⬅️ skip block keys
-                general[k] = v.trim();
+                if (RESERVED_KEYS.has(k)) continue;
+                if (/[\/@]/.test(k)) general[k] = v.trim();
               }
             }
-            return { general, bySection };
+            return { general, sections };
           }
 
-          const updateBlocks = parseBlocks(propsText);
-          const { general, bySection } = parseProps(propsText);
+          const targetBlocks = parseBlocks(propsText);
+          const { general, sections } = parseProps(propsText);
 
-          // Ensure target blocks exist
-          for (const blk of updateBlocks) ensureObj(pkg, blk);
-
-          // Gather all packages
-          const candidates = new Set([
-            ...Object.keys(general),
-            ...Object.values(bySection).flatMap(obj => Object.keys(obj)),
-          ]);
-
-          // Section value > general value
-          function versionFor(name) {
-            for (const obj of Object.values(bySection)) {
-              if (name in obj) return obj[name];
+          // 1) Apply explicit sections ONLY to their matching top-level blocks
+          for (const [secName, map] of Object.entries(sections)) {
+            if (!["dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"].includes(secName)) {
+              // ignore unknown sections for safety
+              continue;
             }
-            if (name in general) return general[name];
-            return null;
+            const blk = ensureTopBlock(pkg, secName);
+            for (const [name, ver] of Object.entries(map)) {
+              blk[name] = ver;
+            }
           }
 
-          // Upsert into each declared block
-          for (const name of candidates) {
-            const ver = versionFor(name);
-            if (!ver) continue;
-            for (const blk of updateBlocks) {
-              pkg[blk][name] = ver;
+          // 2) Apply general pairs to each configured target block
+          for (const blkName of targetBlocks) {
+            const blk = ensureTopBlock(pkg, blkName);
+            for (const [name, ver] of Object.entries(general)) {
+              blk[name] = ver;
             }
           }
 
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-          console.log(`✅ Upserted ${candidates.size} packages into blocks: ${updateBlocks.join(", ")}`);
+          console.log("✅ Updated package.json with section-aware logic.");
           EOF
 
-          node update-by-block.mjs
+          node update-section-aware.mjs
           echo "Resulting package.json:"
           cat package.json
+
 
 
 
