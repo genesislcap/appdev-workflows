@@ -62,7 +62,7 @@ runs:
         path: main-repo
         fetch-depth: 0
 
-    - name: Print version.properties file
+    - name: Print serverversion.properties file
       if: inputs.testautomation_build
       run: cat main-repo/.github/workflows/serverversion.properties
       shell: bash
@@ -153,8 +153,8 @@ runs:
       run: |
         if [ "${{ inputs.testautomation_build }}" == "true" ]; then
           # Extract FOUNDATION_VERSION from the additional file
-          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_webfile }}; then
+            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_webfile }} | cut -d'=' -f2)
             echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
             echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
           else
