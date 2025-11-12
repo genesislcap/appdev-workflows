@@ -441,11 +441,11 @@ jobs:
           echo "Final updated package.json:"
           cat package.json
 
-      - name: Upsert versions into blocks from webversion.properties (driven by `block=`)
+      - name: Upsert versions into blocks from webversion.properties (skip block keys)
         working-directory: "${{ matrix.project }}/${{ inputs.web-path }}"
         shell: bash
         env:
-          PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}" # e.g. main-repo/.github/workflows/webversion.properties
+          PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"
           PACKAGE_JSON: "package.json"
         run: |
           set -euo pipefail
@@ -460,27 +460,30 @@ jobs:
 
           const ensureObj = (o,k) => (o[k] && typeof o[k]==="object") ? o[k] : (o[k] = {});
 
-          // Parse blocks list from multiple possible syntaxes
+          // Keys we should NEVER copy into package.json as packages
+          const RESERVED_KEYS = new Set([
+            "FOUNDATION_VERSION",
+            "block",
+            "blocks",
+            "UPDATE_BLOCKS",
+            "updateBlocks"
+          ]);
+
           function parseBlocks(text) {
             let blocks = null;
-
-            // helpers
-            const cleanCSV = (s) =>
-              s.split(",").map(x => x.trim()).filter(Boolean);
+            const cleanCSV = (s) => s.split(",").map(x => x.trim()).filter(Boolean);
 
             for (const raw of text.split(/\r?\n/)) {
               const line = raw.trim();
               if (!line || line.startsWith("#")) continue;
 
-              // block=... / blocks=... / UPDATE_BLOCKS=...
               let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
               if (m) {
-                let val = m[2].trim().replace(/^"(.*)"$/, "$1"); // strip surrounding quotes if any
+                let val = m[2].trim().replace(/^"(.*)"$/, "$1");
                 blocks = cleanCSV(val);
                 continue;
               }
 
-              // "updateBlocks": ["a","b","c"]
               m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
               if (m) {
                 const inner = m[1].trim();
@@ -492,7 +495,6 @@ jobs:
               }
             }
 
-            // default when not set or set to empty string
             if (!blocks || blocks.length === 0) {
               blocks = ["dependencies","devDependencies","overrides"];
             }
@@ -500,8 +502,8 @@ jobs:
           }
 
           function parseProps(text) {
-            const general = {};       // pkg -> ver from loose lines
-            const bySection = {};     // sectionName -> { pkg -> ver }
+            const general = {};
+            const bySection = {};
             let section = null;
 
             for (const raw of text.split(/\r?\n/)) {
@@ -518,20 +520,22 @@ jobs:
               // Exit section
               if (line.startsWith("}")) { section = null; continue; }
 
-              // JSON-like pair: "pkg": "ver"
+              // JSON-like: "key": "value"
               const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
               if (mJson) {
                 const [, k, v] = mJson;
+                if (RESERVED_KEYS.has(k)) continue;            // ⬅️ skip block keys
                 if (section) bySection[section][k] = v;
                 else general[k] = v;
                 continue;
               }
 
-              // KEY=VAL (treat as general pair if it looks like a package)
+              // KEY=VAL
               const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
               if (mKV) {
                 const [, k, v] = mKV;
-                if (k !== "FOUNDATION_VERSION") general[k] = v.trim();
+                if (RESERVED_KEYS.has(k)) continue;            // ⬅️ skip block keys
+                general[k] = v.trim();
               }
             }
             return { general, bySection };
@@ -540,25 +544,25 @@ jobs:
           const updateBlocks = parseBlocks(propsText);
           const { general, bySection } = parseProps(propsText);
 
-          // Ensure all target blocks exist in package.json
+          // Ensure target blocks exist
           for (const blk of updateBlocks) ensureObj(pkg, blk);
 
-          // Gather every package mentioned anywhere
+          // Gather all packages
           const candidates = new Set([
             ...Object.keys(general),
             ...Object.values(bySection).flatMap(obj => Object.keys(obj)),
           ]);
 
-          // Version precedence: explicit section value > general value
+          // Section value > general value
           function versionFor(name) {
-            for (const [sec, obj] of Object.entries(bySection)) {
+            for (const obj of Object.values(bySection)) {
               if (name in obj) return obj[name];
             }
             if (name in general) return general[name];
             return null;
           }
 
-          // Upsert each package into each declared block
+          // Upsert into each declared block
           for (const name of candidates) {
             const ver = versionFor(name);
             if (!ver) continue;
@@ -574,6 +578,7 @@ jobs:
           node update-by-block.mjs
           echo "Resulting package.json:"
           cat package.json
+
 
 
 
