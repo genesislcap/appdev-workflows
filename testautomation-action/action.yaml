@@ -249,7 +249,7 @@ runs:
         cat > update-section-aware.mjs <<'EOF'
         import fs from "fs";
 
-        const propsPath = process.env.PROPS_FILE || "version.properties";
+        const propsPath = process.env.PROPS_FILE || "webversion.properties";
         const pkgPath   = process.env.PACKAGE_JSON || "package.json";
 
         const RESERVED_KEYS = new Set([
