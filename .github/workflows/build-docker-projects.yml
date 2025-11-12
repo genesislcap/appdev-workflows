@@ -31,7 +31,7 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'
+        default: 'main-repo/.github/workflows/serverversion.properties'
       additional_webfile:
         required: false
         type: string
@@ -576,7 +576,7 @@ jobs:
 
 
 
-      # - name: Merge devDependencies from version.properties into package.json
+      # - name: Merge devDependencies from serverversion.properties into package.json
       #   shell: bash
       #   working-directory: "${{ inputs.working-directory }}"
       #   env:
