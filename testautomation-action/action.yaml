@@ -237,135 +237,136 @@ runs:
     #     # Print the updated package.json
     #     echo "Updated package.json:"
     #     cat "$PACKAGE_JSON"
-    - name: Update package.json using section-aware version.properties
-      if: inputs.testautomation_build
-      working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      shell: bash
-      env:
-        PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"   # e.g. main-repo/.github/workflows/version.properties
-        PACKAGE_JSON: "package.json"
-      run: |
-        set -euo pipefail
-        cat > update-section-aware.mjs <<'EOF'
-        import fs from "fs";
+    
+    # - name: Update package.json using section-aware version.properties
+    #   if: inputs.testautomation_build
+    #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
+    #   shell: bash
+    #   env:
+    #     PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"   # e.g. main-repo/.github/workflows/version.properties
+    #     PACKAGE_JSON: "package.json"
+    #   run: |
+    #     set -euo pipefail
+    #     cat > update-section-aware.mjs <<'EOF'
+    #     import fs from "fs";
 
-        const propsPath = process.env.PROPS_FILE || "webversion.properties";
-        const pkgPath   = process.env.PACKAGE_JSON || "package.json";
+    #     const propsPath = process.env.PROPS_FILE || "webversion.properties";
+    #     const pkgPath   = process.env.PACKAGE_JSON || "package.json";
 
-        const RESERVED_KEYS = new Set([
-          "FOUNDATION_VERSION",
-          "block","blocks","UPDATE_BLOCKS","updateBlocks"
-        ]);
+    #     const RESERVED_KEYS = new Set([
+    #       "FOUNDATION_VERSION",
+    #       "block","blocks","UPDATE_BLOCKS","updateBlocks"
+    #     ]);
 
-        const propsText = fs.readFileSync(propsPath, "utf8");
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+    #     const propsText = fs.readFileSync(propsPath, "utf8");
+    #     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-        // Top-level dependency blocks we allow writing to
-        const ALLOWED_BLOCKS = new Set([
-          "dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"
-        ]);
+    #     // Top-level dependency blocks we allow writing to
+    #     const ALLOWED_BLOCKS = new Set([
+    #       "dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"
+    #     ]);
 
-        // Create/return ONLY a top-level dependency block; never descend into nested objects
-        function ensureTopBlock(o, k) {
-          if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
-            o[k] = {};
-          }
-          return o[k];
-        }
+    #     // Create/return ONLY a top-level dependency block; never descend into nested objects
+    #     function ensureTopBlock(o, k) {
+    #       if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
+    #         o[k] = {};
+    #       }
+    #       return o[k];
+    #     }
 
-        function parseBlocks(text) {
-          let blocks = null;
-          const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
+    #     function parseBlocks(text) {
+    #       let blocks = null;
+    #       const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
 
-          for (const raw of text.split(/\r?\n/)) {
-            const line = raw.trim();
-            if (!line || line.startsWith("#")) continue;
+    #       for (const raw of text.split(/\r?\n/)) {
+    #         const line = raw.trim();
+    #         if (!line || line.startsWith("#")) continue;
 
-            let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
-            if (m) {
-              let val = m[2].trim().replace(/^"(.*)"$/, "$1");
-              blocks = csv(val);
-              continue;
-            }
-            m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
-            if (m) {
-              blocks = m[1]
-                .split(",")
-                .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
-                .filter(Boolean);
-              continue;
-            }
-          }
-          if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
-          // keep only allowed blocks
-          blocks = blocks.filter(b => ALLOWED_BLOCKS.has(b));
-          if (blocks.length === 0) blocks = ["dependencies"]; // fallback
-          return blocks;
-        }
+    #         let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
+    #         if (m) {
+    #           let val = m[2].trim().replace(/^"(.*)"$/, "$1");
+    #           blocks = csv(val);
+    #           continue;
+    #         }
+    #         m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
+    #         if (m) {
+    #           blocks = m[1]
+    #             .split(",")
+    #             .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
+    #             .filter(Boolean);
+    #           continue;
+    #         }
+    #       }
+    #       if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
+    #       // keep only allowed blocks
+    #       blocks = blocks.filter(b => ALLOWED_BLOCKS.has(b));
+    #       if (blocks.length === 0) blocks = ["dependencies"]; // fallback
+    #       return blocks;
+    #     }
 
-        function parseProps(text) {
-          const general = {};
-          const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
-          let section = null;
+    #     function parseProps(text) {
+    #       const general = {};
+    #       const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
+    #       let section = null;
 
-          for (const raw of text.split(/\r?\n/)) {
-            const line = raw.trim();
-            if (!line || line.startsWith("#")) continue;
+    #       for (const raw of text.split(/\r?\n/)) {
+    #         const line = raw.trim();
+    #         if (!line || line.startsWith("#")) continue;
 
-            if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
+    #         if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
 
-            // Enter JSON-like section: "sectionName": {
-            const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
-            if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
+    #         // Enter JSON-like section: "sectionName": {
+    #         const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
+    #         if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
 
-            // Exit section
-            if (line.startsWith("}")) { section = null; continue; }
+    #         // Exit section
+    #         if (line.startsWith("}")) { section = null; continue; }
 
-            // JSON-like pair: "pkg": "ver"
-            const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
-            if (mJson) {
-              const [, k, v] = mJson;
-              if (RESERVED_KEYS.has(k)) continue;
-              if (section) sections[section][k] = v;
-              else general[k] = v;
-              continue;
-            }
+    #         // JSON-like pair: "pkg": "ver"
+    #         const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
+    #         if (mJson) {
+    #           const [, k, v] = mJson;
+    #           if (RESERVED_KEYS.has(k)) continue;
+    #           if (section) sections[section][k] = v;
+    #           else general[k] = v;
+    #           continue;
+    #         }
 
-            // KEY=VAL (treat as general if it looks like a package name)
-            const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
-            if (mKV) {
-              const [, k, v] = mKV;
-              if (RESERVED_KEYS.has(k)) continue;
-              if (/[\/@]/.test(k)) general[k] = v.trim();
-            }
-          }
-          return { general, sections };
-        }
+    #         // KEY=VAL (treat as general if it looks like a package name)
+    #         const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
+    #         if (mKV) {
+    #           const [, k, v] = mKV;
+    #           if (RESERVED_KEYS.has(k)) continue;
+    #           if (/[\/@]/.test(k)) general[k] = v.trim();
+    #         }
+    #       }
+    #       return { general, sections };
+    #     }
 
-        const targetBlocks = parseBlocks(propsText);
-        const { general, sections } = parseProps(propsText);
+    #     const targetBlocks = parseBlocks(propsText);
+    #     const { general, sections } = parseProps(propsText);
 
-        // 1) Apply explicit sections ONLY to their matching top-level blocks
-        for (const [secName, map] of Object.entries(sections)) {
-          if (!ALLOWED_BLOCKS.has(secName)) continue;  // ignore unknown sections
-          const blk = ensureTopBlock(pkg, secName);
-          for (const [name, ver] of Object.entries(map)) {
-            blk[name] = ver;
-          }
-        }
+    #     // 1) Apply explicit sections ONLY to their matching top-level blocks
+    #     for (const [secName, map] of Object.entries(sections)) {
+    #       if (!ALLOWED_BLOCKS.has(secName)) continue;  // ignore unknown sections
+    #       const blk = ensureTopBlock(pkg, secName);
+    #       for (const [name, ver] of Object.entries(map)) {
+    #         blk[name] = ver;
+    #       }
+    #     }
 
-        // 2) Apply general pairs to each configured target block
-        for (const blkName of targetBlocks) {
-          const blk = ensureTopBlock(pkg, blkName);
-          for (const [name, ver] of Object.entries(general)) {
-            blk[name] = ver;
-          }
-        }
+    #     // 2) Apply general pairs to each configured target block
+    #     for (const blkName of targetBlocks) {
+    #       const blk = ensureTopBlock(pkg, blkName);
+    #       for (const [name, ver] of Object.entries(general)) {
+    #         blk[name] = ver;
+    #       }
+    #     }
 
-        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-        console.log("✅ package.json updated with section-aware logic.");
-        EOF
+    #     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+    #     console.log("✅ package.json updated with section-aware logic.");
+    #     EOF
 
-        node update-section-aware.mjs
-        echo "Resulting package.json:"
-        cat package.json
+    #     node update-section-aware.mjs
+    #     echo "Resulting package.json:"
+    #     cat package.json
