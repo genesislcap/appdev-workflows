@@ -368,8 +368,7 @@ jobs:
 
       - name: Upload Bearer Report
         if: inputs.sast
-        uses: actions/upload-artifact@v4
-        if: always()
+        uses: actions/upload-artifact@v4        
         with:
           name: bearer-security-report
           path: bearer-report.txt
