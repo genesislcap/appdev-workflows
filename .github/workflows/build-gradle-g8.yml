@@ -220,7 +220,7 @@ jobs:
           set +e
           # --report=security is default, but added for clarity
           # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_id }}.txt
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.txt
           set -e
 
       # Upload the txt report as an artifact
@@ -228,8 +228,8 @@ jobs:
         if: inputs.sast
         uses: actions/upload-artifact@v4        
         with:
-          name: sast-report-${{ inputs.product_name }}-${{ github.run_id }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_id }}.txt
+          name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.txt
 
       - name: Build
         uses: gradle/gradle-build-action@v2
