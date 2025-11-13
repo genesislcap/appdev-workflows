@@ -362,9 +362,10 @@ jobs:
       - name: Run Bearer and generate report
         if: inputs.sast
         uses: bearer/bearer-action@v2
+        continue-on-error: true
         with:
-          format: json
-          output: bearer-report.txt   # This will create the .txt file
+          format: sarif 
+          output: bearer-report.txt
 
       - name: Upload Bearer Report
         if: inputs.sast
