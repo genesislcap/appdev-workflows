@@ -212,14 +212,14 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Run SAST security scan (SARIF)
+      - name: Run sast security scan (text report)
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
         run: |
           set +e
-          bearer scan . --report=security --exit-code 0 \
-            --format sarif \
-            --output "sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif"
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
           set -e
 
       # Upload the txt report as an artifact
