@@ -219,7 +219,32 @@ jobs:
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
 
+      - name: Install Bearer CLI
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
+      # Run scan and capture the human-readable "Security Report" into a txt file
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}.txt
+          set -e
+
+      # Upload the txt report as an artifact
+      - name: Upload sast Security Report
+        if: inputs.sast
+        uses: actions/upload-artifact@v4        
+        with:
+          name: sast-report-${{ inputs.product_name }}
+          path: sast-report-${{ inputs.product_name }}.txt
+          
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
