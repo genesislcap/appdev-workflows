@@ -89,6 +89,10 @@ on:
         type: string
         description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
+      sast:
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
@@ -176,7 +180,7 @@ jobs:
           cache-read-only: ${{ inputs.cache-read-only }}
           cache-write-only: ${{ inputs.cache-write-only }}
           cache-disabled: ${{ inputs.disable-cache }}
-      - name: Install Bearer CLI
+      - name: Install Sast CLI
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
         run: |
