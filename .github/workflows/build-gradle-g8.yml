@@ -220,7 +220,7 @@ jobs:
           set +e
           # --report=security is default, but added for clarity
           # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
           set -e
 
       # Upload the txt report as an artifact
@@ -229,13 +229,13 @@ jobs:
         uses: actions/upload-artifact@v4        
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
       - name: Upload SARIF file
         if: inputs.sast
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
+          sarif_file: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
       - name: Build
         uses: gradle/gradle-build-action@v2
