@@ -365,14 +365,14 @@ jobs:
         continue-on-error: true
         with:
           format: sarif 
-          output: bearer-report.txt
+          output: bearer-report.sarif
 
       - name: Upload Bearer Report
         if: inputs.sast
         uses: actions/upload-artifact@v4        
         with:
           name: bearer-security-report
-          path: bearer-report.txt
+          path: bearer-report.sarif
 
       - name: Server Build
         uses: gradle/gradle-build-action@v2
