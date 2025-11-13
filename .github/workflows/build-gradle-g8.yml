@@ -151,6 +151,28 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Install Bearer CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+
+      # Run scan and capture the human-readable "Security Report" into a txt file
+      - name: Run Bearer security scan (text report)
+        run: |
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee bearer-security-report.txt
+          set -e
+
+      # Upload the txt report as an artifact
+      - name: Upload Bearer Security Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bearer-security-report
+          path: bearer-security-report.txt
+
       # - uses: actions/checkout@v3
       #   if: inputs.testautomation_build
       #   with:
