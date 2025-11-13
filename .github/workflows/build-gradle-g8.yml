@@ -112,8 +112,8 @@ on:
         default: 'main-repo/.github/workflows/serverversion.properties'
       sast:
         required: false
-        type: string
         default: false
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
@@ -360,12 +360,14 @@ jobs:
       #     build-root-directory: "${{ inputs.working-directory }}"
       #     cache-disabled: true
       - name: Run Bearer and generate report
+        if: inputs.sast
         uses: bearer/bearer-action@v2
         with:
           format: json
           output: bearer-report.txt   # This will create the .txt file
 
       - name: Upload Bearer Report
+        if: inputs.sast
         uses: actions/upload-artifact@v4
         if: always()
         with:
