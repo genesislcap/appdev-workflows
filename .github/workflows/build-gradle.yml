@@ -86,6 +86,11 @@ on:
         type: string
         default: 'main-repo/.github/workflows/serverversion.properties'
 
+      sast:
+        required: false
+        default: false
+        type: boolean
+
     secrets:
       GRADLE_PROPERTIES:
         required: true
@@ -244,7 +249,7 @@ jobs:
         with:
           name: sast-report-${{ inputs.product_name }}
           path: sast-report-${{ inputs.product_name }}.txt
-          
+
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
