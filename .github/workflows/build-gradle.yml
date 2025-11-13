@@ -176,7 +176,32 @@ jobs:
           cache-read-only: ${{ inputs.cache-read-only }}
           cache-write-only: ${{ inputs.cache-write-only }}
           cache-disabled: ${{ inputs.disable-cache }}
+      - name: Install Bearer CLI
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
+      # Run scan and capture the human-readable "Security Report" into a txt file
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_id }}.txt
+          set -e
+
+      # Upload the txt report as an artifact
+      - name: Upload sast Security Report
+        if: inputs.sast
+        uses: actions/upload-artifact@v4        
+        with:
+          name: sast-report-${{ inputs.product_name }}-${{ github.run_id }}
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_id }}.txt
+          
       - name: Server Build
         run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
