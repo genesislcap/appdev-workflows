@@ -195,7 +195,7 @@ jobs:
           set +e
           # --report=security is default, but added for clarity
           # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.txt
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
           set -e
 
       # Upload the txt report as an artifact
@@ -204,7 +204,7 @@ jobs:
         uses: actions/upload-artifact@v4        
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.txt
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
           
       - name: Server Build
         run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
