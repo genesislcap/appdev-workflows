@@ -150,28 +150,7 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
-
-      - name: Install Bearer CLI
-        run: |
-          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
-          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
-
-      # Run scan and capture the human-readable "Security Report" into a txt file
-      - name: Run Bearer security scan (text report)
-        run: |
-          set +e
-          # --report=security is default, but added for clarity
-          # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 | tee bearer-security-report.txt
-          set -e
-
-      # Upload the txt report as an artifact
-      - name: Upload Bearer Security Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bearer-security-report
-          path: bearer-security-report.txt
+      
 
       # - uses: actions/checkout@v3
       #   if: inputs.testautomation_build
@@ -283,118 +262,30 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
 
-       # Step to extract FOUNDATION_VERSION from additional_file
-      # - name: Read FOUNDATION_VERSION from additional file
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}"
-      #   id: extract_version
-      #   shell: bash
-      #   run: |
-      #     if [ "${{ inputs.testautomation_build }}" == "true" ]; then
-      #       # Extract FOUNDATION_VERSION from the additional file
-      #       if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-      #         FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
-      #         echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
-      #         echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
-      #       else
-      #         echo "FOUNDATION_VERSION not found in additional file"
-      #         exit 1
-      #       fi
-      #     fi
-
-      # - name: Check for package-lock.json and remove if exists
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      #   run: |
-      #     if [ -f package-lock.json ]; then
-      #       echo "Removing existing package-lock.json..."
-      #       rm package-lock.json
-      #     else
-      #       echo "No package-lock.json found."
-      #     fi
-
-      # - name: Update @genesislcap dependencies
-      #   if: inputs.testautomation_build
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
-      #   run: |
-      #     NEW_VERSION="${{ steps.extract_version.outputs.foundation_version }}"
-      #     # Update @genesislcap dependencies across all objects in the package.json
-      #     jq --arg version "$NEW_VERSION" '
-      #       walk(
-      #         if type == "object" then
-      #           with_entries(
-      #             if (.key | startswith("@genesislcap")) then .value = $version else . end
-      #           )
-      #         else . end
-      #       )
-      #     ' package.json > package.json.tmp
-
-      #     # Move tmp file to overwrite the original package.json
-      #     mv package.json.tmp package.json
-      #     # Print the final updated package.json
-      #     echo "Final updated package.json:"
-      #     cat package.json
-
-      # - name: Update @genesislcap versions in package.json
-
-      #   shell: bash
-      #   working-directory: "./"
-      #   run: |
-      #     # Define variables
-
-      #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-      #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
-
-      #     # Read and update dependencies from serverversion.properties
-      #     while IFS= read -r line; do
-      #       # Skip empty lines or comments
-      #       [[ -z "$line" || "$line" =~ ^# ]] && continue
-
-      #       # Process JSON-like entries
-      #       if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-      #         key="${BASH_REMATCH[1]}"
-      #         value="${BASH_REMATCH[2]}"
-      #       else
-      #         # Process key=value pairs
-      #         key=$(echo "$line" | cut -d'=' -f1 | xargs)
-      #         value=$(echo "$line" | cut -d'=' -f2 | xargs)
-      #       fi
-
-      #       # Update the package.json file
-      #       jq --arg dep "$key" --arg version "$value" '
-      #         walk(
-      #           if type == "object" and has($dep) then
-      #             .[$dep] = $version
-      #           else
-      #             .
-      #           end
-      #         )
-      #       ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-      #     done < "$INPUT_FILE"
-
-      #     # Print the updated package.json
-      #     echo "Updated package.json:"
-      #     cat "$PACKAGE_JSON"
-
-      # - name: Server Build
-      #   uses: gradle/gradle-build-action@v2
-      #   with:
-      #     arguments: build  --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} -PuseDevRepo=true
-      #     build-root-directory: "${{ inputs.working-directory }}"
-      #     cache-disabled: true
-      - name: Run sast and generate report
+      
+      - name: Install Bearer CLI
         if: inputs.sast
-        uses: bearer/bearer-action@v2
-        continue-on-error: true
-        with:
-          format: sarif 
-          output: bearer-report.sarif
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Upload sast Report
+      # Run scan and capture the human-readable "Security Report" into a txt file
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        run: |
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee bearer-security-report.txt
+          set -e
+
+      # Upload the txt report as an artifact
+      - name: Upload sast Security Report
         if: inputs.sast
         uses: actions/upload-artifact@v4        
         with:
-          name: bearer--report-${{ inputs.product_name }}
-          path: bearer-report.sarif
+          name: sast-report-${{ inputs.product_name }}
+          path: bearer-security-report.txt
 
       # - name: Server Build
       #   uses: gradle/gradle-build-action@v2
