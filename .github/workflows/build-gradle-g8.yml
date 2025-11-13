@@ -228,14 +228,7 @@ jobs:
         uses: actions/upload-artifact@v4        
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
-      
-      - name: Upload SARIF file
-        if: inputs.sast
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
-
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif     
 
       - name: Build
         uses: gradle/gradle-build-action@v2
