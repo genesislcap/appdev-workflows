@@ -110,7 +110,10 @@ on:
         required: false
         type: string
         default: 'main-repo/.github/workflows/serverversion.properties'
-
+      sast:
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
