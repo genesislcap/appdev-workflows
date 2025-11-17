@@ -28,6 +28,10 @@ on:
       tag_version:             # <-- NEW
         required: false
         type: string
+      pg_version:             # <-- NEW
+        required: false
+        type: string
+        default: 17
     # secrets:
     #   GRADLE_PROPERTIES:
     #     required: true
@@ -54,6 +58,7 @@ jobs:
           echo "region_name: ${{ inputs.region_name }}"
           echo "client_name: ${{ inputs.client_name }}"
           echo "tag_version: ${{ inputs.tag_version }}"
+          echo "tag_version: ${{ inputs.pg_version }}"
 
       - name: Install AWS CLI and jq
         run: |
@@ -90,17 +95,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set Up Docker Buildx
-        run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker buildx create --use
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
 
       - name: Create PostgreSQL database dump using Docker
         run: |
-          sudo docker pull postgres:17
+          sudo docker pull postgres:${{ inputs.pg_version }}
           sudo docker run --rm \
             -e PGPASSWORD=$DB_PASSWORD \
-            postgres:17 \
+            postgres:${{ inputs.pg_version }} \
             pg_dump \
             -h ${{ inputs.db_host }} \
             -U ${{ inputs.db_user }} \
