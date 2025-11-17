@@ -135,7 +135,7 @@ runs:
         docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
 
     - name: Scan artifact
-      uses: genesislcap/appdev-workflows/build-image/run-tests@licenses
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@licenses
       with:
         jfrog-username: ${{ inputs.jfrog-username }}
         jfrog-password: ${{ inputs.jfrog-password }}
