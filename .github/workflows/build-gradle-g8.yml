@@ -112,7 +112,7 @@ on:
         default: 'main-repo/.github/workflows/serverversion.properties'
       sast:
         required: false
-        default: false
+        default: true
         type: boolean
 
     secrets:

@@ -88,9 +88,9 @@ on:
 
       sast:
         required: false
-        default: false
+        default: true
         type: boolean
-
+        
     secrets:
       GRADLE_PROPERTIES:
         required: true
