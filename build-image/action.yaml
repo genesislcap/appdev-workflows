@@ -106,6 +106,14 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    - name: Scan artifact
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@licenses
+      with:
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+
     - name: Run Tests
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
@@ -113,14 +121,6 @@ runs:
         jfrog-username: ${{ inputs.jfrog-username }}
         jfrog-password: ${{ inputs.jfrog-password }}
         test-reports-suffix: ${{ inputs.test-reports-suffix }}
-        working-directory: ${{ inputs.working-directory }}
-        server-path: ${{ inputs.server-path }}
-
-    - name: Scan artifact
-      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@licenses
-      with:
-        jfrog-username: ${{ inputs.jfrog-username }}
-        jfrog-password: ${{ inputs.jfrog-password }}
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
