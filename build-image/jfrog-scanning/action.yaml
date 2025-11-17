@@ -30,7 +30,7 @@ runs:
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        if ./gradlew tasks --all | grep -q "appDistZip"; then
+        if ./gradlew tasks --all -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" | grep -q "appDistZip"; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
@@ -41,7 +41,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew appDistZip
+        ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Run the JFrog scan
       if: steps.check_task.outputs.exists
