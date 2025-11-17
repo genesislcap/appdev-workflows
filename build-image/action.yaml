@@ -116,6 +116,14 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
+    - name: Scan artifact
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@licenses
+      with:
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+
     - name: Build Image
       if: inputs.push-image == 'true'
       shell: bash
@@ -133,11 +141,3 @@ runs:
       run: |
         docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
         docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
-
-    - name: Scan artifact
-      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@licenses
-      with:
-        jfrog-username: ${{ inputs.jfrog-username }}
-        jfrog-password: ${{ inputs.jfrog-password }}
-        working-directory: ${{ inputs.working-directory }}
-        server-path: ${{ inputs.server-path }}
