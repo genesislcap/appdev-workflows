@@ -31,7 +31,7 @@ on:
       pg_version:             # <-- NEW
         required: false
         type: string
-        default: 17
+        default: '17'
     # secrets:
     #   GRADLE_PROPERTIES:
     #     required: true
