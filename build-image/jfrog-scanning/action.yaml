@@ -1,0 +1,51 @@
+name: Scan with JFrog
+description: Scan the distribution for vulnerabilities and licences
+
+inputs:
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+  working-directory:
+    default: .
+    required: false
+  server-path:
+    default: server
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - uses: jfrog/setup-jfrog-cli@v4
+      with:
+        JF_URL: https://genesisglobal.jfrog.io
+        JF_USER: ${{ inputs.jfrog-username }}
+        JF_PASSWORD: ${{ inputs.jfrog-password }}
+
+    - name: Check if appDistZip exists
+      shell: bash
+      id: check_task
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        if ./gradlew tasks --all | grep -w "appDistZip" > /dev/null; then
+          echo "appDistZip=true" >> $GITHUB_OUTPUT
+        else
+          echo "appDistZip=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build the dist
+      if: steps.check_task.outputs.exists
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew appDistZip
+
+    - name: Run the JFrog scan
+      if: steps.check_task.outputs.exists
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
