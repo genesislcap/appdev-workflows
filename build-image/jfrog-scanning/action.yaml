@@ -30,7 +30,7 @@ runs:
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        if ./gradlew tasks --all | grep -w "appDistZip" > /dev/null; then
+        if ./gradlew tasks --all | grep -q "appDistZip"; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
