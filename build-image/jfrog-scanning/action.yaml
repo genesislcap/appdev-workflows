@@ -20,7 +20,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - uses: jfrog/setup-jfrog-cli@v4
-      with:
+      env:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
