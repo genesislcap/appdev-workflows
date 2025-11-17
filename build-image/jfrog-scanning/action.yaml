@@ -44,6 +44,8 @@ runs:
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Run the JFrog scan
+      env:
+        GITHUB_STEP_SUMMARY: ${{ github.step_summary }}
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
