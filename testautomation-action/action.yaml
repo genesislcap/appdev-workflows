@@ -27,7 +27,11 @@ inputs:
   additional_file:
     required: false
     type: string
-    default: 'main-repo/.github/workflows/version.properties'
+    default: 'main-repo/.github/workflows/serverversion.properties'
+  additional_webfile:
+    required: false
+    type: string
+    default: 'main-repo/.github/workflows/webversion.properties'
   repo_type:
     required: false
     type: string
@@ -58,9 +62,9 @@ runs:
         path: main-repo
         fetch-depth: 0
 
-    - name: Print version.properties file
+    - name: Print serverversion.properties file
       if: inputs.testautomation_build
-      run: cat main-repo/.github/workflows/version.properties
+      run: cat main-repo/.github/workflows/serverversion.properties
       shell: bash
 
     - name: Restore gradle.properties and setup
@@ -149,8 +153,8 @@ runs:
       run: |
         if [ "${{ inputs.testautomation_build }}" == "true" ]; then
           # Extract FOUNDATION_VERSION from the additional file
-          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_file }}; then
-            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_file }} | cut -d'=' -f2)
+          if grep -q "FOUNDATION_VERSION" ${{ inputs.working-directory }}/${{ inputs.additional_webfile }}; then
+            FOUNDATION_VERSION=$(grep 'FOUNDATION_VERSION' ${{ inputs.working-directory }}/${{ inputs.additional_webfile }} | cut -d'=' -f2)
             echo "FOUNDATION_VERSION=$FOUNDATION_VERSION"
             echo "::set-output name=foundation_version::$FOUNDATION_VERSION"
           else
@@ -195,41 +199,173 @@ runs:
         echo "Final updated package.json:"
         cat package.json
 
-    - name: Update @genesislcap versions in package.json
-      # if: steps.web_exists.outputs.client_folder_exists == 'true'
+    # - name: Update @genesislcap versions in package.json
+    #   # if: steps.web_exists.outputs.client_folder_exists == 'true'
+    #   shell: bash
+    #   working-directory: "./"
+    #   run: |
+    #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
+    #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+
+    #     # Read and update dependencies from version.properties
+    #     while IFS= read -r line; do
+    #       # Skip empty lines or comments
+    #       [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+    #       # Process JSON-like entries
+    #       if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
+    #         key="${BASH_REMATCH[1]}"
+    #         value="${BASH_REMATCH[2]}"
+    #       else
+    #         # Process key=value pairs
+    #         key=$(echo "$line" | cut -d'=' -f1 | xargs)
+    #         value=$(echo "$line" | cut -d'=' -f2 | xargs)
+    #       fi
+
+    #       # Update the package.json file
+    #       jq --arg dep "$key" --arg version "$value" '
+    #         walk(
+    #           if type == "object" and has($dep) then
+    #             .[$dep] = $version
+    #           else
+    #             .
+    #           end
+    #         )
+    #       ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
+    #     done < "$INPUT_FILE"
+
+    #     # Print the updated package.json
+    #     echo "Updated package.json:"
+    #     cat "$PACKAGE_JSON"
+    - name: Update package.json using section-aware version.properties
+      if: inputs.testautomation_build
+      working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
       shell: bash
-      working-directory: "./"
+      env:
+        PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"   # e.g. main-repo/.github/workflows/version.properties
+        PACKAGE_JSON: "package.json"
       run: |
-        PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
-        INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
+        set -euo pipefail
+        cat > update-section-aware.mjs <<'EOF'
+        import fs from "fs";
 
-        # Read and update dependencies from version.properties
-        while IFS= read -r line; do
-          # Skip empty lines or comments
-          [[ -z "$line" || "$line" =~ ^# ]] && continue
+        const propsPath = process.env.PROPS_FILE || "webversion.properties";
+        const pkgPath   = process.env.PACKAGE_JSON || "package.json";
 
-          # Process JSON-like entries
-          if [[ "$line" =~ ^\"(.+)\":\ \"(.+)\"$ ]]; then
-            key="${BASH_REMATCH[1]}"
-            value="${BASH_REMATCH[2]}"
-          else
-            # Process key=value pairs
-            key=$(echo "$line" | cut -d'=' -f1 | xargs)
-            value=$(echo "$line" | cut -d'=' -f2 | xargs)
-          fi
+        const RESERVED_KEYS = new Set([
+          "FOUNDATION_VERSION",
+          "block","blocks","UPDATE_BLOCKS","updateBlocks"
+        ]);
 
-          # Update the package.json file
-          jq --arg dep "$key" --arg version "$value" '
-            walk(
-              if type == "object" and has($dep) then
-                .[$dep] = $version
-              else
-                .
-              end
-            )
-          ' "$PACKAGE_JSON" > tmp.json && mv tmp.json "$PACKAGE_JSON"
-        done < "$INPUT_FILE"
+        const propsText = fs.readFileSync(propsPath, "utf8");
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-        # Print the updated package.json
-        echo "Updated package.json:"
-        cat "$PACKAGE_JSON"
+        // Top-level dependency blocks we allow writing to
+        const ALLOWED_BLOCKS = new Set([
+          "dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"
+        ]);
+
+        // Create/return ONLY a top-level dependency block; never descend into nested objects
+        function ensureTopBlock(o, k) {
+          if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
+            o[k] = {};
+          }
+          return o[k];
+        }
+
+        function parseBlocks(text) {
+          let blocks = null;
+          const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
+
+          for (const raw of text.split(/\r?\n/)) {
+            const line = raw.trim();
+            if (!line || line.startsWith("#")) continue;
+
+            let m = line.match(/^(block|blocks|UPDATE_BLOCKS)\s*=\s*(.+)$/);
+            if (m) {
+              let val = m[2].trim().replace(/^"(.*)"$/, "$1");
+              blocks = csv(val);
+              continue;
+            }
+            m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
+            if (m) {
+              blocks = m[1]
+                .split(",")
+                .map(s => s.trim().replace(/^"(.*)"$/, "$1"))
+                .filter(Boolean);
+              continue;
+            }
+          }
+          if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
+          // keep only allowed blocks
+          blocks = blocks.filter(b => ALLOWED_BLOCKS.has(b));
+          if (blocks.length === 0) blocks = ["dependencies"]; // fallback
+          return blocks;
+        }
+
+        function parseProps(text) {
+          const general = {};
+          const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
+          let section = null;
+
+          for (const raw of text.split(/\r?\n/)) {
+            const line = raw.trim();
+            if (!line || line.startsWith("#")) continue;
+
+            if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
+
+            // Enter JSON-like section: "sectionName": {
+            const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
+            if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
+
+            // Exit section
+            if (line.startsWith("}")) { section = null; continue; }
+
+            // JSON-like pair: "pkg": "ver"
+            const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
+            if (mJson) {
+              const [, k, v] = mJson;
+              if (RESERVED_KEYS.has(k)) continue;
+              if (section) sections[section][k] = v;
+              else general[k] = v;
+              continue;
+            }
+
+            // KEY=VAL (treat as general if it looks like a package name)
+            const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
+            if (mKV) {
+              const [, k, v] = mKV;
+              if (RESERVED_KEYS.has(k)) continue;
+              if (/[\/@]/.test(k)) general[k] = v.trim();
+            }
+          }
+          return { general, sections };
+        }
+
+        const targetBlocks = parseBlocks(propsText);
+        const { general, sections } = parseProps(propsText);
+
+        // 1) Apply explicit sections ONLY to their matching top-level blocks
+        for (const [secName, map] of Object.entries(sections)) {
+          if (!ALLOWED_BLOCKS.has(secName)) continue;  // ignore unknown sections
+          const blk = ensureTopBlock(pkg, secName);
+          for (const [name, ver] of Object.entries(map)) {
+            blk[name] = ver;
+          }
+        }
+
+        // 2) Apply general pairs to each configured target block
+        for (const blkName of targetBlocks) {
+          const blk = ensureTopBlock(pkg, blkName);
+          for (const [name, ver] of Object.entries(general)) {
+            blk[name] = ver;
+          }
+        }
+
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+        console.log("✅ package.json updated with section-aware logic.");
+        EOF
+
+        node update-section-aware.mjs
+        echo "Resulting package.json:"
+        cat package.json

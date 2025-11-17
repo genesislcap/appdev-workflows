@@ -109,8 +109,11 @@ on:
       additional_file:
         required: false
         type: string
-        default: 'main-repo/.github/workflows/version.properties'
-
+        default: 'main-repo/.github/workflows/serverversion.properties'
+      sast:
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
@@ -319,7 +322,7 @@ jobs:
       #     PACKAGE_JSON="${{ inputs.working-directory }}/${{ inputs.web-path }}/package.json"
       #     INPUT_FILE="${{ inputs.working-directory }}/${{ inputs.additional_file }}"
 
-      #     # Read and update dependencies from version.properties
+      #     # Read and update dependencies from serverversion.properties
       #     while IFS= read -r line; do
       #       # Skip empty lines or comments
       #       [[ -z "$line" || "$line" =~ ^# ]] && continue
@@ -357,6 +360,29 @@ jobs:
       #     build-root-directory: "${{ inputs.working-directory }}"
       #     cache-disabled: true
 
+      - name: Install Bearer CLI
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          set -e
+
+      - name: Upload sast Security Report
+        if: inputs.sast
+        uses: actions/upload-artifact@v4        
+        with:
+          name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
