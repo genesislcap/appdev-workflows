@@ -237,6 +237,11 @@ runs:
     #     # Print the updated package.json
     #     echo "Updated package.json:"
     #     cat "$PACKAGE_JSON"
+    - name: Setup Node.js
+      if: inputs.testautomation_build
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
     - name: Update package.json using section-aware version.properties
       if: inputs.testautomation_build
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
