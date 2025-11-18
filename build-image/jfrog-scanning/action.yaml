@@ -53,5 +53,5 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         mkdir -p "$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/sarif-reports/"
-        jf s --licenses --vuln --watches "scan" */build/dist/*.zip > "$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/sarif-reports/final.sarif"
+        jf s --format=sarif --licenses --vuln --watches "scan" */build/dist/*.zip > "$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/sarif-reports/final.sarif"
         jf generate-summary-markdown
