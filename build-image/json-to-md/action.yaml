@@ -1,5 +1,5 @@
 name: "Convert JFrog JSON scan to Markdown"
-description: "Reads JFrog JSON scan output and converts it into GitHub Markdown"
+description: "Reads JFrog JSON scan output and converts it into GitHub Markdown with HTML tables"
 
 inputs:
   json_path:
@@ -18,7 +18,6 @@ runs:
         JSON_FILE="${{ inputs.json_path }}"
         MD_FILE="${{ inputs.output_md }}"
 
-        # Fail early if file doesn't exist
         if [ ! -f "$JSON_FILE" ]; then
           echo "JSON file not found: $JSON_FILE"
           exit 1
@@ -30,66 +29,63 @@ runs:
         NAME=$(jq -r '.summary.scans[0].name // ""' "$JSON_FILE")
         SCAN_ID=$(jq -r '.summary.scans[0].vulnerabilities.sca.scan_ids[0] // empty' "$JSON_FILE")
 
-        # Build scan URL only if SCAN_ID exists
         if [ -n "$SCAN_ID" ]; then
           SCAN_URL="${BASE_URL}/${SCAN_ID}"
         else
           SCAN_URL=""
         fi
 
-        # Safely compute counts (defaults to 0)
         HIGH_VULN=$(jq -r '.summary.scans[0].vulnerabilities.sca.security.High | to_entries | map(.value) | add // 0' "$JSON_FILE")
         MED_VULN=$(jq -r '.summary.scans[0].vulnerabilities.sca.security.Medium | to_entries | map(.value) | add // 0' "$JSON_FILE")
 
         HIGH_VIOL=$(jq -r '.summary.scans[0].violations.sca.security.High | to_entries | map(.value) | add // 0' "$JSON_FILE")
         CRIT_LICENSE=$(jq -r '.summary.scans[0].violations.sca.license.Critical | to_entries | map(.value) | add // 0' "$JSON_FILE")
 
-        # Start fresh file
         : > "$MD_FILE"
 
-        # Header
         printf '%s\n' "# 🔍 JFrog Scan Summary" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
 
-        # Target & Name
-        if [ -n "$TARGET" ]; then
-          printf '%s\n' "**Target:** \`$TARGET\`" >> "$MD_FILE"
-        fi
-        if [ -n "$NAME" ]; then
-          printf '%s\n' "**Name:** \`$NAME\`" >> "$MD_FILE"
-        fi
+        if [ -n "$TARGET" ]; then printf '%s\n' "**Target:** \`$TARGET\`" >> "$MD_FILE"; fi
+        if [ -n "$NAME" ]; then printf '%s\n' "**Name:** \`$NAME\`" >> "$MD_FILE"; fi
         printf '%s\n' "" >> "$MD_FILE"
 
-        # Scan link (when available)
         if [ -n "$SCAN_URL" ]; then
-          printf '%s\n' "**📄 Full Scan Report:** [View in JFrog Xray]($SCAN_URL)" >> "$MD_FILE"
+          printf '%s\n' "**📄 Full Scan Report:** <a href=\"%s\">View in JFrog Xray</a>" "$SCAN_URL" >> "$MD_FILE"
           printf '%s\n' "" >> "$MD_FILE"
         fi
 
         printf '%s\n' "---" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
 
-        # Vulnerabilities table
+        ############################################################
+        # VULNERABILITIES TABLE (HTML)
+        ############################################################
         printf '%s\n' "## 🛡️ Vulnerabilities" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
-        printf '%s\n' "| Severity | Count |" >> "$MD_FILE"
-        printf '%s\n' "|----------|-------|" >> "$MD_FILE"
-        printf '%s\n' "| High     | %s |" "$HIGH_VULN" >> "$MD_FILE"
-        printf '%s\n' "| Medium   | %s |" "$MED_VULN" >> "$MD_FILE"
+
+        printf '%s\n' "<table>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>High</td><td>${HIGH_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Medium</td><td>${MED_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "</table>" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
 
-        # Violations table
+        ############################################################
+        # VIOLATIONS TABLE (HTML)
+        ############################################################
         printf '%s\n' "## 🚨 Violations" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
-        printf '%s\n' "| Type     | Severity | Count |" >> "$MD_FILE"
-        printf '%s\n' "|----------|----------|-------|" >> "$MD_FILE"
-        printf '%s\n' "| Security | High     | %s |" "$HIGH_VIOL" >> "$MD_FILE"
-        printf '%s\n' "| License  | Critical | %s |" "$CRIT_LICENSE" >> "$MD_FILE"
+
+        printf '%s\n' "<table>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><th>Type</th><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Security</td><td>High</td><td>${HIGH_VIOL}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>License</td><td>Critical</td><td>${CRIT_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "</table>" >> "$MD_FILE"
         printf '%s\n' "" >> "$MD_FILE"
 
         echo "Wrote markdown to $MD_FILE"
 
-        # Append to GitHub Actions summary (if available)
         if [ -n "$GITHUB_STEP_SUMMARY" ] && [ -f "$MD_FILE" ]; then
           cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
           echo "Appended markdown to GitHub Actions summary."

@@ -61,15 +61,8 @@ runs:
         filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
         echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
 
-    - name: Create markdown
+    - name: Create markdown summary
       if: steps.check_task.outputs.appDistZip == 'true'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@licenses
       with:
         json_path: ${{ steps.status_filename.outputs.filename }}
-        output_md: summary.md
-
-    - name: Write summary
-      if: steps.check_task.outputs.appDistZip == 'true'
-      shell: bash
-      run: |
-        cat ./summary.md >> $GITHUB_STEP_SUMMARY
