@@ -48,10 +48,18 @@ runs:
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Run the JFrog scan
-      env:
-        JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: ${{ github.step_summary }}
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+
+    - name: Append JFrog summary to GitHub summary
+      if: steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
+      run: |
+        for f in "${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"/*; do
+          echo "### JFrog Scan Summary" >> $GITHUB_STEP_SUMMARY
+          cat "$f" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        done
