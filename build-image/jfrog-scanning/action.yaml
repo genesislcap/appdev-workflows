@@ -51,7 +51,6 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        mkdir -p "$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/sarif-reports/"
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
 
     - name: Get output status filename
@@ -60,7 +59,7 @@ runs:
       id: status_filename
       run: |
         filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
-        echo "filename=$filename" >> $GITHUB_OUTPUT
+        echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
 
     - name: Create markdown
       if: steps.check_task.outputs.appDistZip == 'true'
