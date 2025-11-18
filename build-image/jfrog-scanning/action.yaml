@@ -16,11 +16,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # - name: Export job summary path into composite
-    #   shell: bash
-    #   run: |
-    #     echo "JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR=${{ github.step_summary }}" >> $GITHUB_ENV
-
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
@@ -52,14 +47,26 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
+        export JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR="$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog"
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
 
-    - name: Append JFrog summary to GitHub summary
-      if: steps.check_task.outputs.appDistZip == 'true'
+    - name: Append JFrog command summaries to GitHub summary
       shell: bash
       run: |
-        for f in "${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"/*; do
-          echo "### JFrog Scan Summary" >> $GITHUB_STEP_SUMMARY
-          cat "$f" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"
+        if [ ! -d "$summary_root" ]; then
+          echo "No JFrog summaries found." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        for cmd_dir in "$summary_root"/*; do
+          if [ -d "$cmd_dir" ]; then
+            md_file="$cmd_dir/markdown.txt"
+            if [ -f "$md_file" ]; then
+              cmd_name=$(basename "$cmd_dir")
+              echo "## JFrog Command: $cmd_name" >> "$GITHUB_STEP_SUMMARY"
+              cat "$md_file" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
         done
