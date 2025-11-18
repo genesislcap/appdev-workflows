@@ -21,7 +21,7 @@ runs:
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
-        JF_URL: https://genesisglobal.jfrog.io
+        JF_URL: ${{ vars.JF_URL }}
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
       with:
@@ -46,12 +46,7 @@ runs:
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Run the JFrog scan
-      env:
-        JF_URL: https://genesisglobal.jfrog.io
-        JF_USER: ${{ inputs.jfrog-username }}
-        JF_PASSWORD: ${{ inputs.jfrog-password }}
       if: steps.check_task.outputs.appDistZip == 'true'
-      shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
