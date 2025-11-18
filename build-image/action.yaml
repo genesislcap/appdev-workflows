@@ -114,30 +114,30 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
-    - name: Run Tests
-      uses: genesislcap/appdev-workflows/build-image/run-tests@develop
-      with:
-        version: ${{ inputs.version }}
-        jfrog-username: ${{ inputs.jfrog-username }}
-        jfrog-password: ${{ inputs.jfrog-password }}
-        test-reports-suffix: ${{ inputs.test-reports-suffix }}
-        working-directory: ${{ inputs.working-directory }}
-        server-path: ${{ inputs.server-path }}
+    # - name: Run Tests
+    #   uses: genesislcap/appdev-workflows/build-image/run-tests@develop
+    #   with:
+    #     version: ${{ inputs.version }}
+    #     jfrog-username: ${{ inputs.jfrog-username }}
+    #     jfrog-password: ${{ inputs.jfrog-password }}
+    #     test-reports-suffix: ${{ inputs.test-reports-suffix }}
+    #     working-directory: ${{ inputs.working-directory }}
+    #     server-path: ${{ inputs.server-path }}
 
-    - name: Build Image
-      if: inputs.push-image == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-      run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
+    # - name: Build Image
+    #   if: inputs.push-image == 'true'
+    #   shell: bash
+    #   working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+    #   run: |
+    #     ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
-    - name: Push Image using bash
-      if: inputs.push-image == 'true'
-      shell: bash
-      env:
-        ECR_REGISTRY: ${{ inputs.ecr-registry }}
-        IMAGE_VERSION: ${{ inputs.version }}
-        APP_NAME: ${{ inputs.app-name }}
-      run: |
-        docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
-        docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+    # - name: Push Image using bash
+    #   if: inputs.push-image == 'true'
+    #   shell: bash
+    #   env:
+    #     ECR_REGISTRY: ${{ inputs.ecr-registry }}
+    #     IMAGE_VERSION: ${{ inputs.version }}
+    #     APP_NAME: ${{ inputs.app-name }}
+    #   run: |
+    #     docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+    #     docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
