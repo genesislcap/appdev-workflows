@@ -24,6 +24,7 @@ runs:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
+        JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
     - name: Check if appDistZip exists
       shell: bash
       id: check_task
@@ -43,6 +44,8 @@ runs:
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Run the JFrog scan
+      env:
+        JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
@@ -50,9 +53,11 @@ runs:
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
 
     - name: Append JFrog command summaries to GitHub summary
+      env:
+        JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
       shell: bash
       run: |
-        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}/_runner_file_commands"
+        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"
         if [ ! -d "$summary_root" ]; then
           echo "No JFrog summaries found." >> "$GITHUB_STEP_SUMMARY"
           exit 0
