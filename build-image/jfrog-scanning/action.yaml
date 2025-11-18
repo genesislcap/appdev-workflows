@@ -47,13 +47,12 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        export JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR="$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog"
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
 
     - name: Append JFrog command summaries to GitHub summary
       shell: bash
       run: |
-        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"
+        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}/_runner_file_commands"
         if [ ! -d "$summary_root" ]; then
           echo "No JFrog summaries found." >> "$GITHUB_STEP_SUMMARY"
           exit 0
