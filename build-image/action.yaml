@@ -108,6 +108,7 @@ runs:
         config-path: ${{ inputs.config-path }}    
 
     - name: Run sast report
+      if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
       with:        
         working-directory: ${{ inputs.working-directory }}
