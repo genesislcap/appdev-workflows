@@ -35,6 +35,10 @@ inputs:
   push-image:
     required: false
     default: "true"
+  sast:
+    required: false
+    default: true
+    type: boolean
 
 runs:
   using: "composite"
