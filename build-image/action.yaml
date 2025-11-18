@@ -123,12 +123,14 @@ runs:
     - name: Install Bearer CLI
       if: inputs.sast
       working-directory: "${{ inputs.working-directory }}"
+      shell: bash
       run: |
           curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
     - name: Run sast security scan (text report)
       if: inputs.sast
       working-directory: "${{ inputs.working-directory }}"
+      shell: bash
       run: |
         set +e
         # --report=security is default, but added for clarity
