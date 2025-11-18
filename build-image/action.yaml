@@ -42,7 +42,7 @@ runs:
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: 17
+        java-version: "17.0.17+10"
         distribution: 'zulu'
 
     - name: Install lmdb-devel
