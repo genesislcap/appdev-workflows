@@ -43,7 +43,7 @@ runs:
       uses: actions/setup-java@v4
       with:
         java-version: "17.0.17+10"
-        distribution: 'zulu'
+        distribution: 'temurin'
 
     - name: Install lmdb-devel
       shell: bash
