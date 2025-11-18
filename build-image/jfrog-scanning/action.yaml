@@ -1,0 +1,68 @@
+name: Scan with JFrog
+description: Scan the distribution for vulnerabilities and licences
+
+inputs:
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+  working-directory:
+    default: .
+    required: false
+  server-path:
+    default: server
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - uses: jfrog/setup-jfrog-cli@v4
+      env:
+        JF_URL: https://genesisglobal.jfrog.io
+        JF_USER: ${{ inputs.jfrog-username }}
+        JF_PASSWORD: ${{ inputs.jfrog-password }}
+        JFROG_CLI_LOG_LEVEL: DEBUG
+
+    - name: Check if appDistZip exists
+      shell: bash
+      id: check_task
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        if ./gradlew tasks --all -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" | grep -q "appDistZip"; then
+          echo "appDistZip=true" >> $GITHUB_OUTPUT
+        else
+          echo "appDistZip=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build the dist
+      if: steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
+
+    - name: Run the JFrog scan
+      env:
+        JFROG_CLI_LOG_LEVEL: DEBUG
+      if: steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+
+    - name: Get output status filename
+      if: steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
+      id: status_filename
+      run: |
+        filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
+        echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
+
+    - name: Create markdown summary
+      if: steps.check_task.outputs.appDistZip == 'true'
+      uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
+      with:
+        json_path: ${{ steps.status_filename.outputs.filename }}
