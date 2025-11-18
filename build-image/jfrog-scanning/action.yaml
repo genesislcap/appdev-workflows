@@ -57,7 +57,7 @@ runs:
         JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
       shell: bash
       run: |
-        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}/jfrog-command-summary"
+        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}/jfrog-command-summary/security"
         if [ ! -d "$summary_root" ]; then
           echo "No JFrog summaries found." >> "$GITHUB_STEP_SUMMARY"
           exit 0
