@@ -242,7 +242,7 @@ runs:
       working-directory: "${{ inputs.working-directory }}/${{ inputs.web-path }}"
       shell: bash
       env:
-        PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"   # e.g. main-repo/.github/workflows/version.properties
+        PROPS_FILE: "${{ github.workspace }}/${{ inputs.additional_webfile }}"   # e.g. main-repo/.github/workflows/webversion.properties
         PACKAGE_JSON: "package.json"
       run: |
         set -euo pipefail
@@ -257,25 +257,32 @@ runs:
           "block","blocks","UPDATE_BLOCKS","updateBlocks"
         ]);
 
+        // Top-level blocks we allow updating
+        const ALLOWED_BLOCKS = new Set([
+          "dependencies",
+          "devDependencies",
+          "overrides",
+          "peerDependencies",
+          "optionalDependencies",
+          "bundleDependencies"
+        ]);
+
+        function assertFileExists(p, label) {
+          if (!fs.existsSync(p)) {
+            console.error(`❌ ${label} file not found: ${p}`);
+            process.exit(1);
+          }
+        }
+
+        assertFileExists(propsPath, "properties");
+        assertFileExists(pkgPath, "package.json");
+
         const propsText = fs.readFileSync(propsPath, "utf8");
         const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-        // Top-level dependency blocks we allow writing to
-        const ALLOWED_BLOCKS = new Set([
-          "dependencies","devDependencies","overrides","peerDependencies","optionalDependencies","bundleDependencies"
-        ]);
-
-        // Create/return ONLY a top-level dependency block; never descend into nested objects
-        function ensureTopBlock(o, k) {
-          if (!Object.prototype.hasOwnProperty.call(o, k) || typeof o[k] !== "object" || Array.isArray(o[k])) {
-            o[k] = {};
-          }
-          return o[k];
-        }
-
         function parseBlocks(text) {
           let blocks = null;
-          const csv = s => s.split(",").map(x=>x.trim()).filter(Boolean);
+          const csv = s => s.split(",").map(x => x.trim()).filter(Boolean);
 
           for (const raw of text.split(/\r?\n/)) {
             const line = raw.trim();
@@ -287,6 +294,8 @@ runs:
               blocks = csv(val);
               continue;
             }
+
+            // JSON style: "updateBlocks": ["dependencies","devDependencies"],
             m = line.match(/^"updateBlocks"\s*:\s*\[(.*)\]\s*,?$/);
             if (m) {
               blocks = m[1]
@@ -296,47 +305,66 @@ runs:
               continue;
             }
           }
-          if (!blocks || blocks.length === 0) blocks = ["dependencies","devDependencies","overrides"];
-          // keep only allowed blocks
+
+          // Default if nothing specified
+          if (!blocks || blocks.length === 0) {
+            blocks = ["dependencies", "devDependencies", "overrides"];
+          }
+
+          // Keep only allowed block names
           blocks = blocks.filter(b => ALLOWED_BLOCKS.has(b));
-          if (blocks.length === 0) blocks = ["dependencies"]; // fallback
+          if (blocks.length === 0) {
+            blocks = ["dependencies"]; // final fallback
+          }
           return blocks;
         }
 
         function parseProps(text) {
           const general = {};
-          const sections = {}; // e.g., { dependencies: {..}, devDependencies: {..} }
+          const sections = {};
           let section = null;
 
           for (const raw of text.split(/\r?\n/)) {
             const line = raw.trim();
             if (!line || line.startsWith("#")) continue;
 
-            if (/^FOUNDATION_VERSION\s*=/.test(line)) continue; // ignore
+            if (/^FOUNDATION_VERSION\s*=/.test(line)) continue;
 
-            // Enter JSON-like section: "sectionName": {
+            // Section start: "dependencies": {
             const mSec = line.match(/^"([^"]+)"\s*:\s*\{\s*$/);
-            if (mSec) { section = mSec[1]; sections[section] ??= {}; continue; }
+            if (mSec) {
+              section = mSec[1];
+              if (!sections[section]) sections[section] = {};
+              continue;
+            }
 
-            // Exit section
-            if (line.startsWith("}")) { section = null; continue; }
+            // Section end
+            if (line.startsWith("}")) {
+              section = null;
+              continue;
+            }
 
-            // JSON-like pair: "pkg": "ver"
+            // JSON style: "pkg": "ver",
             const mJson = line.match(/^"([^"]+)"\s*:\s*"([^"]+)"\s*,?$/);
             if (mJson) {
               const [, k, v] = mJson;
               if (RESERVED_KEYS.has(k)) continue;
-              if (section) sections[section][k] = v;
-              else general[k] = v;
+              if (section) {
+                sections[section][k] = v;
+              } else {
+                general[k] = v;
+              }
               continue;
             }
 
-            // KEY=VAL (treat as general if it looks like a package name)
+            // KEY=VAL style
             const mKV = line.match(/^([^=\s]+)\s*=\s*(.+)$/);
             if (mKV) {
               const [, k, v] = mKV;
               if (RESERVED_KEYS.has(k)) continue;
-              if (/[\/@]/.test(k)) general[k] = v.trim();
+              if (/[\/@]/.test(k)) {
+                general[k] = v.trim();
+              }
             }
           }
           return { general, sections };
@@ -345,27 +373,46 @@ runs:
         const targetBlocks = parseBlocks(propsText);
         const { general, sections } = parseProps(propsText);
 
-        // 1) Apply explicit sections ONLY to their matching top-level blocks
+        // Helper: check that a top-level block exists and is an object
+        function getExistingBlock(obj, name) {
+          if (!Object.prototype.hasOwnProperty.call(obj, name)) {
+            console.log(`ℹ️ Skipping block "${name}" – not present in package.json`);
+            return null;
+          }
+          const val = obj[name];
+          if (typeof val !== "object" || Array.isArray(val) || val === null) {
+            console.log(`ℹ️ Skipping block "${name}" – not a plain object in package.json`);
+            return null;
+          }
+          return val;
+        }
+
+        // 1) Apply explicit sections ONLY to their matching existing blocks
         for (const [secName, map] of Object.entries(sections)) {
-          if (!ALLOWED_BLOCKS.has(secName)) continue;  // ignore unknown sections
-          const blk = ensureTopBlock(pkg, secName);
+          if (!ALLOWED_BLOCKS.has(secName)) continue;
+          const blk = getExistingBlock(pkg, secName);
+          if (!blk) continue; // do not create new block, just skip
+
           for (const [name, ver] of Object.entries(map)) {
             blk[name] = ver;
           }
         }
 
-        // 2) Apply general pairs to each configured target block
+        // 2) Apply general pairs to each configured target block, but only if that block exists
         for (const blkName of targetBlocks) {
-          const blk = ensureTopBlock(pkg, blkName);
+          const blk = getExistingBlock(pkg, blkName);
+          if (!blk) continue;
+
           for (const [name, ver] of Object.entries(general)) {
             blk[name] = ver;
           }
         }
 
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-        console.log("✅ package.json updated with section-aware logic.");
+        console.log("✅ package.json updated with section-aware logic (missing blocks skipped).");
         EOF
 
         node update-section-aware.mjs
         echo "Resulting package.json:"
         cat package.json
+
