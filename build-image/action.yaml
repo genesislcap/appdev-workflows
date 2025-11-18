@@ -116,6 +116,29 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
+    - name: Install Bearer CLI
+      if: inputs.sast
+      working-directory: "${{ inputs.working-directory }}"
+      run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+    - name: Run sast security scan (text report)
+      if: inputs.sast
+      working-directory: "${{ inputs.working-directory }}"
+      run: |
+        set +e
+        # --report=security is default, but added for clarity
+        # --exit-code 0 => never fail the job even if findings exist
+        bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif
+        set -e
+
+    - name: Upload sast Security Report
+      if: inputs.sast
+      uses: actions/upload-artifact@v4        
+      with:
+        name: sast-report-${{ inputs.app-name }}-${{ github.run_number }}
+        path: sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif
+          
     - name: Build Image
       if: inputs.push-image == 'true'
       shell: bash
