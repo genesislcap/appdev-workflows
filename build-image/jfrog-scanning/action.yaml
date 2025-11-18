@@ -16,17 +16,19 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Export job summary path into composite
+      shell: bash
+      run: |
+        echo "GITHUB_STEP_SUMMARY=${{ github.step_summary }}" >> $GITHUB_ENV
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
-        JF_URL: ${{ vars.JF_URL }}
+        JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
-      with:
-        disable-job-summary: false
-
     - name: Check if appDistZip exists
       shell: bash
       id: check_task
@@ -47,6 +49,7 @@ runs:
 
     - name: Run the JFrog scan
       if: steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
