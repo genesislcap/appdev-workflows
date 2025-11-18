@@ -24,6 +24,7 @@ runs:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
+        JFROG_CLI_LOG_LEVEL: DEBUG
         JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
     - name: Check if appDistZip exists
       shell: bash
@@ -46,37 +47,10 @@ runs:
     - name: Run the JFrog scan
       env:
         JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
+        JFROG_CLI_LOG_LEVEL: DEBUG
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+        jf s --licenses --vuln --watches "scan" */build/dist/*.zip > "$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/sarif-reports/final.sarif"
         jf generate-summary-markdown
-
-    - name: Append JFrog command summaries to GitHub summary
-      env:
-        JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: /opt/actions-runner/_work/_temp/_jfrog
-      shell: bash
-      run: |
-        summary_root="${JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR}"
-        if [ ! -d "$summary_root" ]; then
-          echo "No JFrog summaries found." >> "$GITHUB_STEP_SUMMARY"
-          exit 0
-        fi
-        sudo dnf install -y tree
-        tree $summary_root
-
-
-        # for scan_output in "$summary_root"/*; do
-        #   cat "$scan_output"
-        #   ls -la "$cmd_dir"
-        #   if [ -d "$cmd_dir" ]; then
-        #     md_file="$cmd_dir/markdown.txt"
-        #     if [ -f "$md_file" ]; then
-        #       cmd_name=$(basename "$cmd_dir")
-        #       echo "## JFrog Command: $cmd_name" >> "$GITHUB_STEP_SUMMARY"
-        #       cat "$md_file" >> "$GITHUB_STEP_SUMMARY"
-        #       echo "" >> "$GITHUB_STEP_SUMMARY"
-        #     fi
-        #   fi
-        # done
