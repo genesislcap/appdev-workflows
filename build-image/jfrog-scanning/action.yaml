@@ -24,6 +24,8 @@ runs:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
+      with:
+        disable-job-summary: false
 
     - name: Check if appDistZip exists
       shell: bash
@@ -45,7 +47,9 @@ runs:
 
     - name: Run the JFrog scan
       env:
-        GITHUB_STEP_SUMMARY: ${{ github.step_summary }}
+        JF_URL: https://genesisglobal.jfrog.io
+        JF_USER: ${{ inputs.jfrog-username }}
+        JF_PASSWORD: ${{ inputs.jfrog-password }}
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
