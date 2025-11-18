@@ -65,6 +65,7 @@ runs:
 
         for cmd_dir in "$summary_root"/*; do
           echo "$cmd_dir"
+          ls -la "$cmd_dir"
           if [ -d "$cmd_dir" ]; then
             md_file="$cmd_dir/markdown.txt"
             if [ -f "$md_file" ]; then
