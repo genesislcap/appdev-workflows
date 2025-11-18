@@ -35,6 +35,10 @@ inputs:
   push-image:
     required: false
     default: "true"
+  sast:
+    required: false
+    default: true
+    type: boolean
 
 runs:
   using: "composite"
@@ -101,10 +105,16 @@ runs:
       if: ${{ inputs.config-path }}
       uses: genesislcap/appdev-workflows/read-dot-env@develop
       with:
-        config-path: ${{ inputs.config-path }}
+        config-path: ${{ inputs.config-path }}    
+
+    - name: Run sast report
+      uses: genesislcap/appdev-workflows/build-image/uploaad-sast-report@develop
+      with:        
+        working-directory: ${{ inputs.working-directory }}
+        app-name: ${{ inputs.app-name }}
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v4      
 
     - name: Run Tests
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
@@ -116,6 +126,8 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
+    
+          
     - name: Build Image
       if: inputs.push-image == 'true'
       shell: bash
