@@ -12,15 +12,13 @@ runs:
   using: "composite"
   steps:
 
-    - name: Install SAST CLI
-      if: inputs.sast
+    - name: Install SAST CLI      
       working-directory: "${{ inputs.working-directory }}"
       shell: bash
       run: |
           curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
-    - name: Run sast security scan (text report)
-      if: inputs.sast
+    - name: Run sast security scan (text report)      
       working-directory: "${{ inputs.working-directory }}"
       shell: bash
       run: |
@@ -30,8 +28,7 @@ runs:
         bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif
         set -e
 
-    - name: Upload sast Security Report
-      if: inputs.sast
+    - name: Upload sast Security Report      
       uses: actions/upload-artifact@v4        
       with:
         name: sast-report-${{ inputs.app-name }}-${{ github.run_number }}
