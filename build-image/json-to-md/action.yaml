@@ -51,7 +51,7 @@ runs:
         printf '%s\n' "" >> "$MD_FILE"
 
         if [ -n "$SCAN_URL" ]; then
-          printf '%s\n' "**📄 Full Scan Report:** <a href=\"%s\">View in JFrog Xray</a>" "$SCAN_URL" >> "$MD_FILE"
+          printf '%s\n' "**📄 Full Scan Report:** <a href=\"$SCAN_URL\">View in JFrog Xray</a>" >> "$MD_FILE"
           printf '%s\n' "" >> "$MD_FILE"
         fi
 
