@@ -41,6 +41,10 @@ on:
         required: false
         type: boolean
         default: true
+      sast:
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       JFROG_USERNAME:
@@ -120,6 +124,37 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
             ${{ runner.os }}-
+      - name: Install Bearer CLI
+        if: inputs.sast
+        # working-directory: "${{ inputs.working-directory }}"
+        
+        run: |
+          if [ -z "${{ inputs.build_path }}" ]; then
+            cd "${{ inputs.build_path }}"
+          fi
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        # working-directory: "${{ inputs.working-directory }}"
+        run: |
+          if [ -z "${{ inputs.build_path }}" ]; then
+          cd "${{ inputs.build_path }}"
+          fi
+          set +e
+          # --report=security is default, but added for clarity
+          # --exit-code 0 => never fail the job even if findings exist
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          set -e
+
+      # Upload the txt report as an artifact
+      - name: Upload sast Security Report
+        if: inputs.sast
+        uses: actions/upload-artifact@v4        
+        with:
+          name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif     
 
 
       - name: set version
@@ -138,7 +173,7 @@ jobs:
            else
                mvn versions:set -DnewVersion=${{ env.VERSION }} ${{ inputs.mvn_options }}
            fi
-
+      
       - name: Build
         if: ${{ inputs.skip_tests != 'true' }}
         run: |
