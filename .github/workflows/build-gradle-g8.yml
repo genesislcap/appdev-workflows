@@ -260,7 +260,7 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
-
+          cat ~/.gradle/gradle.properties
        # Step to extract FOUNDATION_VERSION from additional_file
       # - name: Read FOUNDATION_VERSION from additional file
       #   if: inputs.testautomation_build
