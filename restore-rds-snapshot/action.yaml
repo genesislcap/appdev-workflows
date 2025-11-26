@@ -94,7 +94,7 @@ runs:
       uses: actions/checkout@v5
       with:
         repository: genesislcap/appdev-workflows
-        ref: rds-snapshot
+        ref: develop
         path: "appdev-workflows"
 
     - name: Restore Snapshot
