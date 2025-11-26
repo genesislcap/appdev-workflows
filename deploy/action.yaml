@@ -77,7 +77,7 @@ runs:
 
     - name: RDS Snapshot step
       if: inputs.snapshot_rds == 'true'
-      uses: genesislcap/appdev-workflows/rds-snapshot@DCD-3464
+      uses: genesislcap/appdev-workflows/rds-snapshot@develop
       with:
         app_name: ${{ inputs.app_name }}
         customer: ${{ inputs.customer }}
