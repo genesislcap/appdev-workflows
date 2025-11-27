@@ -180,6 +180,16 @@ jobs:
           cache-read-only: ${{ inputs.cache-read-only }}
           cache-write-only: ${{ inputs.cache-write-only }}
           cache-disabled: ${{ inputs.disable-cache }}
+
+      - name: Scan artifact
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: "${{ inputs.working-directory }}/server"
+
       - name: Install Sast CLI
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
