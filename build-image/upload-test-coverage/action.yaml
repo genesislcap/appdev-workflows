@@ -1,0 +1,30 @@
+name: Run Tests
+description: Run tests and upload results as GH artifact
+
+inputs:
+  version:
+    required: true
+  sonar-token:
+    required: true
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+  working-directory:
+    default: .
+    required: false
+  server-path:
+    default: server
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Upload test coverage
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token=${{ inputs.sonar-token }}

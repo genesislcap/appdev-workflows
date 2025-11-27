@@ -1,0 +1,155 @@
+name: Build Genesis Docker Image
+description: Builds a Genesis Docker image
+
+inputs:
+  ecr-registry:
+    required: true
+  version:
+    required: true
+  region:
+    required: true
+  working-directory:
+    required: false
+    default: "."
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  jfrog-username:
+    required: true
+  jfrog-password:
+    required: true
+  app-name:
+    required: true
+  config-path:
+    required: false
+  node-version:
+    required: false
+    default: "20"
+  server-path:
+    required: false
+    default: "server"
+  test-reports-suffix:
+    required: false
+    default: ""
+  push-image:
+    required: false
+    default: "true"
+  sast:
+    required: false
+    default: true
+    type: boolean
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: 'adopt'
+
+    - name: Install lmdb-devel
+      shell: bash
+      run: |
+        sudo dnf install -y lmdb-devel
+
+    - name: Configure Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: eu-west-2
+
+    - name: Log into ECR
+      if: inputs.push-image == 'true'
+      shell: bash
+      run: |
+        aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr-registry }}
+
+    - name: Login to Jfrog
+      uses: docker/login-action@v3
+      with:
+        registry: genesisglobal-docker-remote.jfrog.io
+        username: ${{ inputs.jfrog-username }}
+        password: ${{ inputs.jfrog-password }}
+
+    - name: Docker iamge preload
+      shell: bash
+      run: |
+        docker pull genesisglobal-docker-remote.jfrog.io/rockylinux:8-minimal
+        docker tag genesisglobal-docker-remote.jfrog.io/rockylinux:8-minimal rockylinux:8-minimal
+
+    - name: Set the version
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: |
+        sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+
+    - name: Find product name
+      id: find-app-build-type
+      shell: bash
+      run: |
+        # sensible to customization
+        project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
+
+        echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+
+    - name: Read .env file for build
+      if: ${{ inputs.config-path }}
+      uses: genesislcap/appdev-workflows/read-dot-env@develop
+      with:
+        config-path: ${{ inputs.config-path }}
+
+    - name: Run sast report
+      if: inputs.sast
+      uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        app-name: ${{ inputs.app-name }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Scan artifact
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+      with:
+        version: ${{ inputs.version }}
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+
+    - name: Run Tests
+      uses: genesislcap/appdev-workflows/build-image/run-tests@develop
+      with:
+        version: ${{ inputs.version }}
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        test-reports-suffix: ${{ inputs.test-reports-suffix }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+
+    - name: Build Image
+      if: inputs.push-image == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
+
+    - name: Push Image using bash
+      if: inputs.push-image == 'true'
+      shell: bash
+      env:
+        ECR_REGISTRY: ${{ inputs.ecr-registry }}
+        IMAGE_VERSION: ${{ inputs.version }}
+        APP_NAME: ${{ inputs.app-name }}
+      run: |
+        docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+        docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}

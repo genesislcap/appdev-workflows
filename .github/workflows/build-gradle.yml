@@ -223,6 +223,14 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
+      - name: Scan artifact
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: "${{ inputs.working-directory }}/server"
 
       - name: Install Bearer CLI
         if: inputs.sast
@@ -242,11 +250,11 @@ jobs:
 
       - name: Upload sast Security Report
         if: inputs.sast
-        uses: actions/upload-artifact@v4        
+        uses: actions/upload-artifact@v4
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
-          
+
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
