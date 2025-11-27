@@ -127,7 +127,7 @@ jobs:
       - name: Install Bearer CLI
         if: inputs.sast
         # working-directory: "${{ inputs.working-directory }}"
-        
+
         run: |
           if [ -z "${{ inputs.build_path }}" ]; then
             cd "${{ inputs.build_path }}"
@@ -151,10 +151,10 @@ jobs:
       # Upload the txt report as an artifact
       - name: Upload sast Security Report
         if: inputs.sast
-        uses: actions/upload-artifact@v4        
+        uses: actions/upload-artifact@v4
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif     
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
 
       - name: set version
@@ -173,7 +173,7 @@ jobs:
            else
                mvn versions:set -DnewVersion=${{ env.VERSION }} ${{ inputs.mvn_options }}
            fi
-      
+
       - name: Build
         if: ${{ inputs.skip_tests != 'true' }}
         run: |
@@ -217,23 +217,23 @@ jobs:
               curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ inputs.artifact_product_name }}/server/pom-${{ env.VERSION }}.xml" -T pom.xml
             fi
 
-#      - name: Notify failure on Slack
-#        uses: bryannice/gitactions-slack-notification@2.0.0
-#        if: failure() && env.SLACK_INCOMING_WEBHOOK
-#        env:
-#          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-#          SLACK_TITLE: ❌ Server build for ${{ env.PRODUCT_NAME }} failed
-#          SLACK_MESSAGE: The Server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-#          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+      - name: Notify failure on Slack
+        uses: youscan/gitactions-slack-notification@3.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Server build for ${{ env.PRODUCT_NAME }} failed
+          SLACK_MESSAGE: The Server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
-#      - name: Notify success on Slack
-#        uses: bryannice/gitactions-slack-notification@2.0.0
-#        if: success() && env.SLACK_INCOMING_WEBHOOK
-#        env:
-#          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-#          SLACK_TITLE: ✅ Server build for ${{ env.PRODUCT_NAME }} passed
-#          SLACK_MESSAGE: The Server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-#          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
+      - name: Notify success on Slack
+        uses: youscan/gitactions-slack-notification@3.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Server build for ${{ env.PRODUCT_NAME }} passed
+          SLACK_MESSAGE: The Server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.PRODUCT_NAME }}-build-notifications
 
 #      - name: Depcheck
  #       uses: dependency-check/Dependency-Check_Action@1.0.0

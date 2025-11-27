@@ -181,7 +181,7 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" server/build.gradle.kts
-          
+
           echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: 'Create .npmrc'
@@ -225,10 +225,10 @@ jobs:
       # Upload the txt report as an artifact
       - name: Upload sast Security Report
         if: inputs.sast
-        uses: actions/upload-artifact@v4        
+        uses: actions/upload-artifact@v4
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif     
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
       - name: Build
         uses: gradle/gradle-build-action@v2
@@ -326,23 +326,23 @@ jobs:
           repository: genesislcap/appdev-workflows
           path: ./appdev-workflows
 
-#      - name: Notify failure on Slack
-#        uses: bryannice/gitactions-slack-notification@2.0.0
-#        if: failure() && env.SLACK_INCOMING_WEBHOOK
-#        env:
-#          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-#          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
-#          SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-#          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+      - name: Notify failure on Slack
+        uses: youscan/gitactions-slack-notification@3.0.0
+        if: failure() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
-#      - name: Notify success on Slack
-#        uses: bryannice/gitactions-slack-notification@2.0.0
-#        if: success() && env.SLACK_INCOMING_WEBHOOK
-#        env:
-#          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-#          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
-#          SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-#          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+      - name: Notify success on Slack
+        uses: youscan/gitactions-slack-notification@3.0.0
+        if: success() && env.SLACK_INCOMING_WEBHOOK
+        env:
+          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
   tag-jiras:
     needs: build-server
