@@ -14,6 +14,9 @@ inputs:
   server-path:
     default: server
     required: false
+  dist-folder-name:
+    default: dist
+    required: false
 
 runs:
   using: "composite"
@@ -50,7 +53,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+        jf s --licenses --vuln --watches "scan" */build/${{ inputs.dist-folder-name }}/*.zip
 
     - name: Get output status filename
       if: steps.check_task.outputs.appDistZip == 'true'
