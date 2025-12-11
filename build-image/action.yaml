@@ -118,7 +118,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Scan artifact
-      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@npm-audit
       with:
         version: ${{ inputs.version }}
         jfrog-username: ${{ inputs.jfrog-username }}

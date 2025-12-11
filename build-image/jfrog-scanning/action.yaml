@@ -27,6 +27,24 @@ runs:
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
 
+    - name: Run the JFrog npm audit
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/client/
+      run: |
+        jf audit --npm --licenses --watches "scan" > scan-results.txt
+
+    - name: Get output status filename
+      shell: bash
+      id: audit_status_filename
+      run: |
+        filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
+        echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
+
+    - name: Create markdown summary
+      uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
+      with:
+        json_path: ${{ steps.audit_status_filename.outputs.filename }}
+
     - name: Check if appDistZip exists
       shell: bash
       id: check_task
