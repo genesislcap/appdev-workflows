@@ -420,10 +420,11 @@ jobs:
           name: server-test-reports-${{ inputs.product_name }}
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
+        
       - name: Upload Auth Permissions
         uses: actions/upload-artifact@v4
         with:
-          name: AuthPermissions${{ inputs.test-reports-suffix }}
+          name: AuthPermissions${{ inputs.product_name }}
           path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
         if: always()
         
