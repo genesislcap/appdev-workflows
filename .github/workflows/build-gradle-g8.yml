@@ -420,7 +420,13 @@ jobs:
           name: server-test-reports-${{ inputs.product_name }}
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
-
+      - name: Upload Auth Permissions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPermissions${{ inputs.test-reports-suffix }}
+          path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
+        if: always()
+        
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
@@ -501,3 +507,4 @@ jobs:
       #     SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
       #     SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
       #     SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+7
