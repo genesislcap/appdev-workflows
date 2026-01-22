@@ -420,7 +420,14 @@ jobs:
           name: server-test-reports-${{ inputs.product_name }}
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
-
+        
+      - name: Upload Auth Permissions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPermissions-${{ inputs.product_name }}-${{ github.run_number }}
+          path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
+        if: always()
+        
       - name: Docker Build Image
         if: inputs.build_docker
         uses: gradle/gradle-build-action@v2
