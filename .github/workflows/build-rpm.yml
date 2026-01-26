@@ -19,9 +19,9 @@ on:
         type: string
         description: Comma separated list of folders in Artifactory to deploy the RPM
       server-distribution:
-        required: true
+        required: false
         type: string
-        description: Server tar file
+        description: Server tar file (required when build_server is true)
       client-distribution:
         required: true
         type: string
@@ -88,6 +88,17 @@ jobs:
           sudo yum -y install wget
           mkdir downloads
           mkdir web-downloads
+
+      - name: Validate inputs
+        run: |
+          # Validate that server-distribution is provided when build_server is true
+          if [ "${{ inputs.build_server }}" == "true" ]; then
+            if [ -z "${{ inputs.server-distribution }}" ]; then
+              echo "❌ Error: server-distribution is required when build_server is true"
+              exit 1
+            fi
+          fi
+          echo "✅ Input validation passed"
 
       - name: Downloads
         if: ${{ inputs.build_server }}
