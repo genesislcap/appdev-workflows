@@ -1,4 +1,4 @@
-Name:           genesis-PRODUCT
+Name:           genesis-PRODUCT%{?web_only:-web-only}
 Version:        1.0.0
 Release:        1%{?dist}
 Summary:        genesis-rpm
