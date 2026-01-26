@@ -42,6 +42,11 @@ on:
         required: false
         type: string
         description: Optional nginx override
+      build_server:
+        description: "Whether to build and upload the server component"
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       JFROG_USERNAME:
@@ -85,6 +90,7 @@ jobs:
           mkdir web-downloads
 
       - name: Downloads
+        if: ${{ inputs.build_server }}
         working-directory: rpm/downloads
         run: |
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.server-distribution }}
@@ -96,6 +102,7 @@ jobs:
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
 
       - name: Server Package
+        if: ${{ inputs.build_server }}
         working-directory: rpm/downloads
         run: |
           VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
@@ -148,7 +155,12 @@ jobs:
           mv *.gz ~/rpmbuild/SOURCES/
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
-          rpmbuild -bb product.spec
+
+          if [ "${{ inputs.build_server }}" == "false" ]; then
+            rpmbuild -bb --define "web_only 1" product.spec
+          else
+            rpmbuild -bb product.spec
+          fi
 
       - name: Upload RPMs to S3
         run: |
