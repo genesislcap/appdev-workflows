@@ -212,6 +212,8 @@ if [ -f "/tmp/web-%{version}.tar.gz" ]; then
     mkdir -p "/$root_dir/$genesis_user/web-$server_dir" || exit 1
     cd "/$root_dir/$genesis_user/web-$server_dir" || exit 1
     tar -xf /tmp/web-%{version}.tar.gz &> /dev/null || exit 1
+    mkdir web-version
+    touch web-version/%{version}
     echo "Unlink old web installation and point it to the new web folder" 2>&1 | tee -a "$LOG"
     if [ -L $web_path ]; then
         unlink $web_path || exit 1
