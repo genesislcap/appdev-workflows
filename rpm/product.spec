@@ -8,7 +8,8 @@ License:        (c) genesis.global
 Group:          Genesis Platform
 URL:            https://genesis.global/
 %{!?web_only:Source0:        server-%{version}.tar.gz}
-Source1:        web-%{version}.tar.gz
+%{!?web_only:Source1:        web-%{version}.tar.gz}
+%{?web_only:Source0:        web-%{version}.tar.gz}
 
 Requires:       %{name} = %{version}
 Requires:       /bin/sh
