@@ -93,6 +93,16 @@ on:
         required: false
         default: true
         type: boolean
+      build_server:
+        description: "Whether to build and upload the server component"
+        required: false
+        default: true
+        type: boolean
+      build_web:
+        description: "Whether to build and upload the web component"
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
@@ -118,6 +128,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
+    if: ${{ inputs.build_server }}
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - uses: actions/checkout@v4
@@ -339,6 +350,7 @@ jobs:
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
   build-web:
+    if: ${{ inputs.build_web }}
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
       - uses: actions/checkout@v3
