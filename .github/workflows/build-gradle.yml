@@ -93,7 +93,7 @@ on:
         required: false
         default: true
         type: boolean
-      tam_tag:
+      skip-tests:
         description: "Enable TAM tag build"
         required: false
         type: boolean
@@ -258,12 +258,12 @@ jobs:
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
 
       - name: Server Build
-        if: ${{ !inputs.tam_tag }}
+        if: ${{ !inputs.skip-tests }}
         run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
       - name: Server Assemble
-        if: inputs.tam_tag
+        if: inputs.skip-tests
         run: |
           ./gradlew assemble \
             --stacktrace \
