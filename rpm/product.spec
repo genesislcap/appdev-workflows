@@ -1,4 +1,4 @@
-Name:           genesis-PRODUCT
+Name:           genesis-PRODUCT%{?web_only:-web-only}
 Version:        1.0.0
 Release:        1%{?dist}
 Summary:        genesis-rpm
@@ -7,8 +7,9 @@ BuildArch:      noarch
 License:        (c) genesis.global
 Group:          Genesis Platform
 URL:            https://genesis.global/
-Source0:        server-%{version}.tar.gz
-Source1:        web-%{version}.tar.gz
+%{!?web_only:Source0:        server-%{version}.tar.gz}
+%{!?web_only:Source1:        web-%{version}.tar.gz}
+%{?web_only:Source0:        web-%{version}.tar.gz}
 
 Requires:       %{name} = %{version}
 Requires:       /bin/sh
@@ -19,7 +20,7 @@ Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 %description
 %files
 %dir %attr(1777, root, root) "/tmp"
-%attr(1777, root, root) "/tmp/server-%{version}.tar.gz"
+%{!?web_only:%attr(1777, root, root) "/tmp/server-%{version}.tar.gz"}
 %attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
 
 %install
@@ -29,7 +30,7 @@ ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
 pwd
 mkdir rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp
 ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
-cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
+%{!?web_only:cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/}
 cp rpmbuild/SOURCES/web-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
 cd rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
 ls
@@ -150,6 +151,7 @@ if [ -d /home/$genesis_user/run/runtime/keys ]; then
     cp -r /home/"$genesis_user"/run/runtime/keys /tmp/
 fi
 
+%if 0%{!?web_only:1}
 # kill server
 if genesis_is_running; then
     echo "Detected Genesis processes running, attempting to kill them..." 2>&1 | tee -a "$LOG"
@@ -201,6 +203,7 @@ fi
 
 ln -s "/$root_dir/$genesis_user/server/$server_dir/run/" "/home/$genesis_user/run" || exit 1
 chown -R "$genesis_user:$genesis_grp" "/home/$genesis_user/run" || exit 1
+%endif
 
 #Copy web if exists
 echo "Check if web is being deployed ..." 2>&1 | tee -a "$LOG"
@@ -209,6 +212,8 @@ if [ -f "/tmp/web-%{version}.tar.gz" ]; then
     mkdir -p "/$root_dir/$genesis_user/web-$server_dir" || exit 1
     cd "/$root_dir/$genesis_user/web-$server_dir" || exit 1
     tar -xf /tmp/web-%{version}.tar.gz &> /dev/null || exit 1
+    mkdir web-version
+    touch web-version/%{version}
     echo "Unlink old web installation and point it to the new web folder" 2>&1 | tee -a "$LOG"
     if [ -L $web_path ]; then
         unlink $web_path || exit 1
@@ -228,6 +233,7 @@ if [ -f "/tmp/web-%{version}.tar.gz" ]; then
 fi
 chown -R "$genesis_user:$genesis_grp" "/$root_dir/$genesis_user" || exit 1
 
+%if 0%{!?web_only:1}
 # Set up bashrc
 echo "Setting up bashrc for the $genesis_user if its not present" 2>&1 | tee -a "$LOG"
 if grep --quiet GENESIS_HOME -ic "/home/$genesis_user/.bashrc"; then
@@ -309,6 +315,7 @@ if [ $start_processes = "true" ]; then
     echo "/tmp/genesis_install.conf file absent or run_exec not defined .... Starting servers ...." 2>&1 | tee -a "$LOG"
     runuser -l "$genesis_user" -c 'startServer'
 fi
+%endif
 
 echo "Install.sh has completed ..." 2>&1 | tee -a "$LOG"
 
