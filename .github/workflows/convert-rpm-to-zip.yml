@@ -1,0 +1,149 @@
+name: Convert RPM to Zip
+
+on:
+  workflow_call:
+    inputs:
+      package_name:
+        description: "Full RPM package name with extension (e.g., genesis-tam2-HSBC_20251114.1-1.amzn2023.noarch.rpm)"
+        type: string
+        required: true
+      product:
+        description: "Product name"
+        type: string
+        required: true
+      client:
+        description: "Client name (e.g., hsbc, bmo, bmo-na, btig, gpp, marex, marex-na, stonex)"
+        type: string
+        required: true
+      
+
+    
+
+jobs:
+  upload-package:
+    runs-on: appdev-selfhosted-al2023
+    steps:
+      - name: Set S3 path from client name
+        id: set-s3-path
+        shell: bash
+        run: |
+          CLIENT_LOWER=$(echo "${{ inputs.client }}" | tr '[:upper:]' '[:lower:]')
+          PRODUCT_LOWER=$(echo "${{ inputs.product }}" | tr '[:upper:]' '[:lower:]')
+          S3_PATH="product/$PRODUCT_LOWER/rpm/$CLIENT_LOWER"
+          echo "s3-path=$S3_PATH" >> $GITHUB_OUTPUT
+          echo "S3 path set to: $S3_PATH"  
+
+      - name: Download package from S3
+        id: download-package
+        shell: bash
+        run: |
+          SOURCE_PATH="s3://product-rpms/${{ steps.set-s3-path.outputs.s3-path }}/${{ inputs.package_name }}"
+          TEMP_DIR="/tmp/s3-to-jfrog-$$"
+          mkdir -p "$TEMP_DIR"
+          echo "temp-dir=$TEMP_DIR" >> $GITHUB_OUTPUT
+          
+          echo "Checking if source package exists: $SOURCE_PATH"
+          
+          if aws s3 ls "$SOURCE_PATH" > /dev/null 2>&1; then
+            echo "Source package found: $SOURCE_PATH"
+          else
+            echo "Error: Source package not found at $SOURCE_PATH"
+            exit 1
+          fi
+          
+          echo "Downloading package from: $SOURCE_PATH"
+          aws s3 cp "$SOURCE_PATH" "$TEMP_DIR/${{ inputs.package_name }}" --quiet
+          
+          if [ ! -f "$TEMP_DIR/${{ inputs.package_name }}" ]; then
+            echo "Error: Failed to download package"
+            exit 1
+          fi
+          echo "Package downloaded successfully"
+
+      - name: Convert RPM to ZIP
+        # if: inputs.rpm-to-zip == true
+        id: convert-rpm
+        shell: bash
+        run: |
+          TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
+          RPM_FILE="$TEMP_DIR/${{ inputs.package_name }}"
+          
+          # Check if file is actually an RPM
+          if ! file "$RPM_FILE" | grep -q "RPM"; then
+            echo "Warning: File does not appear to be an RPM file"
+          fi
+          
+          # Install required tools if not available
+          if ! command -v rpm2cpio &> /dev/null || ! command -v cpio &> /dev/null || ! command -v zip &> /dev/null; then
+            echo "Installing required tools (rpm, cpio, zip)..."
+            sudo dnf install -y rpm cpio zip
+          fi
+          
+          # Extract RPM to temporary directory
+          EXTRACT_DIR="$TEMP_DIR/extracted"
+          mkdir -p "$EXTRACT_DIR"
+          
+          echo "Extracting RPM file: $RPM_FILE"
+          cd "$EXTRACT_DIR"
+          rpm2cpio "$RPM_FILE" | cpio -idmv
+          
+          # Create ZIP file with same base name (just extension changes)
+          # Get base name without extension
+          RPM_BASENAME="${RPM_FILE%.rpm}"
+          ZIP_NAME="${RPM_BASENAME}.zip"
+          ZIP_FILENAME=$(basename "$ZIP_NAME")
+          
+          echo "Creating ZIP file: $ZIP_NAME"
+          echo "ZIP will contain the same structure as extracted RPM"
+          
+          # Create ZIP from extracted directory, preserving the directory structure
+          # Create ZIP in temp directory with contents from extracted directory
+          cd "$EXTRACT_DIR"
+          zip -r "$ZIP_NAME" . -q
+          
+          # Verify ZIP was created and has content
+          if [ ! -f "$ZIP_NAME" ]; then
+            echo "Error: ZIP file was not created"
+            exit 1
+          fi
+          
+          ZIP_SIZE=$(stat -f%z "$ZIP_NAME" 2>/dev/null || stat -c%s "$ZIP_NAME" 2>/dev/null)
+          if [ "$ZIP_SIZE" -eq 0 ]; then
+            echo "Error: ZIP file is zero bytes"
+            exit 1
+          fi
+          echo "ZIP file created successfully (size: $ZIP_SIZE bytes)"
+          
+          # Set output with new filename and path
+          echo "zip-filename=$ZIP_FILENAME" >> $GITHUB_OUTPUT
+          echo "zip-path=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "Converted RPM to ZIP: $ZIP_FILENAME (preserving RPM structure)"
+          
+          # Clean up extracted directory
+          cd "$TEMP_DIR"
+          rm -rf "$EXTRACT_DIR"
+
+      - name: Upload ZIP back to same S3 location        
+        shell: bash
+        run: |
+          TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
+          ZIP_PATH="${{ steps.convert-rpm.outputs.zip-path }}"
+          ZIP_FILENAME="${{ steps.convert-rpm.outputs.zip-filename }}"
+
+          DEST_PATH="s3://product-rpms/${{ steps.set-s3-path.outputs.s3-path }}/$ZIP_FILENAME"
+
+          echo "Uploading ZIP to: $DEST_PATH"
+          aws s3 cp "$ZIP_PATH" "$DEST_PATH"
+
+          echo "ZIP uploaded successfully"
+
+      - name: Cleanup temporary files
+        if: always()
+        shell: bash
+        run: |
+          TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
+          if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+            echo "Cleaning up temporary directory: $TEMP_DIR"
+            rm -rf "$TEMP_DIR"
+            echo "Cleanup completed"
+          fi
