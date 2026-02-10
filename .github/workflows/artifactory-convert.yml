@@ -129,7 +129,7 @@ jobs:
           rm -rf "$EXTRACT_DIR"
 
       - name: Upload ZIP back to same S3 location
-        if: inputs.rpm-to-zip == true
+        # if: inputs.rpm-to-zip == true
         shell: bash
         run: |
           TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
