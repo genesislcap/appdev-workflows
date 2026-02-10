@@ -235,7 +235,9 @@ jobs:
           set +e
           # --report=security is default, but added for clarity
           # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          # bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore \
+          | tee sast-report-cpri-666.txt
           set -e
 
       # Upload the txt report as an artifact
