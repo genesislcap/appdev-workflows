@@ -29,7 +29,7 @@ on:
 
 jobs:
   upload-package:
-    runs-on: [ appdev-small ]
+    runs-on: appdev-selfhosted-al2023
     steps:
       - name: Set S3 path from client name
         id: set-s3-path
