@@ -15,10 +15,7 @@ on:
         description: "Client name (e.g., hsbc, bmo, bmo-na, btig, gpp, marex, marex-na, stonex)"
         type: string
         required: true
-      jfrog-repo:
-        description: "JFrog repository name (e.g., hsbc-tam-area)"
-        type: string
-        required: true
+      
       rpm-to-zip:
         description: "Convert RPM to ZIP file before uploading?"
         type: boolean
