@@ -1,4 +1,4 @@
-name: Data Archive
+name: Convert RPM to Zip
 
 on:
   workflow_call:
@@ -16,11 +16,6 @@ on:
         type: string
         required: true
       
-      # rpm-to-zip:
-      #   description: "Convert RPM to ZIP file before uploading?"
-      #   type: boolean
-      #   required: false
-      #   default: false
 
     
 
@@ -128,8 +123,7 @@ jobs:
           cd "$TEMP_DIR"
           rm -rf "$EXTRACT_DIR"
 
-      - name: Upload ZIP back to same S3 location
-        # if: inputs.rpm-to-zip == true
+      - name: Upload ZIP back to same S3 location        
         shell: bash
         run: |
           TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
@@ -142,59 +136,6 @@ jobs:
           aws s3 cp "$ZIP_PATH" "$DEST_PATH"
 
           echo "ZIP uploaded successfully"
-
-
-      # - name: Upload package to JFrog Artifactory
-      #   shell: bash
-      #   run: |
-      #     TEMP_DIR="${{ steps.download-package.outputs.temp-dir }}"
-          
-      #     # Use ZIP file if conversion was done, otherwise use original RPM
-      #     if [ "${{ inputs.rpm-to-zip }}" == "true" ]; then
-      #       PACKAGE_FILE="${{ steps.convert-rpm.outputs.zip-path }}"
-      #       UPLOAD_FILENAME="${{ steps.convert-rpm.outputs.zip-filename }}"
-      #     else
-      #       PACKAGE_FILE="$TEMP_DIR/${{ inputs.package_name }}"
-      #       UPLOAD_FILENAME="${{ inputs.package_name }}"
-      #     fi
-          
-      #     JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog-repo }}/$UPLOAD_FILENAME"
-          
-      #     echo "Uploading package to: $JFROG_URL"
-          
-      #     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-      #       -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
-      #       -X PUT \
-      #       -T "$PACKAGE_FILE" \
-      #       "$JFROG_URL")
-          
-      #     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-      #       echo "Package uploaded successfully to JFrog (HTTP $HTTP_CODE)"
-      #     else
-      #       echo "Error: Failed to upload package (HTTP $HTTP_CODE)"
-      #       exit 1
-      #     fi
-
-      # - name: Verify upload succeeded
-      #   shell: bash
-      #   run: |
-      #     # Use ZIP filename if conversion was done, otherwise use original RPM name
-      #     if [ "${{ inputs.rpm-to-zip }}" == "true" ]; then
-      #       UPLOAD_FILENAME="${{ steps.convert-rpm.outputs.zip-filename }}"
-      #     else
-      #       UPLOAD_FILENAME="${{ inputs.package_name }}"
-      #     fi
-          
-      #     JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog-repo }}/$UPLOAD_FILENAME"
-      #     echo "Verifying package exists in JFrog: $JFROG_URL"
-          
-      #     if curl -s -f --user "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
-      #       -I "$JFROG_URL" > /dev/null; then
-      #       echo "Package verified in JFrog Artifactory"
-      #     else
-      #       echo "Error: Package verification failed"
-      #       exit 1
-      #     fi
 
       - name: Cleanup temporary files
         if: always()
