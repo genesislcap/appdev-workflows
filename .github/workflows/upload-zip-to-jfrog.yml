@@ -96,7 +96,8 @@ jobs:
       - name: Verify upload
         shell: bash
         run: |
-          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}"
+          ZIP_NAME="${{ steps.download.outputs.zip-name }}"
+          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}/$ZIP_NAME"
 
           echo "Verifying file in JFrog..."
 
