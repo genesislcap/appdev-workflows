@@ -1,0 +1,117 @@
+name: Upload ZIP from S3 to JFrog
+
+on:
+  workflow_call:
+    inputs:
+      s3_zip_path:
+        description: "Full S3 path of ZIP file (e.g., s3://product-rpms/product/tam/rpm/hsbc/file.zip)"
+        required: true
+        type: string
+
+      jfrog_target_path:
+        description: "JFrog repo + path (e.g., hsbc-tam-area/file.zip)"
+        required: true
+        type: string
+
+    # secrets:      
+    #   JFROG_USERNAME:
+    #     required: true      
+    #   JFROG_PASSWORD:
+    #     required: true
+
+jobs:
+  upload-zip:
+    runs-on: appdev-selfhosted-al2023
+
+    steps:
+      - name: Prepare temp directory
+        id: prep
+        shell: bash
+        run: |
+          TEMP_DIR="/tmp/jfrog-upload-$$"
+          mkdir -p "$TEMP_DIR"
+          echo "temp-dir=$TEMP_DIR" >> $GITHUB_OUTPUT
+
+      # ---------------------------------------------------------
+      # Download ZIP from S3
+      # ---------------------------------------------------------
+      - name: Download ZIP from S3
+        id: download
+        shell: bash
+        run: |
+          TEMP_DIR="${{ steps.prep.outputs.temp-dir }}"
+          S3_PATH="${{ inputs.s3_zip_path }}"
+
+          echo "Checking S3 file: $S3_PATH"
+
+          if ! aws s3 ls "$S3_PATH" > /dev/null 2>&1; then
+            echo "❌ ZIP file not found in S3"
+            exit 1
+          fi
+
+          FILE_NAME=$(basename "$S3_PATH")
+          LOCAL_FILE="$TEMP_DIR/$FILE_NAME"
+
+          echo "Downloading ZIP..."
+          aws s3 cp "$S3_PATH" "$LOCAL_FILE" --quiet
+
+          if [ ! -f "$LOCAL_FILE" ]; then
+            echo "❌ Download failed"
+            exit 1
+          fi
+
+          echo "zip-file=$LOCAL_FILE" >> $GITHUB_OUTPUT
+          echo "zip-name=$FILE_NAME" >> $GITHUB_OUTPUT
+
+      # ---------------------------------------------------------
+      # Upload ZIP to JFrog
+      # ---------------------------------------------------------
+      - name: Upload ZIP to JFrog Artifactory
+        shell: bash
+        run: |
+          ZIP_FILE="${{ steps.download.outputs.zip-file }}"
+          ZIP_NAME="${{ steps.download.outputs.zip-name }}"
+
+          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}"
+
+          echo "Uploading $ZIP_NAME to JFrog:"
+          echo "$JFROG_URL"
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
+            -X PUT \
+            -T "$ZIP_FILE" \
+            "$JFROG_URL")
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Upload successful (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Upload failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      # ---------------------------------------------------------
+      # Verify upload
+      # ---------------------------------------------------------
+      - name: Verify upload
+        shell: bash
+        run: |
+          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}"
+
+          echo "Verifying file in JFrog..."
+
+          curl -s -f -I \
+            -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
+            "$JFROG_URL" > /dev/null
+
+          echo "✅ Verification successful"
+
+      # ---------------------------------------------------------
+      # Cleanup
+      # ---------------------------------------------------------
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: |
+          TEMP_DIR="${{ steps.prep.outputs.temp-dir }}"
+          rm -rf "$TEMP_DIR"
