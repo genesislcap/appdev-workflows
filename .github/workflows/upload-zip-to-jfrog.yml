@@ -72,7 +72,7 @@ jobs:
           ZIP_FILE="${{ steps.download.outputs.zip-file }}"
           ZIP_NAME="${{ steps.download.outputs.zip-name }}"
 
-          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}"
+          JFROG_URL="https://genesisglobal.jfrog.io/artifactory/${{ inputs.jfrog_target_path }}/$ZIP_NAME"
 
           echo "Uploading $ZIP_NAME to JFrog:"
           echo "$JFROG_URL"
