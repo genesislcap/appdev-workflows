@@ -248,126 +248,126 @@ jobs:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
-      - name: Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: true
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  #     # - name: Build
+  #     #   uses: gradle/gradle-build-action@v2
+  #     #   with:
+  #     #     arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
+  #     #     build-root-directory: "${{ inputs.working-directory }}"
+  #     #     cache-disabled: true
+  #     #   env:
+  #     #     SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
-      - name: Test and Coverage
-        if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+  #     - name: Test and Coverage
+  #       if: inputs.sonar_enabled
+  #       uses: gradle/gradle-build-action@v2
+  #       env:
+  #         SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+  #       with:
+  #         arguments: >
+  #           test jacocoTestReport sonarqube --no-configuration-cache
+  #           -Dsonar.token=${{ env.SONAR_TOKEN }}
+  #         build-root-directory: "${{ inputs.working-directory }}/server"
+  #         cache-disabled: true
 
-      - name: Upload Test Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports${{ inputs.test-reports-suffix }}
-          path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
-        if: always()
+  #     - name: Upload Test Reports
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: test-reports${{ inputs.test-reports-suffix }}
+  #         path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
+  #       if: always()
 
-      - name: Publish All Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            ./**/surefire-reports/**/*.xml
-            ./**/build/test-results/**/*.xml
-          fail_on: nothing
-          report_suite_logs: any
+  #     - name: Publish All Test Results
+  #       uses: EnricoMi/publish-unit-test-result-action@v2
+  #       if: always()
+  #       with:
+  #         files: |
+  #           ./**/surefire-reports/**/*.xml
+  #           ./**/build/test-results/**/*.xml
+  #         fail_on: nothing
+  #         report_suite_logs: any
 
-      - name: Docker Build Image
-        if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+  #     - name: Docker Build Image
+  #       if: inputs.build_docker
+  #       uses: gradle/gradle-build-action@v2
+  #       with:
+  #         arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
+  #         build-root-directory: "${{ inputs.working-directory }}/"
+  #         cache-disabled: true
 
-      - name: Docker Push Image
-        if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+  #     - name: Docker Push Image
+  #       if: inputs.build_docker
+  #       uses: gradle/gradle-build-action@v2
+  #       with:
+  #         arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
+  #         build-root-directory: "${{ inputs.working-directory }}/"
+  #         cache-disabled: true
 
-      - name: Create Giant Server Zip
-        if: inputs.upload
-        shell: bash
-        working-directory: "${{ inputs.working-directory }}/server"
-        run: |
-          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
-          cd .genesis-home
-          pwd
-          ls -la
-          tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+  #     - name: Create Giant Server Zip
+  #       if: inputs.upload
+  #       shell: bash
+  #       working-directory: "${{ inputs.working-directory }}/server"
+  #       run: |
+  #         ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
+  #         cd .genesis-home
+  #         pwd
+  #         ls -la
+  #         tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
 
-      - name: Upload Server Package
-        if: inputs.upload
-        working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
-        run: |
-          echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
+  #     - name: Upload Server Package
+  #       if: inputs.upload
+  #       working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
+  #       run: |
+  #         echo "${{ env.REPO_NAME }}"
+  #         curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
-      - name: Upload Web Package
-        if: inputs.upload
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
-            mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
-          fi
+  #     - name: Upload Web Package
+  #       if: inputs.upload
+  #       working-directory: ${{ inputs.working-directory }}
+  #       run: |
+  #         if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
+  #           mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
+  #           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
+  #         fi
 
-      - name: Artifactory Publish
-        if: inputs.publish-to-artifactory
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+  #     - name: Artifactory Publish
+  #       if: inputs.publish-to-artifactory
+  #       uses: gradle/gradle-build-action@v2
+  #       with:
+  #         arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
+  #         build-root-directory: "${{ inputs.working-directory }}/server"
+  #         cache-disabled: true
 
-      - name: Update Jira tickets with fix version
-        if: inputs.update-jira
-        uses: actions/checkout@v4
-        with:
-          repository: genesislcap/appdev-workflows
-          path: ./appdev-workflows
+  #     - name: Update Jira tickets with fix version
+  #       if: inputs.update-jira
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: genesislcap/appdev-workflows
+  #         path: ./appdev-workflows
 
-      - name: Notify failure on Slack
-        uses: youscan/gitactions-slack-notification@3.0.0
-        if: failure() && env.SLACK_INCOMING_WEBHOOK
-        env:
-          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
-          SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+  #     - name: Notify failure on Slack
+  #       uses: youscan/gitactions-slack-notification@3.0.0
+  #       if: failure() && env.SLACK_INCOMING_WEBHOOK
+  #       env:
+  #         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  #         SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
+  #         SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+  #         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
-      - name: Notify success on Slack
-        uses: youscan/gitactions-slack-notification@3.0.0
-        if: success() && env.SLACK_INCOMING_WEBHOOK
-        env:
-          SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
-          SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
-          SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+  #     - name: Notify success on Slack
+  #       uses: youscan/gitactions-slack-notification@3.0.0
+  #       if: success() && env.SLACK_INCOMING_WEBHOOK
+  #       env:
+  #         SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  #         SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
+  #         SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+  #         SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
-  tag-jiras:
-    needs: build-server
-    if: inputs.update-jira
-    uses: ./.github/workflows/tag-jiras.yml
-    with:
-      repository: ${{ inputs.repo-name }}
-      release-version: ${{ inputs.version }}
-    secrets:
-      JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+  # tag-jiras:
+  #   needs: build-server
+  #   if: inputs.update-jira
+  #   uses: ./.github/workflows/tag-jiras.yml
+  #   with:
+  #     repository: ${{ inputs.repo-name }}
+  #     release-version: ${{ inputs.version }}
+  #   secrets:
+  #     JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
