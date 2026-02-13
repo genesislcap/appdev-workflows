@@ -242,9 +242,10 @@ jobs:
           cat "$GITHUB_WORKSPACE/bearer.ignore"
           echo "----------------------------------"
 
-          bearer scan . --report=security --exit-code 0 \
-            --ignore-file "$GITHUB_WORKSPACE/bearer.ignore" \
-            | tee "$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
+          bearer scan . --report=security --exit-code 0 --ignore-file "$GITHUB_WORKSPACE/bearer.ignore" \
+          | sed '/^To ignore this finding, run:/d' \
+          | tee "$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
+
 
           set -e
 
