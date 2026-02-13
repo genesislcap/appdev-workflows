@@ -233,6 +233,12 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         run: |
           set +e
+          echo "PWD=$(pwd)"
+          ls -la
+          echo "---- bearer.ignore ----"
+          cat bearer.ignore
+          echo "-----------------------"
+
           # --report=security is default, but added for clarity
           # --exit-code 0 => never fail the job even if findings exist
           # bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
