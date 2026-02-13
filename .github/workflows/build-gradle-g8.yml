@@ -233,18 +233,21 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         run: |
           set +e
-          echo "PWD=$(pwd)"
-          ls -la
-          echo "---- bearer.ignore ----"
-          cat bearer.ignore
-          echo "-----------------------"
 
-          # --report=security is default, but added for clarity
-          # --exit-code 0 => never fail the job even if findings exist
-          # bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
-          bearer scan . --report=security --exit-code 0 --ignore-file bearer.ignore \
-          | tee sast-report-cpri-666.txt
+          echo "PWD=$(pwd)"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+
+          echo "---- bearer.ignore (workspace) ----"
+          ls -la "$GITHUB_WORKSPACE/bearer.ignore"
+          cat "$GITHUB_WORKSPACE/bearer.ignore"
+          echo "----------------------------------"
+
+          bearer scan . --report=security --exit-code 0 \
+            --ignore-file "$GITHUB_WORKSPACE/bearer.ignore" \
+            | tee "$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
+
           set -e
+
 
       # Upload the txt report as an artifact
       - name: Upload sast Security Report
