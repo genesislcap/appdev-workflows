@@ -240,15 +240,26 @@ jobs:
           IGNORE_FILE="$GITHUB_WORKSPACE/bearer.ignore"
 
           bearer scan . \
-            --report=sarif \
+            --report security \
+            --format sarif \
             --exit-code 0 \
             --ignore-file "$IGNORE_FILE" \
             --hide-progress-bar \
-            > "$OUT"
+            --output "$OUT"
+
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "Bearer scan failed (exit=$rc)"
+            exit $rc
+          fi
 
           echo "SARIF written to: $OUT"
           set -e
-
+      - name: Upload SARIF
+        if: inputs.sast
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ github.workspace }}/sast-report-cpri-${{ github.run_number }}.sarif
 
 
 
