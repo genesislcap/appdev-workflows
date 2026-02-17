@@ -110,6 +110,8 @@ on:
         required: false
       SENTRY_AUTH_TOKEN:
         required: false
+      OPENAI_API_KEY:
+        required: false
 
 
 env:
@@ -257,6 +259,68 @@ jobs:
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+
+      - name: AI summarize SAST report
+        if: inputs.sast
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REPORT: ${{ github.workspace }}/sast-report-${{ inputs.product_name }}-${{ github.run_number }}.txt
+        run: |
+          python3 - << 'PY'
+          import os, json, textwrap, urllib.request
+
+          report_path = os.environ["REPORT"]
+          with open(report_path, "r", encoding="utf-8", errors="ignore") as f:
+              report = f.read()
+
+          prompt = f"""
+          You are a DevOps security assistant.
+          Summarize this Bearer SAST report for engineers:
+          - 5 bullet summary
+          - Top 10 highest-risk findings (file + short reason)
+          - Concrete remediation suggestions
+          - If report is empty, say "No findings".
+          
+          Report:
+          {report[:120000]}
+          """
+
+          payload = {
+            "model": "gpt-4.1-mini",
+            "input": prompt
+          }
+
+          req = urllib.request.Request(
+              "https://api.openai.com/v1/responses",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
+                  "Content-Type": "application/json"
+              }
+          )
+
+          with urllib.request.urlopen(req) as resp:
+              data = json.loads(resp.read().decode("utf-8"))
+          
+          # Extract text output
+          out = ""
+          for item in data.get("output", []):
+              for c in item.get("content", []):
+                  if c.get("type") == "output_text":
+                      out += c.get("text", "")
+          
+          out = out.strip() or "No summary generated."
+          with open("ai-sast-summary.txt", "w", encoding="utf-8") as f:
+              f.write(out)
+          print(out)
+          PY
+      - name: Upload AI summary
+        if: inputs.sast
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-sast-summary-${{ inputs.product_name }}-${{ github.run_number }}
+          path: ai-sast-summary.txt
+
 
   #     # - name: Build
   #     #   uses: gradle/gradle-build-action@v2
