@@ -230,34 +230,25 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Run sast security scan (text report)
+      - name: Run sast security scan (SARIF)
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
         run: |
           set +e
 
+          OUT="$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.sarif"
           IGNORE_FILE="$GITHUB_WORKSPACE/bearer.ignore"
 
-          # extract fingerprints from ignore file
-          IGNORE_IDS=$(jq -r '.ignore | keys[]' "$IGNORE_FILE" | tr '\n' '|')
-          IGNORE_IDS=${IGNORE_IDS%|}
-
-          bearer scan . --report=security --exit-code 0 \
+          bearer scan . \
+            --report=sarif \
+            --exit-code 0 \
             --ignore-file "$IGNORE_FILE" \
-            --quiet --hide-progress-bar \
-          | awk -v ids="$IGNORE_IDS" '
-              BEGIN { skip=0 }
-              # if block contains ignored fingerprint → skip entire block
-              $0 ~ "To ignore this finding, run:" && $0 ~ ids { skip=1; next }
+            --hide-progress-bar \
+            > "$OUT"
 
-              # new block starts when severity appears
-              /^(CRITICAL|HIGH|MEDIUM|LOW):/ { skip=0 }
-
-              !skip { print }
-            ' \
-          | tee "$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
-
+          echo "SARIF written to: $OUT"
           set -e
+
 
 
 
