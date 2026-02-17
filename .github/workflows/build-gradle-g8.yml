@@ -234,10 +234,12 @@ jobs:
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
         run: |
-          set +e
+          set -euo pipefail
 
           OUT="$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.sarif"
           IGNORE_FILE="$GITHUB_WORKSPACE/bearer.ignore"
+
+          echo "Running Bearer SAST scan..."
 
           bearer scan . \
             --report security \
@@ -245,23 +247,17 @@ jobs:
             --exit-code 0 \
             --ignore-file "$IGNORE_FILE" \
             --hide-progress-bar \
-            --output "$OUT"
-
-          rc=$?
-          if [ $rc -ne 0 ]; then
-            echo "Bearer scan failed (exit=$rc)"
-            exit $rc
-          fi
+            --quiet \
+            --output "$OUT" \
+            >/dev/null 2>&1
 
           echo "SARIF written to: $OUT"
-          set -e
+
       - name: Upload SARIF
         if: inputs.sast
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ github.workspace }}/sast-report-cpri-${{ github.run_number }}.sarif
-
-
 
       # Upload the txt report as an artifact
       - name: Upload sast Security Report
