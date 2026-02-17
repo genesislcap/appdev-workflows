@@ -253,11 +253,11 @@ jobs:
 
           echo "SARIF written to: $OUT"
 
-      - name: Upload SARIF
-        if: inputs.sast
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ github.workspace }}/sast-report-cpri-${{ github.run_number }}.sarif
+      # - name: Upload SARIF
+      #   if: inputs.sast
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: ${{ github.workspace }}/sast-report-cpri-${{ github.run_number }}.sarif
 
       # Upload the txt report as an artifact
       - name: Upload sast Security Report
