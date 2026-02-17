@@ -265,7 +265,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          path: sast-report-cpri-${{ github.run_number }}.sarif
 
       # - name: AI summarize SAST report
       #   if: inputs.sast
