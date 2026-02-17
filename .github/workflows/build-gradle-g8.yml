@@ -230,28 +230,37 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Run sast security scan (SARIF)
+      - name: Run sast security scan (text report)
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
         run: |
-          set -euo pipefail
-
-          OUT="$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.sarif"
+          set +e
           IGNORE_FILE="$GITHUB_WORKSPACE/bearer.ignore"
+          OUT="$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
 
-          echo "Running Bearer SAST scan..."
+          IGNORE_IDS=$(jq -r '.ignore | keys[]' "$IGNORE_FILE")
 
-          bearer scan . \
-            --report security \
-            --format sarif \
-            --exit-code 0 \
+          bearer scan . --report=security --exit-code 0 \
             --ignore-file "$IGNORE_FILE" \
             --hide-progress-bar \
-            --quiet \
-            --output "$OUT" \
-            >/dev/null 2>&1
-
-          echo "SARIF written to: $OUT"
+          | awk -v ignore_ids="$IGNORE_IDS" '
+              function is_ignored(fp,   n,i,a){ n=split(ignore_ids,a,"\n"); for(i=1;i<=n;i++) if(a[i]==fp) return 1; return 0 }
+              function flush(   i){ if(inblk && !drop) for(i=1;i<=bn;i++) print b[i]; inblk=drop=bn=0 }
+              /^(CRITICAL|HIGH|MEDIUM|LOW): / { flush(); inblk=1 }
+              {
+                if(inblk){
+                  b[++bn]=$0
+                  if($0 ~ /^To ignore this finding, run: bearer ignore add /){
+                    fp=$0; sub(/^To ignore this finding, run: bearer ignore add /,"",fp)
+                    if(is_ignored(fp)) drop=1
+                  }
+                  next
+                }
+                print
+              }
+              END{ flush() }
+            ' | tee "$OUT"
+          set -e
 
       # - name: Upload SARIF
       #   if: inputs.sast
@@ -265,7 +274,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-cpri-${{ github.run_number }}.sarif
+          path: sast-report-cpri-${{ github.run_number }}.txt
 
       # - name: AI summarize SAST report
       #   if: inputs.sast
