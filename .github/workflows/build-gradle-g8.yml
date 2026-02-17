@@ -236,21 +236,29 @@ jobs:
         run: |
           set +e
 
-          echo "PWD=$(pwd)"
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          IGNORE_FILE="$GITHUB_WORKSPACE/bearer.ignore"
 
-          echo "---- bearer.ignore (workspace) ----"
-          ls -la "$GITHUB_WORKSPACE/bearer.ignore"
-          cat "$GITHUB_WORKSPACE/bearer.ignore"
-          echo "----------------------------------"
+          # extract fingerprints from ignore file
+          IGNORE_IDS=$(jq -r '.ignore | keys[]' "$IGNORE_FILE" | tr '\n' '|')
+          IGNORE_IDS=${IGNORE_IDS%|}
 
           bearer scan . --report=security --exit-code 0 \
-          --ignore-file "$GITHUB_WORKSPACE/bearer.ignore" \
-          --quiet --hide-progress-bar\
+            --ignore-file "$IGNORE_FILE" \
+            --quiet --hide-progress-bar \
+          | awk -v ids="$IGNORE_IDS" '
+              BEGIN { skip=0 }
+              # if block contains ignored fingerprint → skip entire block
+              $0 ~ "To ignore this finding, run:" && $0 ~ ids { skip=1; next }
+
+              # new block starts when severity appears
+              /^(CRITICAL|HIGH|MEDIUM|LOW):/ { skip=0 }
+
+              !skip { print }
+            ' \
           | tee "$GITHUB_WORKSPACE/sast-report-cpri-${{ github.run_number }}.txt"
 
-
           set -e
+
 
 
       # Upload the txt report as an artifact
