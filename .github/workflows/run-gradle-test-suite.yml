@@ -68,6 +68,15 @@ on:
         required: false
         default: false
         type: boolean
+      aiEnabled:
+        required: false
+        type: boolean
+        default: true
+        description: "When true, checkout automation framework and app repo for AI failure analysis"
+      appRepo:
+        required: true
+        type: string
+        description: "App repo to checkout when aiEnabled"
 
     secrets:
       PAGES_TOKEN:
@@ -86,6 +95,8 @@ on:
         required: true
       genesisArtifactoryPassword:
         required: true
+      AI_API_KEY:
+        required: false
 
 env:
   # GHA_TOKEN: ${{secrets.GHA_TOKEN}}
@@ -101,6 +112,11 @@ jobs:
     environment: master
     container:
       image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
+    env:
+      AI_ENABLED: ${{ inputs.aiEnabled }}
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      APP_REPO_PATH: ${{ inputs.aiEnabled && inputs.appRepo != '' && format('{0}/dev-repo', github.workspace) || '' }}
+      AUTOMATION_FRAMEWORK_PATH: ${{ inputs.aiEnabled && format('{0}/platform-qa-automation', github.workspace) || '' }}
     steps:
     - name: Checkout code
       if: ${{ !inputs.testautomation_build }}
@@ -116,6 +132,36 @@ jobs:
         fetch-depth: '0'
         ref: ${{ inputs.testautobranch }}
         token: ${{ secrets.GHA_TOKEN }}
+
+    - name: Checkout platform-qa-automation
+      if: ${{ inputs.aiEnabled }}
+      uses: actions/checkout@v4
+      with:
+        repository: genesislcap/platform-qa-automation
+        path: platform-qa-automation
+        token: ${{ secrets.GHA_TOKEN }}
+
+    - name: Checkout app repo
+      if: ${{ inputs.aiEnabled && inputs.appRepo != '' }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.appRepo }}
+        path: dev-repo
+        token: ${{ secrets.GHA_TOKEN }}
+
+    - name: Validate AI paths
+      if: ${{ inputs.aiEnabled }}
+      run: |
+        if [ -z "$APP_REPO_PATH" ]; then
+          echo "::error::APP_REPO_PATH is empty. AI failure analysis requires app repo path when aiEnabled is true."
+          exit 1
+        fi
+        if [ -z "$AUTOMATION_FRAMEWORK_PATH" ]; then
+          echo "::error::AUTOMATION_FRAMEWORK_PATH is empty. AI failure analysis requires automation framework path when aiEnabled is true."
+          exit 1
+        fi
+        echo "APP_REPO_PATH=$APP_REPO_PATH"
+        echo "AUTOMATION_FRAMEWORK_PATH=$AUTOMATION_FRAMEWORK_PATH"
 
     - name: Install k6
       if: inputs.ptautomation_build
