@@ -74,7 +74,7 @@ on:
         default: true
         description: "When true, checkout automation framework and app repo for AI failure analysis"
       appRepo:
-        required: false   # CHANGED: was required:true, now validated only when aiEnabled=true
+        required: false
         type: string
         default: ""
         description: "App repo to checkout when aiEnabled is true"
@@ -114,7 +114,7 @@ jobs:
     env:
       AI_ENABLED: ${{ inputs.aiEnabled }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
-      # CHANGED: only set if aiEnabled AND appRepo provided
+      #only set if aiEnabled AND appRepo provided
       APP_REPO_PATH: ${{ inputs.aiEnabled && inputs.appRepo != '' && format('{0}/dev-repo', github.workspace) || '' }}
       AUTOMATION_FRAMEWORK_PATH: ${{ inputs.aiEnabled && format('{0}/platform-qa-automation', github.workspace) || '' }}
     steps:
@@ -133,7 +133,7 @@ jobs:
         ref: ${{ inputs.testautobranch }}
         token: ${{ secrets.GHA_TOKEN }}
 
-    # --- AI LOGIC FIX: Validate required inputs/secrets only when aiEnabled is true ---
+    # --- Validate required inputs/secrets only when aiEnabled is true ---
     - name: Validate AI prerequisites
       if: ${{ inputs.aiEnabled }}
       shell: bash
