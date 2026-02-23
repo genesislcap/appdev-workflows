@@ -74,9 +74,10 @@ on:
         default: true
         description: "When true, checkout automation framework and app repo for AI failure analysis"
       appRepo:
-        required: true
+        required: false
         type: string
-        description: "App repo to checkout when aiEnabled"
+        default: ""
+        description: "App repo to checkout when aiEnabled is true"
 
     secrets:
       PAGES_TOKEN:
@@ -103,8 +104,6 @@ env:
   genesisArtifactoryUser: ${{secrets.genesisArtifactoryUser}}
   genesisArtifactoryPassword: ${{secrets.genesisArtifactoryPassword}}
 
-
-
 jobs:
   build-Tests:
     # runs-on: [ appdev-selfhosted-al2023 ]
@@ -115,6 +114,7 @@ jobs:
     env:
       AI_ENABLED: ${{ inputs.aiEnabled }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      #only set if aiEnabled AND appRepo provided
       APP_REPO_PATH: ${{ inputs.aiEnabled && inputs.appRepo != '' && format('{0}/dev-repo', github.workspace) || '' }}
       AUTOMATION_FRAMEWORK_PATH: ${{ inputs.aiEnabled && format('{0}/platform-qa-automation', github.workspace) || '' }}
     steps:
@@ -133,6 +133,20 @@ jobs:
         ref: ${{ inputs.testautobranch }}
         token: ${{ secrets.GHA_TOKEN }}
 
+    # --- Validate required inputs/secrets only when aiEnabled is true ---
+    - name: Validate AI prerequisites
+      if: ${{ inputs.aiEnabled }}
+      shell: bash
+      run: |
+        if [ -z "${{ secrets.GHA_TOKEN }}" ]; then
+          echo "::error::GHA_TOKEN is required when aiEnabled is true (needed to checkout platform-qa-automation and app repo)."
+          exit 1
+        fi
+        if [ -z "${{ inputs.appRepo }}" ]; then
+          echo "::error::appRepo input is required when aiEnabled is true."
+          exit 1
+        fi
+
     - name: Checkout platform-qa-automation
       if: ${{ inputs.aiEnabled }}
       uses: actions/checkout@v4
@@ -142,7 +156,7 @@ jobs:
         token: ${{ secrets.GHA_TOKEN }}
 
     - name: Checkout app repo
-      if: ${{ inputs.aiEnabled && inputs.appRepo != '' }}
+      if: ${{ inputs.aiEnabled }}
       uses: actions/checkout@v4
       with:
         repository: ${{ inputs.appRepo }}
@@ -202,7 +216,6 @@ jobs:
           sed -i 's|^qa-btig-tam1=.*|qa-btig-tam1=${{ inputs.tamdefaultEnv }}|' config.properties
         fi
 
-
     - name: Print config.properties
       if: inputs.tamdefaultEnv
       working-directory: "${{ inputs.test-root-path }}/${{ inputs.config-path }}"
@@ -219,7 +232,6 @@ jobs:
     - name: Make gradlew executable
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
-
 
     - name: Run tests
       if: ${{ inputs.cucumberTags == 'novalue' }}
@@ -241,7 +253,6 @@ jobs:
         TAGS_ARRAY=$(echo '${{ inputs.cucumberTags }}' | sed 's/,/","/g')
         sed -i "s|@IncludeTags(.*)|@IncludeTags({\"$TAGS_ARRAY\"})|" CucumberRunner.java
         cat CucumberRunner.java
-
 
     - name: Run tests
       if: ${{ inputs.cucumberTags != 'novalue' }}
