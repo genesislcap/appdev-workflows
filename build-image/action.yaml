@@ -39,7 +39,7 @@ inputs:
     required: false
     default: true
     type: boolean
-  server-build-gradle-arguments:
+  build-image-arguments:
     type: string
     description: Additional arguments/properties to be passed to the buildImage gradle command
     required: false
