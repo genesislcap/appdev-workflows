@@ -32,6 +32,9 @@ inputs:
   test-reports-suffix:
     required: false
     default: ""
+  run-tests:
+    required: false
+    default: "true"
   build-image:
     required: false
     default: "true"
@@ -134,6 +137,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Run Tests
+      if: inputs.run-tests == 'true'
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
