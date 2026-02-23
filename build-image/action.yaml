@@ -100,7 +100,7 @@ runs:
       shell: bash
       run: |
         # sensible to customization
-        project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p')
+        project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p' | head -n 1)
 
         echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
