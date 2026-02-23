@@ -32,6 +32,9 @@ inputs:
   test-reports-suffix:
     required: false
     default: ""
+  build-image:
+    required: false
+    default: "true"
   push-image:
     required: false
     default: "true"
@@ -141,7 +144,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Build Image
-      if: inputs.push-image == 'true'
+      if: inputs.build-image == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
