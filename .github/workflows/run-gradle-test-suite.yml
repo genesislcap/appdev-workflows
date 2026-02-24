@@ -71,7 +71,7 @@ on:
       aiEnabled:
         required: false
         type: boolean
-        default: true
+        default: false
         description: "When true, checkout automation framework and app repo for AI failure analysis"
       appRepo:
         required: false
