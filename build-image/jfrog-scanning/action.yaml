@@ -66,26 +66,17 @@ runs:
       with:
         json_path: ${{ steps.status_filename.outputs.filename }}
         
-    - name: Package scan summary
+    - name: Generate scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        set -euo pipefail
+        # Timestamp for the report filename
+        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+        TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # The json-to-md action writes the markdown next to the JSON file
-        JSON_FILE="${{ steps.status_filename.outputs.filename }}"
-        MD_FILE="scan-summary.md"
+        # Run JFrog scan in table format and save to file
+        jf s --licenses --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
 
-        if [ ! -f "$MD_FILE" ]; then
-          echo "Markdown file not found: $MD_FILE"
-          exit 1
-        fi
-
-        zip -j jfrog-scan-summary.zip "$MD_FILE"
-
-    - name: Upload JFrog scan summary
-      if: steps.check_task.outputs.appDistZip == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: jfrog-scan-summary
-        path: jfrog-scan-summary.zip
+        # Upload artifact to GitHub Actions
+        echo "Uploading scan table report: $TABLE_REPORT"
