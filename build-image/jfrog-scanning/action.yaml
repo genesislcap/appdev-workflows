@@ -65,3 +65,31 @@ runs:
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
       with:
         json_path: ${{ steps.status_filename.outputs.filename }}
+        
+    # -----------------------------
+    # stgenerate table scan
+    # -----------------------------
+    - name: Generate scan table report
+      if: steps.check_task.outputs.appDistZip == 'true'
+      id: table_report
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+        TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
+
+        # Run JFrog scan in table format
+        jf s --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
+
+        # Move the report to the repo root so upload-artifact can use it
+        mv $TABLE_REPORT $GITHUB_WORKSPACE/
+
+        # Expose the filename
+        echo "table_report_file=$GITHUB_WORKSPACE/$TABLE_REPORT" >> $GITHUB_OUTPUT
+
+    - name: Upload JFrog scan table report
+      if: steps.check_task.outputs.appDistZip == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: xray-dependencies-scan
+        path: ${{ steps.table_report.outputs.table_report_file }}
