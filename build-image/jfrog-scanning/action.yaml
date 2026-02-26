@@ -74,7 +74,7 @@ runs:
 
         # The json-to-md action writes the markdown next to the JSON file
         JSON_FILE="${{ steps.status_filename.outputs.filename }}"
-        MD_FILE="${JSON_FILE%.json}.md"
+        MD_FILE="scan-summary.md"
 
         if [ ! -f "$MD_FILE" ]; then
           echo "Markdown file not found: $MD_FILE"
