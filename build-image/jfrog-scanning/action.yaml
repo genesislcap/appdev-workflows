@@ -66,24 +66,28 @@ runs:
       with:
         json_path: ${{ steps.status_filename.outputs.filename }}
         
+    # -----------------------------
+    # stgenerate table scan
+    # -----------------------------
     - name: Generate scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
+      id: table_report
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        # Timestamp for the report filename
+        # Timestamp for filename
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # Run JFrog scan in table format and save to file
+        # Run JFrog scan in table format and save
         jf s --licenses --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
 
-        # Upload artifact to GitHub Actions
-        echo "Uploading scan table report: $TABLE_REPORT"
-        
+        # Expose filename as output for the next step
+        echo "table_report_file=$TABLE_REPORT" >> $GITHUB_OUTPUT
+
     - name: Upload JFrog scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: jfrog-scan-table-report
-        path: ${{ inputs.working-directory }}/${{ inputs.server-path }}/$TABLE_REPORT
+        path: ${{ inputs.working-directory }}/${{ inputs.server-path }}/${{ steps.table_report.outputs.table_report_file }}
