@@ -80,3 +80,10 @@ runs:
 
         # Upload artifact to GitHub Actions
         echo "Uploading scan table report: $TABLE_REPORT"
+        
+    - name: Upload JFrog scan table report
+      if: steps.check_task.outputs.appDistZip == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: jfrog-scan-table-report
+        path: ${{ inputs.working-directory }}/${{ inputs.server-path }}/$TABLE_REPORT
