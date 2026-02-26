@@ -75,19 +75,21 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        # Timestamp for filename
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # Run JFrog scan in table format and save
-        jf s --licenses --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
+        # Run JFrog scan in table format
+        jf s --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
 
-        # Expose filename as output for the next step
-        echo "table_report_file=$TABLE_REPORT" >> $GITHUB_OUTPUT
+        # Move the report to the repo root so upload-artifact can use it
+        mv $TABLE_REPORT $GITHUB_WORKSPACE/
+
+        # Expose the filename
+        echo "table_report_file=$GITHUB_WORKSPACE/$TABLE_REPORT" >> $GITHUB_OUTPUT
 
     - name: Upload JFrog scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: jfrog-scan-table-report
-        path: ${{ inputs.working-directory }}/${{ inputs.server-path }}/${{ steps.table_report.outputs.table_report_file }}
+        path: ${{ steps.table_report.outputs.table_report_file }}
