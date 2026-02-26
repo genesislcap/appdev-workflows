@@ -360,12 +360,12 @@ jobs:
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
-  # tag-jiras:
-  #   needs: build-server
-  #   if: inputs.update-jira
-  #   uses: ./.github/workflows/tag-jiras.yml
-  #   with:
-  #     repository: ${{ inputs.repo-name }}
-  #     release-version: ${{ inputs.version }}
-  #   secrets:
-  #     JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+  tag-jiras:
+    needs: build-server
+    if: inputs.update-jira
+    uses: ./.github/workflows/tag-jiras.yml
+    with:
+      repository: ${{ inputs.repo-name }}
+      release-version: ${{ inputs.version }}
+    secrets:
+      JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
