@@ -108,6 +108,11 @@ on:
         required: false
         default: true
         type: boolean
+      int-test-module:
+        description: "Int test module"
+        required: false
+        type: string
+        default: ""
 
 
     secrets:
@@ -272,6 +277,11 @@ jobs:
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
         run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+
+      - name: Int tests
+        if: ${{ !inputs.skip-tests && inputs.int-test-module }}
+        run: ./gradlew ${{ inputs.int-test-module }}:test --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
       - name: Server Assemble
