@@ -282,7 +282,7 @@ jobs:
 
       - name: Integration tests
         if: ${{ !inputs.skip-tests && inputs.int-test-module }}
-        run: ./gradlew :${{ inputs.int-test-module }}:test --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        run: ./gradlew :${{ inputs.int-test-module }}:test --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
       - name: Server Assemble
