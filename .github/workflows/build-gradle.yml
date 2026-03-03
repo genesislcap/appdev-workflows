@@ -242,11 +242,11 @@ jobs:
       - name: Scan artifact
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
-         version: ${{ env.RELEASE_VERSION }}
-         jfrog-username: ${{ secrets.JFROG_USERNAME }}
-         jfrog-password: ${{ secrets.JFROG_PASSWORD }}
-         working-directory: ${{ inputs.working-directory }}
-         server-path: ${{ inputs.server-path }}
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: ${{ inputs.server-path }}
 
       - name: Install Sast CLI
         if: inputs.sast
