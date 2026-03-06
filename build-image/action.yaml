@@ -39,6 +39,10 @@ inputs:
     required: false
     default: true
     type: boolean
+  build-image-arguments:
+    type: string
+    description: Additional arguments/properties to be passed to the buildImage gradle command
+    required: false
 
 runs:
   using: "composite"
@@ -141,7 +145,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
+        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
 
     - name: Push Image using bash
       if: inputs.push-image == 'true'
