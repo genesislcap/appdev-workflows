@@ -26,7 +26,7 @@ runs:
     # -----------------------------
     - uses: jfrog/setup-jfrog-cli@v4
       with:
-        version: 2.55.0   # make sure CLI is recent enough
+        version: 2.95.0   # updated CLI
       env:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
@@ -37,12 +37,6 @@ runs:
       run: |
         echo "Installed JFrog CLI version:"
         jf --version
-        REQUIRED="2.45.0"
-        INSTALLED=$(jf --version)
-        if [[ "$(printf '%s\n' "$REQUIRED" "$INSTALLED" | sort -V | head -n1)" != "$REQUIRED" ]]; then
-          echo "ERROR: JFrog CLI version $INSTALLED is too old. Minimum required is $REQUIRED."
-          exit 1
-        fi
 
     # -----------------------------
     # Check if appDistZip exists
@@ -76,7 +70,8 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+        # Xray scan for vulnerabilities and licenses
+        jf xr scan --watches "scan" --licenses --vulnerabilities */build/dist/*.zip
 
     # -----------------------------
     # Generate table report (critical/high only, exclude licenses)
@@ -90,8 +85,8 @@ runs:
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # Run JFrog scan in table format: only Critical/High, exclude licenses
-        jf s --vuln --watches "scan" --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
+        # Xray scan table: Critical/High only, exclude licenses
+        jf xr scan --watches "scan" --vulnerabilities --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
 
         # Move the report to repo root for upload
         mv $TABLE_REPORT $GITHUB_WORKSPACE/
