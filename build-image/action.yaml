@@ -43,6 +43,10 @@ inputs:
     type: string
     description: Additional arguments/properties to be passed to the buildImage gradle command
     required: false
+  skip-tests:
+    required: false
+    type: boolean
+    default: false
 
 runs:
   using: "composite"
@@ -131,6 +135,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Run Tests
+      if: ${{ !inputs.skip-tests }}
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
