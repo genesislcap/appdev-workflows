@@ -71,7 +71,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         # Xray scan for vulnerabilities and licenses
-        jf xr scan --watches "scan" --licenses --vulnerabilities */build/dist/*.zip
+        jf xr scan --watches "scan" --licenses --vuln */build/dist/*.zip
 
     # -----------------------------
     # Generate table report (critical/high only, exclude licenses)
@@ -86,7 +86,7 @@ runs:
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
         # Xray scan table: Critical/High only, exclude licenses
-        jf xr scan --watches "scan" --vulnerabilities --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
+        jf xr scan --watches "scan" --vuln --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
 
         # Move the report to repo root for upload
         mv $TABLE_REPORT $GITHUB_WORKSPACE/
