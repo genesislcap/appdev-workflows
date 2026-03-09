@@ -86,7 +86,7 @@ runs:
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
         # Xray scan table: Critical/High only, exclude licenses
-        jf xr scan --watches "scan" --vuln --format=table --min-severity=High */build/dist/*.zip | tee $TABLE_REPORT
+        jf xr scan --watches "vulnerabilities" --vuln --format=table --min-severity=High */build/dist/*.zip | tee $TABLE_REPORT
 
         # Move the report to repo root for upload
         mv $TABLE_REPORT $GITHUB_WORKSPACE/
