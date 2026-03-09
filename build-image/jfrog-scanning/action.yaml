@@ -1,5 +1,5 @@
 name: Scan with JFrog
-description: Scan the distribution for vulnerabilities and licences
+description: Scan the distribution for vulnerabilities and licenses
 
 inputs:
   version:
@@ -21,12 +21,32 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    # -----------------------------
+    # Install JFrog CLI
+    # -----------------------------
     - uses: jfrog/setup-jfrog-cli@v4
+      with:
+        version: 2.55.0   # make sure CLI is recent enough
       env:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
 
+    - name: Check JFrog CLI version
+      shell: bash
+      run: |
+        echo "Installed JFrog CLI version:"
+        jf --version
+        REQUIRED="2.45.0"
+        INSTALLED=$(jf --version)
+        if [[ "$(printf '%s\n' "$REQUIRED" "$INSTALLED" | sort -V | head -n1)" != "$REQUIRED" ]]; then
+          echo "ERROR: JFrog CLI version $INSTALLED is too old. Minimum required is $REQUIRED."
+          exit 1
+        fi
+
+    # -----------------------------
+    # Check if appDistZip exists
+    # -----------------------------
     - name: Check if appDistZip exists
       shell: bash
       id: check_task
@@ -38,6 +58,9 @@ runs:
           echo "appDistZip=false" >> $GITHUB_OUTPUT
         fi
 
+    # -----------------------------
+    # Build the distribution
+    # -----------------------------
     - name: Build the dist
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
@@ -45,6 +68,9 @@ runs:
       run: |
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon
 
+    # -----------------------------
+    # Run full JFrog scan (vuln + licenses)
+    # -----------------------------
     - name: Run the JFrog scan
       if: steps.check_task.outputs.appDistZip == 'true'
       shell: bash
@@ -52,22 +78,8 @@ runs:
       run: |
         jf s --licenses --vuln --watches "scan" */build/dist/*.zip
 
-    - name: Get output status filename
-      if: steps.check_task.outputs.appDistZip == 'true'
-      shell: bash
-      id: status_filename
-      run: |
-        filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
-        echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
-
-    - name: Create markdown summary
-      if: steps.check_task.outputs.appDistZip == 'true'
-      uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
-      with:
-        json_path: ${{ steps.status_filename.outputs.filename }}
-        
     # -----------------------------
-    # stgenerate table scan
+    # Generate table report (critical/high only, exclude licenses)
     # -----------------------------
     - name: Generate scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
@@ -78,10 +90,10 @@ runs:
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # Run JFrog scan in table format and only display critical and high
+        # Run JFrog scan in table format: only Critical/High, exclude licenses
         jf s --vuln --watches "scan" --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
 
-        # Move the report to the repo root so upload-artifact can use it
+        # Move the report to repo root for upload
         mv $TABLE_REPORT $GITHUB_WORKSPACE/
 
         # Expose the filename
