@@ -78,8 +78,8 @@ runs:
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
 
-        # Run JFrog scan in table format
-        jf s --vuln --watches "scan" --format=table */build/dist/*.zip | tee $TABLE_REPORT
+        # Run JFrog scan in table format and only display critical and high
+        jf s --vuln --watches "scan" --format=table --exclude-severities=Low,Medium --exclude-licenses */build/dist/*.zip | tee $TABLE_REPORT
 
         # Move the report to the repo root so upload-artifact can use it
         mv $TABLE_REPORT $GITHUB_WORKSPACE/
