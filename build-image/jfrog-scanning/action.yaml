@@ -14,7 +14,7 @@ inputs:
   server-path:
     default: server
     required: false
-  build-image-arguments:
+  build-server-arguments:
     type: string
     description: Additional arguments/properties to be passed to the appDistZip gradle task
     required: false
@@ -47,7 +47,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon ${{ inputs.build-image-arguments }}
+        ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
       if: steps.check_task.outputs.appDistZip == 'true'
