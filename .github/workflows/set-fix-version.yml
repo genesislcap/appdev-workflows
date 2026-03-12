@@ -84,25 +84,9 @@ jobs:
           # Ensure the directory exists
           mkdir -p "$(dirname "$CSV_FILE")"
 
-          # Check the directory exists
-          if [ -d "$(dirname "$CSV_FILE")" ]; then
-              echo "Directory exists and is writable"
-          else
-              echo "Failed to create directory at: $(dirname "$CSV_FILE")"
-              exit 1
-          fi
-
           # Create the CSV file and write headers
           echo "Creating CSV file at: $CSV_FILE"
           echo "JiraID,Project,Summary,Status,FixVersions" > "$CSV_FILE"
-
-          # Check if the CSV file was created
-          if [ -f "$CSV_FILE" ]; then
-              echo "CSV file created successfully: $CSV_FILE"
-          else
-              echo "Failed to create CSV file at: $CSV_FILE"
-              exit 1
-          fi
 
           # Start processing commits
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
@@ -115,7 +99,16 @@ jobs:
 
           # Extract Jira issue keys from commits
           for COMMIT in $COMMITS; do
-              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')
+              echo "Processing commit: $COMMIT"  # Debugging: Show the commit being processed
+              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]+-[0-9]+')  # Improved regex
+
+              # Debugging: Show extracted Jira IDs
+              if [ -z "$JIRAS" ]; then
+                  echo "No Jira ID found in commit: $COMMIT"
+              else
+                  echo "Found Jira IDs: $JIRAS"
+              fi
+
               for J in $JIRAS; do
                   echo "Found Jira ID: $J"
                   echo "$J,,,, " >> "$CSV_FILE"
@@ -138,7 +131,7 @@ jobs:
       - name: Set Fix Version on Jira issues
         run: |
           echo "Running Python script to set fix version"
-          python scripts/set_fix_version.py  #
+          python scripts/set_fix_version.py  # Adjust the path if you put the Python file elsewhere
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}   # Pass secrets as environment variables
           JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
