@@ -108,6 +108,8 @@ jobs:
           # Start processing commits
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
           git fetch --tags
+          
+          # Collect commits and store them in a variable (separate commit hash and message)
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
           # Log the collected commits
@@ -115,12 +117,16 @@ jobs:
           echo "$COMMITS"
 
           # Extract Jira issue keys from commits using a more robust regex
-          for COMMIT in $COMMITS; do
-              # Debugging: Log each commit
-              echo "Processing commit: $COMMIT"
-              
+          while IFS= read -r COMMIT; do
+              # Separate the commit hash and message
+              COMMIT_HASH=$(echo "$COMMIT" | cut -d ' ' -f 1)
+              COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
+
+              # Debugging: Log each commit before processing
+              echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
+
               # Extract Jira issue key using a more robust pattern
-              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]+-[0-9]+')
+              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
 
               # Check if JIRAS is populated
               if [ -n "$JIRAS" ]; then
@@ -129,9 +135,9 @@ jobs:
                       echo "$J,,,, " >> "$CSV_FILE"
                   done
               else
-                  echo "No Jira IDs found for commit: $COMMIT"
+                  echo "No Jira IDs found for commit: $COMMIT_MSG"
               fi
-          done
+          done <<< "$COMMITS"
 
           # Debugging: Check if the CSV file has been updated after processing commits
           if [ -f "$CSV_FILE" ]; then
@@ -249,14 +255,8 @@ jobs:
           # Log writing to CSV
           print(f"Writing results to CSV file: {csv_file}")
           with open(csv_file, 'w', newline='') as f:
-              writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
+              writer = csv.DictWriter(f, fieldnames=['JiraID', 'Project', 'Summary', 'Status', 'FixVersions'])
               writer.writeheader()
               writer.writerows(rows)
-          PYTHON_SCRIPT
 
-      # Upload the generated CSV file as an artifact
-      - name: Upload Jira CSV artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
-          path: ${{ steps.extract_jiras.outputs.csv_file }}
+          print("Fix Versions successfully updated.")
