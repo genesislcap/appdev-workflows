@@ -29,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token for GitHub API
       GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
       GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
@@ -65,21 +64,48 @@ jobs:
       - name: Extract Jira issues from commits
         id: extract_jiras
         run: |
+          set -x  # Enable command tracing for debugging
+          set -e  # Exit on error to ensure we catch any failure
+
+          # Get the previous and current tags
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
-          
-          # Remove all characters except letters, numbers, underscore, or dash
+
+          # Sanitize the tags to avoid invalid characters in file names
           SANITIZED_CUR_TAG=$(echo "$CUR_TAG" | tr '/.' '_')
           SANITIZED_PREV_TAG=$(echo "$PREV_TAG" | tr '/.' '_')
+
+          # Define the CSV file path
           CSV_FILE="${GITHUB_WORKSPACE}/tag_${SANITIZED_CUR_TAG}-${SANITIZED_PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
+
+          # Debugging: Log the file path
+          echo "The CSV file will be created at: $CSV_FILE"
 
           # Ensure the directory exists
           mkdir -p "$(dirname "$CSV_FILE")"
 
-          # Log the file path for debugging
-          echo "The CSV file will be created at: $CSV_FILE"
+          # Check the directory exists
+          if [ -d "$(dirname "$CSV_FILE")" ]; then
+              echo "Directory exists and is writable"
+          else
+              echo "Failed to create directory at: $(dirname "$CSV_FILE")"
+              exit 1
+          fi
 
+          # Create the CSV file and write headers
+          echo "Creating CSV file at: $CSV_FILE"
+          echo "JiraID,Project,Summary,Status,FixVersions" > "$CSV_FILE"
+
+          # Check if the CSV file was created
+          if [ -f "$CSV_FILE" ]; then
+              echo "CSV file created successfully: $CSV_FILE"
+          else
+              echo "Failed to create CSV file at: $CSV_FILE"
+              exit 1
+          fi
+
+          # Start processing commits
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
           git fetch --tags
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
@@ -88,17 +114,22 @@ jobs:
           echo "Collected commits between $PREV_TAG and $CUR_TAG:"
           echo "$COMMITS"
 
-          # Initialize CSV
-          echo "JiraID,Project,Summary,Status,FixVersions" > $CSV_FILE
-
-          # Loop through commits and extract Jira IDs
+          # Extract Jira issue keys from commits
           for COMMIT in $COMMITS; do
               JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')
               for J in $JIRAS; do
                   echo "Found Jira ID: $J"
-                  echo "$J,,,, " >> $CSV_FILE
+                  echo "$J,,,, " >> "$CSV_FILE"
               done
           done
+
+          # Debugging: Check if the CSV file has been updated after processing commits
+          if [ -f "$CSV_FILE" ]; then
+              echo "CSV file content after commit processing:"
+              cat "$CSV_FILE"
+          else
+              echo "CSV file still not created after processing commits!"
+          fi
 
           echo "CSV file generated: $CSV_FILE"
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
@@ -208,14 +239,4 @@ jobs:
           # Log writing to CSV
           print(f"Writing results to CSV file: {csv_file}")
           with open(csv_file, 'w', newline='') as f:
-              writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
-              writer.writeheader()
-              writer.writerows(rows)
-          PYTHON_SCRIPT
-
-      # Upload the generated CSV file as an artifact
-      - name: Upload Jira CSV artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
-          path: ${{ steps.extract_jiras.outputs.csv_file }}
+              writer = csv.DictWriter(f, fieldnames
