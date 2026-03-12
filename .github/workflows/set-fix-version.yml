@@ -159,6 +159,12 @@ jobs:
           echo "CSV file generated: $CSV_FILE"
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
           echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
+      # Debugging: Check if JIRA_URL is set as an environment variable
+      - name: Debug JIRA_URL
+        run: |
+          echo "JIRA_URL is: $JIRA_URL"
+          echo "JIRA_TOKEN is: $JIRA_TOKEN"
+          echo "JIRA_USER is: $JIRA_USER"
 
       # Set the Fix Version for Jira issues by updating the issues in Jira
       - name: Set Fix Version on Jira issues
