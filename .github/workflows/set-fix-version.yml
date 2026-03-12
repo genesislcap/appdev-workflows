@@ -31,32 +31,27 @@ jobs:
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
 
     steps:
-      # Step 1: Checkout the repository to access commit history
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure that all commits and tags are fetched
 
-      # Step 2: Set up Python for running the Jira update script
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      # Step 3: Install dependencies (requests, jira, pandas)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests jira pandas
 
-      # Step 4: Log input parameters
       - name: Log input parameters
         run: |
           echo "Previous Tag: ${{ inputs.prev_tag }}"
           echo "Current Tag: ${{ inputs.cur_tag }}"
           echo "Dry Run: ${{ inputs.dry_run }}"
 
-      # Step 5: Extract Jira issue IDs from commits
       - name: Extract Jira issues from commits
         id: extract_jiras
         run: |
@@ -80,6 +75,7 @@ jobs:
           for COMMIT in $COMMITS; do
               JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')
               for J in $JIRAS; do
+                  echo "Found Jira ID: $J"
                   echo "$J,,,, " >> $CSV_FILE
               done
           done
@@ -88,7 +84,6 @@ jobs:
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
           echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
 
-      # Step 6: Set Fix Version on Jira issues
       - name: Set Fix Version on Jira issues
         run: |
           CSV_FILE="${{ steps.extract_jiras.outputs.csv_file }}"
@@ -113,10 +108,12 @@ jobs:
           print(f"Connecting to Jira at {jira_url} as {jira_user}")
           
           # Connect to Jira
-          jira = JIRA(server=jira_url, basic_auth=(jira_user, jira_token))
-          
-          # Log successful Jira connection
-          print("Successfully connected to Jira.")
+          try:
+              jira = JIRA(server=jira_url, basic_auth=(jira_user, jira_token))
+              print("Successfully connected to Jira.")
+          except Exception as e:
+              print(f"Failed to connect to Jira: {e}")
+              exit(1)
           
           # Dictionary to cache project versions to avoid redundant API calls
           project_versions_cache = {}
@@ -124,9 +121,12 @@ jobs:
           # Function to fetch and cache project versions for Jira project
           def get_project_versions(project_key):
               if project_key not in project_versions_cache:
-                  # Log the Jira API call to fetch versions
                   print(f"Fetching project versions for project: {project_key}")
-                  project_versions_cache[project_key] = [v.name for v in jira.project_versions(project_key)]
+                  try:
+                      project_versions_cache[project_key] = [v.name for v in jira.project_versions(project_key)]
+                  except Exception as e:
+                      print(f"Failed to fetch project versions for {project_key}: {e}")
+                      exit(1)
               return project_versions_cache[project_key]
           
           # Function to ensure the fix version exists for a project
@@ -135,7 +135,11 @@ jobs:
               if version_name not in versions:  # Only create version if it doesn't exist
                   if not dry_run:
                       print(f"Creating new version {version_name} for project {project_key}")
-                      jira.create_version(name=version_name, project=project_key)
+                      try:
+                          jira.create_version(name=version_name, project=project_key)
+                      except Exception as e:
+                          print(f"Failed to create version {version_name} for project {project_key}: {e}")
+                          exit(1)
                   versions.append(version_name)
               return versions
           
@@ -151,7 +155,6 @@ jobs:
           for row in rows:
               issue_id = row['JiraID']
               try:
-                  # Log issue processing
                   print(f"Processing Jira issue: {issue_id}")
           
                   # Fetch the Jira issue
@@ -165,29 +168,31 @@ jobs:
                   # Only update the issue if the current tag is not already set as a fix version
                   if cur_tag not in current_fixversions and not dry_run:
                       print(f"Updating issue {issue_id} with Fix Version {cur_tag}")
-                      issue.update(fields={"fixVersions": current_fixversions + [{"name": cur_tag}]})
+                      try:
+                          issue.update(fields={"fixVersions": current_fixversions + [{"name": cur_tag}]})
+                      except Exception as e:
+                          print(f"Failed to update issue {issue_id}: {e}")
+                          row['Status'] = f"Failed to update: {e}"
+                          continue
           
-                  # Populate CSV data
                   row['Project'] = project_key
                   row['FixVersions'] = ", ".join(updated_versions)
                   row['Status'] = issue.fields.status.name
                   row['Summary'] = issue.fields.summary
           
               except Exception as e:
-                  # Log failure if the Jira issue can't be fetched or updated
                   print(f"Failed to process issue {issue_id}: {e}")
                   row['Status'] = f"Failed: {e}"
+          
+          # Log writing to CSV
+          print(f"Writing results to CSV file: {csv_file}")
+          with open(csv_file, 'w', newline='') as f:
+              writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
+              writer.writeheader()
+              writer.writerows(rows)
+          
+          PYTHON_SCRIPT
 
-              # Log writing to CSV
-              print(f"Writing results to CSV file: {csv_file}")
-              with open(csv_file, 'w', newline='') as f:
-                  writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
-                  writer.writeheader()
-                  writer.writerows(rows)
-
-              PYTHON_SCRIPT
-
-      # Step 7: Upload the Jira CSV artifact
       - name: Upload Jira CSV artifact
         uses: actions/upload-artifact@v4
         with:
