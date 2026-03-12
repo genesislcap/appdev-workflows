@@ -32,7 +32,6 @@ jobs:
       GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
       GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
-      
 
     steps:
       # Checkout the repository to get all tags and commits for the workflow
@@ -239,4 +238,14 @@ jobs:
           # Log writing to CSV
           print(f"Writing results to CSV file: {csv_file}")
           with open(csv_file, 'w', newline='') as f:
-              writer = csv.DictWriter(f, fieldnames
+              writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
+              writer.writeheader()
+              writer.writerows(rows)
+          PYTHON_SCRIPT
+
+      # Upload the generated CSV file as an artifact
+      - name: Upload Jira CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
+          path: ${{ steps.extract_jiras.outputs.csv_file }}
