@@ -1,38 +1,14 @@
-# -----------------------------------------------------------------------------
-# Jira Fix Version Automation (Shared Workflow)
-# -----------------------------------------------------------------------------
-# This shared workflow automates the process of setting the "Fix Version" 
-# for Jira issues based on commit messages between two Git tags.
-#
-# Inputs:
-#   prev_tag: Previous release tag (e.g., v1.0.0)
-#   cur_tag: Current release tag (e.g., v1.1.0)
-#   dry_run: Dry run mode (yes/no) - Simulate changes without updating Jira
-#
-# Environment variables (from calling repo):
-#   JIRA_URL: URL of the Jira instance (e.g., https://jira.example.com)
-#   JIRA_TOKEN: Jira API token for authentication
-#   JIRA_USER: Jira username for authentication
-#
-# Outputs:
-#   CSV artifact: tag_<cur_tag>-<prev_tag>-jira-<build_number>.csv
-#
-# Optimizations:
-# - Caches Jira project versions to avoid redundant API calls
-# - Avoids updating Jira issues if the "Fix Version" is already set
-# -----------------------------------------------------------------------------
-
 name: Jira Fix Version Automation
 
 on:
   workflow_call:
     inputs:
       prev_tag:
-        description: 'Previous release tag'  # The previous Git release tag (e.g., v1.0.0)
+        description: 'Previous release tag'
         required: true
         type: string
       cur_tag:
-        description: 'Current release tag'  # The current Git release tag (e.g., v1.1.0)
+        description: 'Current release tag'
         required: true
         type: string
       dry_run:
@@ -42,12 +18,11 @@ on:
 
 jobs:
   jira-fixversion:
-    runs-on: ubuntu-latest  # Use Ubuntu runner for the job
-
-    environment: production  # Optional: Set an environment if necessary
+    runs-on: ubuntu-latest
+    environment: production
 
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token to interact with GitHub API
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token for GitHub API
       JIRA_URL: ${{ secrets.JIRA_URL }}  # Jira URL from secrets (not passed explicitly)
       JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}  # Jira API token from secrets (not passed explicitly)
       JIRA_USER: ${{ secrets.JIRA_USER }}  # Jira username from secrets (not passed explicitly)
@@ -58,57 +33,69 @@ jobs:
     steps:
       # Step 1: Checkout the repository to access commit history
       - name: Checkout repository
-        uses: actions/checkout@v4  # Checkout the code so we can access commits
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure that all commits and tags are fetched
 
       # Step 2: Set up Python for running the Jira update script
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11  # Setting up Python 3.11
+          python-version: 3.11
 
-      # Step 3: Install dependencies (requests, jira, pandas) required for the workflow
+      # Step 3: Install dependencies (requests, jira, pandas)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests jira pandas  # Install necessary Python packages
+          pip install requests jira pandas
 
-      # Step 4: Extract Jira issue IDs from commit messages
+      # Step 4: Log input parameters
+      - name: Log input parameters
+        run: |
+          echo "Previous Tag: ${{ inputs.prev_tag }}"
+          echo "Current Tag: ${{ inputs.cur_tag }}"
+          echo "Dry Run: ${{ inputs.dry_run }}"
+
+      # Step 5: Extract Jira issue IDs from commits
       - name: Extract Jira issues from commits
         id: extract_jiras
         run: |
-          # Prepare inputs and the CSV filename to store results
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
           CSV_FILE="tag_${CUR_TAG}-${PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
 
-          echo "Collecting commits between $PREV_TAG and $CUR_TAG..."
-          git fetch --tags  # Fetch all tags to compare commits between the tags
-          COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")  # Extract commits
+          echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
+          git fetch --tags
+          COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
-          # Initialize the CSV with headers
+          # Log the collected commits
+          echo "Collected commits between $PREV_TAG and $CUR_TAG:"
+          echo "$COMMITS"
+
+          # Initialize CSV
           echo "JiraID,Project,Summary,Status,FixVersions" > $CSV_FILE
 
-          # Loop through commits and extract Jira issue IDs (e.g., PROJ-123)
+          # Loop through commits and extract Jira IDs
           for COMMIT in $COMMITS; do
-              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')  # Regex to find Jira IDs
+              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')
               for J in $JIRAS; do
-                  echo "$J,,,, " >> $CSV_FILE  # Add each Jira ID to the CSV
+                  echo "$J,,,, " >> $CSV_FILE
               done
           done
 
           echo "CSV file generated: $CSV_FILE"
-          echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT  # Output the CSV file path for use in later steps
-          echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT  # Output the dry_run flag
+          echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
+          echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
 
-      # Step 5: Set Fix Version on Jira issues (main logic)
+      # Step 6: Set Fix Version on Jira issues
       - name: Set Fix Version on Jira issues
         run: |
-          # Fetch the CSV file and dry_run flag from the previous step
           CSV_FILE="${{ steps.extract_jiras.outputs.csv_file }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ steps.extract_jiras.outputs.dry_run }}"
 
+          echo "Starting to process the CSV file: $CSV_FILE"
           python << 'PYTHON_SCRIPT'
           import csv
           import os
@@ -122,8 +109,14 @@ jobs:
           csv_file = os.environ['CSV_FILE']
           dry_run = os.environ['DRY_RUN'].lower() == 'yes'
           
-          # Connect to Jira using the provided credentials
+          # Log Jira connectivity
+          print(f"Connecting to Jira at {jira_url} as {jira_user}")
+          
+          # Connect to Jira
           jira = JIRA(server=jira_url, basic_auth=(jira_user, jira_token))
+          
+          # Log successful Jira connection
+          print("Successfully connected to Jira.")
           
           # Dictionary to cache project versions to avoid redundant API calls
           project_versions_cache = {}
@@ -131,7 +124,8 @@ jobs:
           # Function to fetch and cache project versions for Jira project
           def get_project_versions(project_key):
               if project_key not in project_versions_cache:
-                  # Fetch versions from Jira only if not already cached
+                  # Log the Jira API call to fetch versions
+                  print(f"Fetching project versions for project: {project_key}")
                   project_versions_cache[project_key] = [v.name for v in jira.project_versions(project_key)]
               return project_versions_cache[project_key]
           
@@ -140,20 +134,26 @@ jobs:
               versions = get_project_versions(project_key)
               if version_name not in versions:  # Only create version if it doesn't exist
                   if not dry_run:
-                      jira.create_version(name=version_name, project=project_key)  # Create the version in Jira if not in cache
+                      print(f"Creating new version {version_name} for project {project_key}")
+                      jira.create_version(name=version_name, project=project_key)
                   versions.append(version_name)
               return versions
           
-          # Read the CSV file and process each Jira issue
+          # Log CSV reading
+          print(f"Reading CSV file: {csv_file}")
           rows = []
           with open(csv_file, newline='') as f:
               reader = csv.DictReader(f)
               for row in reader:
                   rows.append(row)
           
+          # Log processing of each issue
           for row in rows:
               issue_id = row['JiraID']
               try:
+                  # Log issue processing
+                  print(f"Processing Jira issue: {issue_id}")
+          
                   # Fetch the Jira issue
                   issue = jira.issue(issue_id)
                   project_key = issue.fields.project.key  # Get the project key for the issue
@@ -164,28 +164,32 @@ jobs:
           
                   # Only update the issue if the current tag is not already set as a fix version
                   if cur_tag not in current_fixversions and not dry_run:
-                      issue.update(fields={"fixVersions": current_fixversions + [{"name": cur_tag}]})  # Update issue's fix version
+                      print(f"Updating issue {issue_id} with Fix Version {cur_tag}")
+                      issue.update(fields={"fixVersions": current_fixversions + [{"name": cur_tag}]})
           
                   # Populate CSV data
                   row['Project'] = project_key
                   row['FixVersions'] = ", ".join(updated_versions)
                   row['Status'] = issue.fields.status.name
                   row['Summary'] = issue.fields.summary
+          
+              except Exception as e:
+                  # Log failure if the Jira issue can't be fetched or updated
+                  print(f"Failed to process issue {issue_id}: {e}")
+                  row['Status'] = f"Failed: {e}"
 
-                  except Exception as e:
-                    # Log failure if the Jira issue can't be fetched or updated
-                    row['Status'] = f"Failed: {e}"
-            
-            # Write the updated information back to the CSV
-            with open(csv_file, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
-                writer.writeheader()
-                writer.writerows(rows)
-            PYTHON_SCRIPT
+              # Log writing to CSV
+              print(f"Writing results to CSV file: {csv_file}")
+              with open(csv_file, 'w', newline='') as f:
+                  writer = csv.DictWriter(f, fieldnames=['JiraID','Project','Summary','Status','FixVersions'])
+                  writer.writeheader()
+                  writer.writerows(rows)
 
-      # Step 6: Upload the Jira CSV artifact
+              PYTHON_SCRIPT
+
+      # Step 7: Upload the Jira CSV artifact
       - name: Upload Jira CSV artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}  # Artifact name
-          path: ${{ steps.extract_jiras.outputs.csv_file }}  # Path to the CSV artifact
+          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
+          path: ${{ steps.extract_jiras.outputs.csv_file }}
