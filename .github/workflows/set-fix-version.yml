@@ -32,6 +32,7 @@ jobs:
       GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
       GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
+      
 
     steps:
       # Checkout the repository to get all tags and commits for the workflow
@@ -115,11 +116,21 @@ jobs:
 
           # Extract Jira issue keys from commits
           for COMMIT in $COMMITS; do
-              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]{2,}-[0-9]+')
-              for J in $JIRAS; do
-                  echo "Found Jira ID: $J"
-                  echo "$J,,,, " >> "$CSV_FILE"
-              done
+              # Debugging: Log each commit
+              echo "Processing commit: $COMMIT"
+              
+              # Extract Jira issue key using a more robust pattern
+              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]+-[0-9]+')
+
+              # Check if JIRAS is populated
+              if [ -n "$JIRAS" ]; then
+                  echo "Found Jira IDs: $JIRAS"
+                  for J in $JIRAS; do
+                      echo "$J,,,, " >> "$CSV_FILE"
+                  done
+              else
+                  echo "No Jira IDs found for commit: $COMMIT"
+              fi
           done
 
           # Debugging: Check if the CSV file has been updated after processing commits
