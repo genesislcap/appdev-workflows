@@ -134,6 +134,7 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
         build-server-arguments: ${{ inputs.build-image-arguments }}
+        app-name: ${{ inputs.app-name }}
 
     - name: Run Tests
       if: ${{ !inputs.skip-tests }}
