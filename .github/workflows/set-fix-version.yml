@@ -33,7 +33,7 @@ jobs:
       GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
       GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
-      CUR_TAG: ${{ inputs.cur_tag }}  # Pass the CUR_TAG from inputs to environment
+      
 
     steps:
       # Checkout the repository to get all tags and commits for the workflow
