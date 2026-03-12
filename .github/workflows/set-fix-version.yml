@@ -166,112 +166,22 @@ jobs:
           echo "JIRA_TOKEN is: $JIRA_TOKEN"
           echo "JIRA_USER is: $JIRA_USER"
 
-      # Set the Fix Version for Jira issues by updating the issues in Jira
-      - name: Set Fix Version on Jira issues
+     # Run Python script to set fix version
+      - name: Run Python script to set fix version
         run: |
-          CSV_FILE="${{ steps.extract_jiras.outputs.csv_file }}"
-          CUR_TAG="${{ inputs.cur_tag }}"
-          DRY_RUN="${{ steps.extract_jiras.outputs.dry_run }}"
+          echo "Running Python script to set fix version"
+          python ./appdev/scripts/set_fix_version.py  # Running the script from the appdev repo
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          CUR_TAG: ${{ inputs.cur_tag }}
+          CSV_FILE: ${{ steps.extract_jiras.outputs.csv_file }}
+          DRY_RUN: ${{ steps.extract_jiras.outputs.dry_run }}
 
-          echo "Starting to process the CSV file: $CSV_FILE"
-          python << 'PYTHON_SCRIPT'
-          import csv
-          import os
-          from jira import JIRA
-          
-          # Retrieve environment variables
-          jira_url = os.environ['JIRA_URL']
-          jira_token = os.environ['JIRA_TOKEN']
-          jira_user = os.environ['JIRA_USER']
-          cur_tag = os.environ['CUR_TAG']
-          csv_file = os.environ['CSV_FILE']
-          dry_run = os.environ['DRY_RUN'].lower() == 'yes'
-          
-          # Log Jira connectivity
-          print(f"Connecting to Jira at {jira_url} as {jira_user}")
-          
-          # Connect to Jira
-          try:
-              jira = JIRA(server=jira_url, basic_auth=(jira_user, jira_token))
-              print("Successfully connected to Jira.")
-          except Exception as e:
-              print(f"Failed to connect to Jira: {e}")
-              exit(1)
-          
-          # Dictionary to cache project versions to avoid redundant API calls
-          project_versions_cache = {}
-          
-          # Function to fetch and cache project versions for Jira project
-          def get_project_versions(project_key):
-              if project_key not in project_versions_cache:
-                  print(f"Fetching project versions for project: {project_key}")
-                  try:
-                      project_versions_cache[project_key] = [v.name for v in jira.project_versions(project_key)]
-                  except Exception as e:
-                      print(f"Failed to fetch project versions for {project_key}: {e}")
-                      exit(1)
-              return project_versions_cache[project_key]
-          
-          # Function to ensure the fix version exists for a project
-          def ensure_fix_version(project_key, version_name):
-              versions = get_project_versions(project_key)
-              if version_name not in versions:  # Only create version if it doesn't exist
-                  if not dry_run:
-                      print(f"Creating new version {version_name} for project {project_key}")
-                      try:
-                          jira.create_version(name=version_name, project=project_key)
-                      except Exception as e:
-                          print(f"Failed to create version {version_name} for project {project_key}: {e}")
-                          exit(1)
-                  versions.append(version_name)
-              return versions
-          
-          # Log CSV reading
-          print(f"Reading CSV file: {csv_file}")
-          rows = []
-          with open(csv_file, newline='') as f:
-              reader = csv.DictReader(f)
-              for row in reader:
-                  rows.append(row)
-          
-          # Log processing of each issue
-          for row in rows:
-              issue_id = row['JiraID']
-              try:
-                  print(f"Processing Jira issue: {issue_id}")
-          
-                  # Fetch the Jira issue
-                  issue = jira.issue(issue_id)
-                  project_key = issue.fields.project.key  # Get the project key for the issue
-                  current_fixversions = [v.name for v in getattr(issue.fields, 'fixVersions', [])]  # Get existing fix versions
-          
-                  # Ensure the fix version exists in the Jira project
-                  updated_versions = ensure_fix_version(project_key, cur_tag)
-          
-                  # Only update the issue if the current tag is not already set as a fix version
-                  if cur_tag not in current_fixversions and not dry_run:
-                      print(f"Updating issue {issue_id} with Fix Version {cur_tag}")
-                      try:
-                          issue.update(fields={"fixVersions": current_fixversions + [{"name": cur_tag}]})
-                      except Exception as e:
-                          print(f"Failed to update issue {issue_id}: {e}")
-                          row['Status'] = f"Failed to update: {e}"
-                          continue
-          
-                  row['Project'] = project_key
-                  row['FixVersions'] = ", ".join(updated_versions)
-                  row['Status'] = issue.fields.status.name
-                  row['Summary'] = issue.fields.summary
-          
-              except Exception as e:
-                  print(f"Failed to process issue {issue_id}: {e}")
-                  row['Status'] = f"Failed: {e}"
-          
-          # Log writing to CSV
-          print(f"Writing results to CSV file: {csv_file}")
-          with open(csv_file, 'w', newline='') as f:
-              writer = csv.DictWriter(f, fieldnames=['JiraID', 'Project', 'Summary', 'Status', 'FixVersions'])
-              writer.writeheader()
-              writer.writerows(rows)
-
-          print("Fix Versions successfully updated.")
+      # Upload the generated CSV file as an artifact
+      - name: Upload Jira CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
+          path: ${{ steps.extract_jiras.outputs.csv_file }}
