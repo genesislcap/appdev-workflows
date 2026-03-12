@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token for GitHub API
+      #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token for GitHub API
       GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
       GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
       GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
