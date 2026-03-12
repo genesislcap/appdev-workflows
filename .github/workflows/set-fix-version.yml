@@ -25,7 +25,7 @@
 name: Jira Fix Version Automation
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       prev_tag:
         description: 'Previous release tag'  # The previous Git release tag (e.g., v1.0.0)
