@@ -19,7 +19,7 @@ on:
 jobs:
   jira-fixversion:
     runs-on: ubuntu-latest
-    environment: production
+    #environment: production
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token for GitHub API
@@ -58,6 +58,8 @@ jobs:
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
+          echo "Jira URL: ${{ secrets.JIRA_URL }}"
+          echo "Jira User: ${{ secrets.JIRA_USER }}"
           CSV_FILE="tag_${CUR_TAG}-${PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
 
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
@@ -105,6 +107,8 @@ jobs:
           dry_run = os.environ['DRY_RUN'].lower() == 'yes'
           
           # Log Jira connectivity
+          echo "Jira URL: ${{ secrets.JIRA_URL }}"
+          echo "Jira User: ${{ secrets.JIRA_USER }}"
           print(f"Connecting to Jira at {jira_url} as {jira_user}")
           
           # Connect to Jira
