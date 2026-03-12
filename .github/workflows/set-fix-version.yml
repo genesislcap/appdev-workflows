@@ -185,7 +185,7 @@ jobs:
 
       # Step 6: Upload the Jira CSV artifact
       - name: Upload Jira CSV artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}  # Artifact name
           path: ${{ steps.extract_jiras.outputs.csv_file }}  # Path to the CSV artifact
