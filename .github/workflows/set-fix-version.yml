@@ -84,36 +84,59 @@ jobs:
           # Ensure the directory exists
           mkdir -p "$(dirname "$CSV_FILE")"
 
+          # Check the directory exists
+          if [ -d "$(dirname "$CSV_FILE")" ]; then
+              echo "Directory exists and is writable"
+          else
+              echo "Failed to create directory at: $(dirname "$CSV_FILE")"
+              exit 1
+          fi
+
           # Create the CSV file and write headers
           echo "Creating CSV file at: $CSV_FILE"
           echo "JiraID,Project,Summary,Status,FixVersions" > "$CSV_FILE"
 
+          # Check if the CSV file was created
+          if [ -f "$CSV_FILE" ]; then
+              echo "CSV file created successfully: $CSV_FILE"
+          else
+              echo "Failed to create CSV file at: $CSV_FILE"
+              exit 1
+          fi
+
           # Start processing commits
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
           git fetch --tags
+          
+          # Collect commits and store them in a variable (separate commit hash and message)
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
           # Log the collected commits
           echo "Collected commits between $PREV_TAG and $CUR_TAG:"
           echo "$COMMITS"
 
-          # Extract Jira issue keys from commits
-          for COMMIT in $COMMITS; do
-              echo "Processing commit: $COMMIT"  # Debugging: Show the commit being processed
-              JIRAS=$(echo "$COMMIT" | grep -oE '[A-Z]+-[0-9]+')  # Improved regex
+          # Extract Jira issue keys from commits using a more robust regex
+          while IFS= read -r COMMIT; do
+              # Separate the commit hash and message
+              COMMIT_HASH=$(echo "$COMMIT" | cut -d ' ' -f 1)
+              COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
 
-              # Debugging: Show extracted Jira IDs
-              if [ -z "$JIRAS" ]; then
-                  echo "No Jira ID found in commit: $COMMIT"
-              else
+              # Debugging: Log each commit before processing
+              echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
+
+              # Extract Jira issue key using a more robust pattern
+              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
+
+              # Check if JIRAS is populated
+              if [ -n "$JIRAS" ]; then
                   echo "Found Jira IDs: $JIRAS"
+                  for J in $JIRAS; do
+                      echo "$J,,,, " >> "$CSV_FILE"
+                  done
+              else
+                  echo "No Jira IDs found for commit: $COMMIT_MSG"
               fi
-
-              for J in $JIRAS; do
-                  echo "Found Jira ID: $J"
-                  echo "$J,,,, " >> "$CSV_FILE"
-              done
-          done
+          done <<< "$COMMITS"
 
           # Debugging: Check if the CSV file has been updated after processing commits
           if [ -f "$CSV_FILE" ]; then
@@ -126,6 +149,7 @@ jobs:
           echo "CSV file generated: $CSV_FILE"
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
           echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
+
 
       # Set Fix Version for Jira issues by updating the issues in Jira
       - name: Set Fix Version on Jira issues
