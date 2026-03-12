@@ -41,13 +41,14 @@ jobs:
         with:
           fetch-depth: 0  # Ensure that all commits and tags are fetched
           
-      # Checkout the appdev repository where the script is located
+      # Checkout the appdev repository (appdev-workflows) and specify the branch
       - name: Checkout appdev repository
         uses: actions/checkout@v4
         with:
-          repository: 'genesislcap/appdev'  # Change this to the actual repo name
+          repository: 'genesislcap/appdev-workflows'  # Correct repository name
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: appdev  # This will clone the appdev repo to the 'appdev' folder    
+          ref: 'FahdTazi72-patch-7'  # Specify the branch
+          path: appdev  # This will clone the appdev repo to the 'appdev' folder   
 
       # Set up Python for the job
       - name: Set up Python
