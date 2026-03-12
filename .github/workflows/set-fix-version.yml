@@ -16,6 +16,16 @@ on:
         required: true
         type: string
 
+
+    secrets:
+      JIRA_URL:
+        required: true
+      JIRA_TOKEN:
+        required: true
+      JIRA_USER:
+        required: true
+      
+
 jobs:
   jira-fixversion:
     runs-on: ubuntu-latest
