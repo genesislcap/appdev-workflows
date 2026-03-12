@@ -4,7 +4,7 @@ from jira import JIRA
 
 # Retrieve environment variables
 jira_url = os.environ['JIRA_URL']
-jira_token = os.environ['JIRA_TOKEN']
+JIRA_API_TOKEN = os.environ['JIRA_API_TOKEN']
 jira_user = os.environ['JIRA_USER']
 cur_tag = os.environ['CUR_TAG']
 csv_file = os.environ['CSV_FILE']
@@ -15,7 +15,7 @@ print(f"Connecting to Jira at {jira_url} as {jira_user}")
 
 # Connect to Jira
 try:
-    jira = JIRA(server=jira_url, basic_auth=(jira_user, jira_token))
+    jira = JIRA(server=jira_url, basic_auth=(jira_user, JIRA_API_TOKEN))
     print("Successfully connected to Jira.")
 except Exception as e:
     print(f"Failed to connect to Jira: {e}")
