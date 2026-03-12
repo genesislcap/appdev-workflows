@@ -68,7 +68,17 @@ jobs:
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
-          CSV_FILE="tag_${CUR_TAG}-${PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
+          
+          # Remove all characters except letters, numbers, underscore, or dash
+          SANITIZED_CUR_TAG=$(echo "$CUR_TAG" | tr '/.' '_')
+          SANITIZED_PREV_TAG=$(echo "$PREV_TAG" | tr '/.' '_')
+          CSV_FILE="${GITHUB_WORKSPACE}/tag_${SANITIZED_CUR_TAG}-${SANITIZED_PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
+
+          # Ensure the directory exists
+          mkdir -p "$(dirname "$CSV_FILE")"
+
+          # Log the file path for debugging
+          echo "The CSV file will be created at: $CSV_FILE"
 
           echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
           git fetch --tags
