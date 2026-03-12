@@ -114,7 +114,7 @@ jobs:
           echo "Collected commits between $PREV_TAG and $CUR_TAG:"
           echo "$COMMITS"
 
-          # Extract Jira issue keys from commits
+          # Extract Jira issue keys from commits using a more robust regex
           for COMMIT in $COMMITS; do
               # Debugging: Log each commit
               echo "Processing commit: $COMMIT"
