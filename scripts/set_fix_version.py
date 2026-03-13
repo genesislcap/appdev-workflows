@@ -57,6 +57,18 @@ for row in rows:
         # Current FixVersions
         current_fixversions = [v.name for v in getattr(issue.fields, 'fixVersions', [])]
 
+         # Get the project key
+        project_key = issue.fields.project.key
+        
+        # Check if version exists in Jira
+        versions = jira.project_versions(project_key)
+        version_names = [v.name for v in versions]
+        
+        if cur_tag not in version_names and not dry_run:
+            # Create the version in Jira
+            print(f"Creating fixVersion '{cur_tag}' in project {project_key}")
+            jira.create_version(name=cur_tag, project=project_key)
+
        # Convert current fixversions to list of objects
         fix_versions_payload = [{"name": v} for v in current_fixversions]
 
