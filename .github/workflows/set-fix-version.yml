@@ -87,7 +87,7 @@ jobs:
 
           echo "The CSV file will be created at: $CSV_FILE"
           mkdir -p "$(dirname "$CSV_FILE")"
-          echo "JiraID,Project,Summary,Status,FixVersions" > "$CSV_FILE"
+          echo "CommitJiraID,NewIssueKey,Project,Summary,Status,FixVersions" > "$CSV_FILE"
 
           git fetch --tags
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
