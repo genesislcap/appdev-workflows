@@ -73,88 +73,57 @@ jobs:
       - name: Extract Jira issues from commits
         id: extract_jiras
         run: |
-          set -x  # Enable command tracing for debugging
-          set -e  # Exit on error to ensure we catch any failure
+          set -x
+          set -e
 
-          # Get the previous and current tags
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
 
-          # Sanitize the tags to avoid invalid characters in file names
           SANITIZED_CUR_TAG=$(echo "$CUR_TAG" | tr '/.' '_')
           SANITIZED_PREV_TAG=$(echo "$PREV_TAG" | tr '/.' '_')
 
-          # Define the CSV file path
           CSV_FILE="${GITHUB_WORKSPACE}/tag_${SANITIZED_CUR_TAG}-${SANITIZED_PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
 
-          # Debugging: Log the file path
           echo "The CSV file will be created at: $CSV_FILE"
-
-          # Ensure the directory exists
           mkdir -p "$(dirname "$CSV_FILE")"
-
-          # Check the directory exists
-          if [ -d "$(dirname "$CSV_FILE")" ]; then
-              echo "Directory exists and is writable"
-          else
-              echo "Failed to create directory at: $(dirname "$CSV_FILE")"
-              exit 1
-          fi
-
-          # Create the CSV file and write headers
-          echo "Creating CSV file at: $CSV_FILE"
           echo "JiraID,Project,Summary,Status,FixVersions" > "$CSV_FILE"
 
-          # Check if the CSV file was created
-          if [ -f "$CSV_FILE" ]; then
-              echo "CSV file created successfully: $CSV_FILE"
-          else
-              echo "Failed to create CSV file at: $CSV_FILE"
-              exit 1
-          fi
-
-          # Start processing commits
-          echo "Starting Git fetch to collect commits between tags $PREV_TAG and $CUR_TAG"
           git fetch --tags
-          
-          # Collect commits and store them in a variable (separate commit hash and message)
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
-          # Log the collected commits
-          echo "Collected commits between $PREV_TAG and $CUR_TAG:"
-          echo "$COMMITS"
+          # Declare an associative array to track duplicates
+          declare -A seen_jiras
+          # Array to preserve Jira ID order
+          ordered_jiras=()
 
-          # Extract Jira issue keys from commits using a more robust regex
+          # Extract Jira IDs in commit order
           while IFS= read -r COMMIT; do
-              # Separate the commit hash and message
               COMMIT_HASH=$(echo "$COMMIT" | cut -d ' ' -f 1)
               COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
-
-              # Debugging: Log each commit before processing
               echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
 
-              # Extract Jira issue key using a more robust pattern
               JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
 
-              # Check if JIRAS is populated
               if [ -n "$JIRAS" ]; then
-                  echo "Found Jira IDs: $JIRAS"
                   for J in $JIRAS; do
-                      echo "$J,,,, " >> "$CSV_FILE"
+                      if [ -z "${seen_jiras[$J]}" ]; then
+                          seen_jiras[$J]=1
+                          ordered_jiras+=("$J")
+                          echo "Found new Jira ID: $J"
+                      else
+                          echo "Skipping duplicate Jira ID: $J"
+                      fi
                   done
               else
                   echo "No Jira IDs found for commit: $COMMIT_MSG"
               fi
           done <<< "$COMMITS"
 
-          # Debugging: Check if the CSV file has been updated after processing commits
-          if [ -f "$CSV_FILE" ]; then
-              echo "CSV file content after commit processing:"
-              cat "$CSV_FILE"
-          else
-              echo "CSV file still not created after processing commits!"
-          fi
+          # Write Jira IDs to CSV in the original commit order
+          for J in "${ordered_jiras[@]}"; do
+              echo "$J,,,, " >> "$CSV_FILE"
+          done
 
           echo "CSV file generated: $CSV_FILE"
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
