@@ -57,13 +57,16 @@ for row in rows:
         # Current FixVersions
         current_fixversions = [v.name for v in getattr(issue.fields, 'fixVersions', [])]
 
-        # Add cur_tag to Jira only if not dry-run
-        if not dry_run and cur_tag not in current_fixversions:
-            issue.update(fields={"fixVersions": current_fixversions + [cur_tag]})
-            current_fixversions.append(cur_tag)
+       # Convert current fixversions to list of objects
+        fix_versions_payload = [{"name": v} for v in current_fixversions]
 
-        # Populate FixVersions column in CSV
-        row['FixVersions'] = ", ".join(current_fixversions)
+        # Add cur_tag if not already present
+        if not dry_run and cur_tag not in current_fixversions:
+            fix_versions_payload.append({"name": cur_tag})
+            issue.update(fields={"fixVersions": fix_versions_payload})
+        
+        # Update CSV column
+        row['FixVersions'] = ", ".join([v['name'] for v in fix_versions_payload])
 
     except Exception as e:
         print(f"Failed to process issue {commit_jira_id}: {e}")
