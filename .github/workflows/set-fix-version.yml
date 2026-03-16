@@ -47,7 +47,7 @@ jobs:
         with:
           repository: 'genesislcap/appdev-workflows'  # Correct repository name
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: 'FahdTazi72-patch-7'  # Specify the branch
+          ref: 'develop'  # Specify the branch
           path: appdev  # This will clone the appdev repo to the 'appdev' folder   
 
       # Set up Python for the job
