@@ -103,9 +103,12 @@ jobs:
               COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
               echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
 
-              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
+              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
 
               if [ -n "$JIRAS" ]; then
+                echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
+                continue
+              fi
                   for J in $JIRAS; do
                       if [ -z "${seen_jiras[$J]}" ]; then
                           seen_jiras[$J]=1
