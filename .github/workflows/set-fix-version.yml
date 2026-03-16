@@ -15,6 +15,10 @@ on:
         description: 'Dry run mode (yes/no)'  # If set to 'yes', no changes are made to Jira
         required: true
         type: string
+      fixversion_prefix:
+        description: 'Optional prefix to prepend to the fix version'
+        required: false
+        type: string
 
     secrets:
       JIRA_URL:
@@ -29,47 +33,41 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GITHUB_REPO: ${{ github.repository }}  # The repository this workflow is running in
-      GITHUB_REF: ${{ github.ref }}  # The Git reference that triggered the workflow
-      GITHUB_RUN_NUMBER: ${{ github.run_number }}  # Unique run number for this workflow
+      GITHUB_REPO: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_RUN_NUMBER: ${{ github.run_number }}
       
-
     steps:
-      # Checkout the repository to get all tags and commits for the workflow
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure that all commits and tags are fetched
+          fetch-depth: 0
           
-      # Checkout the appdev repository (appdev-workflows) and specify the branch
       - name: Checkout appdev repository
         uses: actions/checkout@v4
         with:
-          repository: 'genesislcap/appdev-workflows'  # Correct repository name
+          repository: 'genesislcap/appdev-workflows'
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: 'develop'  # Specify the branch
-          path: appdev  # This will clone the appdev repo to the 'appdev' folder   
+          ref: 'develop'
+          path: appdev
 
-      # Set up Python for the job
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      # Install dependencies required for the script
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests jira pandas
 
-      # Log input parameters to verify values
       - name: Log input parameters
         run: |
           echo "Previous Tag: ${{ inputs.prev_tag }}"
           echo "Current Tag: ${{ inputs.cur_tag }}"
           echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "FixVersion Prefix: ${{ inputs.fixversion_prefix || '' }}"
 
-      # Extract Jira issue keys from commit messages between the previous and current tags
       - name: Extract Jira issues from commits
         id: extract_jiras
         run: |
@@ -79,6 +77,7 @@ jobs:
           PREV_TAG="${{ inputs.prev_tag }}"
           CUR_TAG="${{ inputs.cur_tag }}"
           DRY_RUN="${{ inputs.dry_run }}"
+          PREFIX="${{ inputs.fixversion_prefix || '' }}"
 
           SANITIZED_CUR_TAG=$(echo "$CUR_TAG" | tr '/.' '_')
           SANITIZED_PREV_TAG=$(echo "$PREV_TAG" | tr '/.' '_')
@@ -92,38 +91,30 @@ jobs:
           git fetch --tags
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
-          # Declare an associative array to track duplicates
           declare -A seen_jiras
-          # Array to preserve Jira ID order
           ordered_jiras=()
 
-          # Extract Jira IDs in commit order
           while IFS= read -r COMMIT; do
               COMMIT_HASH=$(echo "$COMMIT" | cut -d ' ' -f 1)
               COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
               echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
 
               JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
-              
-              # If no Jira ID found, log and skip
               if [ -z "$JIRAS" ]; then
                 echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
                 continue
               fi
-                  for J in $JIRAS; do
-                      if [ -z "${seen_jiras[$J]}" ]; then
-                          seen_jiras[$J]=1
-                          ordered_jiras+=("$J")
-                          echo "Found new Jira ID: $J"
-                      else
-                          echo "Skipping duplicate Jira ID: $J"
-                      fi
-                  done
-              
-              
+              for J in $JIRAS; do
+                  if [ -z "${seen_jiras[$J]}" ]; then
+                      seen_jiras[$J]=1
+                      ordered_jiras+=("$J")
+                      echo "Found new Jira ID: $J"
+                  else
+                      echo "Skipping duplicate Jira ID: $J"
+                  fi
+              done
           done <<< "$COMMITS"
 
-          # Write Jira IDs to CSV in the original commit order
           for J in "${ordered_jiras[@]}"; do
               echo "$J,,,, " >> "$CSV_FILE"
           done
@@ -131,18 +122,18 @@ jobs:
           echo "CSV file generated: $CSV_FILE"
           echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
           echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
-      # Debugging: Check if JIRA_URL is set as an environment variable
+          echo "fixversion_prefix=$PREFIX" >> $GITHUB_OUTPUT
+
       - name: Debug JIRA_URL
         run: |
           echo "JIRA_URL is: $JIRA_URL"
           echo "JIRA_API_TOKEN is: $JIRA_API_TOKEN"
           echo "JIRA_USER is: $JIRA_USER"
 
-     # Run Python script to set fix version
       - name: Run Python script to set fix version
         run: |
           echo "Running Python script to set fix version"
-          python ./appdev/scripts/set_fix_version.py  # Running the script from the appdev repo
+          python ./appdev/scripts/set_fix_version.py
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
@@ -150,8 +141,8 @@ jobs:
           CUR_TAG: ${{ inputs.cur_tag }}
           CSV_FILE: ${{ steps.extract_jiras.outputs.csv_file }}
           DRY_RUN: ${{ steps.extract_jiras.outputs.dry_run }}
+          FIXVERSION_PREFIX: ${{ steps.extract_jiras.outputs.fixversion_prefix }}
 
-      # Upload the generated CSV file as an artifact
       - name: Upload Jira CSV artifact
         uses: actions/upload-artifact@v4
         with:
