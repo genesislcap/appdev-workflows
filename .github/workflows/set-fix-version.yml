@@ -106,7 +106,7 @@ jobs:
               JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
               
               # If no Jira ID found, log and skip
-              if [ -n "$JIRAS" ]; then
+              if [ -z "$JIRAS" ]; then
                 echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
                 continue
               fi
