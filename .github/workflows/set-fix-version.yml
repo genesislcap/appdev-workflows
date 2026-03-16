@@ -104,7 +104,8 @@ jobs:
               echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
 
               JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
-
+              
+              # If no Jira ID found, log and skip
               if [ -n "$JIRAS" ]; then
                 echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
                 continue
@@ -118,9 +119,8 @@ jobs:
                           echo "Skipping duplicate Jira ID: $J"
                       fi
                   done
-              else
-                  echo "No Jira IDs found for commit: $COMMIT_MSG"
-              fi
+              
+              
           done <<< "$COMMITS"
 
           # Write Jira IDs to CSV in the original commit order
