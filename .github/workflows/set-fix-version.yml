@@ -88,7 +88,9 @@ jobs:
           mkdir -p "$(dirname "$CSV_FILE")"
           echo "CommitJiraID,NewIssueKey,Project,Summary,Status,FixVersions" > "$CSV_FILE"
 
-          git fetch --tags
+          # actions/checkout may materialize the current ref as the peeled commit for
+          # annotated tags; force-refresh tags so subsequent tag lookups stay consistent.
+          git fetch --force --tags origin
           COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
 
           declare -A seen_jiras
