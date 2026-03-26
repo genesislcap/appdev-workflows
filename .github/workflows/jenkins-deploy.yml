@@ -97,9 +97,10 @@ jobs:
         id: trigger_jenkins_job
         run: |
           set -euo pipefail
+          JENKINS_BASE_URL="https://jenkinsdev.cdservice.genesis.global"
           RESPONSE_HEADERS=$(mktemp)
 
-          curl --fail --silent --show-error -D "$RESPONSE_HEADERS" -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
+          curl --fail --silent --show-error -D "$RESPONSE_HEADERS" -X POST "$JENKINS_BASE_URL/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/${{ inputs.product }}/${{ inputs.environment_level }}/product_${{ inputs.product }}_upgrade" \
             --data-urlencode "client=${{ inputs.client }}" \
             --data-urlencode "environment=${{ inputs.environment }}" \
             --data-urlencode "hosts=${{ inputs.hosts }}" \
@@ -125,6 +126,10 @@ jobs:
             exit 1
           fi
 
+          if [[ "$QUEUE_URL" == /* ]]; then
+            QUEUE_URL="$JENKINS_BASE_URL$QUEUE_URL"
+          fi
+
           echo "queue_url=$QUEUE_URL" >> "$GITHUB_OUTPUT"
 
       - name: Install jq
@@ -135,6 +140,7 @@ jobs:
         if: ${{ inputs.testautomation_build }}
         run: |
           set -euo pipefail
+          JENKINS_BASE_URL="https://jenkinsdev.cdservice.genesis.global"
 
           if [ -z "${{ secrets.JENKINS_TOKEN }}" ]; then
             echo "JENKINS_TOKEN is required when testautomation_build is true."
@@ -159,6 +165,9 @@ jobs:
             fi
 
             if [ -n "$BUILD_URL" ]; then
+              if [[ "$BUILD_URL" == /* ]]; then
+                BUILD_URL="$JENKINS_BASE_URL$BUILD_URL"
+              fi
               echo "Resolved Jenkins build URL: $BUILD_URL"
               break
             fi
