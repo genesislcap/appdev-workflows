@@ -48,18 +48,36 @@ jobs:
           echo "genesis_user: ${{ inputs.genesis_user }}"
           echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
           echo "app_user: ${{ inputs.app_user }}"
-          echo "token: ${{ secrets.JENKINS_TOKEN }}"
 
       - name: Trigger Jenkins Job
+        id: trigger_jenkins_job
         run: |
-          curl -X POST "https://jenkinsdev.cdservice.genesis.global/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
-            --data-urlencode "host_name=${{ inputs.HOSTNAME }}" \
+          set -euo pipefail
+          JENKINS_BASE_URL="https://jenkinsdev.cdservice.genesis.global"
+          RESPONSE_HEADERS=$(mktemp)
+
+          curl --fail --silent --show-error -D "$RESPONSE_HEADERS" -X POST "$JENKINS_BASE_URL/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
+            --data-urlencode "host_name=${{ inputs.hostname }}" \
             --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
             --data-urlencode "extra_variables=" \
             --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}" \
             --data-urlencode "app_user=${{ inputs.app_user }}"
+
+          QUEUE_URL=$(awk 'BEGIN { IGNORECASE = 1 } /^Location:/ { print $2 }' "$RESPONSE_HEADERS" | tr -d '\r')
+          rm -f "$RESPONSE_HEADERS"
+
+          if [ -z "$QUEUE_URL" ]; then
+            echo "Failed to capture Jenkins queue URL from trigger response."
+            exit 1
+          fi
+
+          if [[ "$QUEUE_URL" == /* ]]; then
+            QUEUE_URL="$JENKINS_BASE_URL$QUEUE_URL"
+          fi
+
+          echo "queue_url=$QUEUE_URL" >> "$GITHUB_OUTPUT"
 
 
       - name: Install jq
@@ -69,12 +87,65 @@ jobs:
       - name: Poll Jenkins for Job Status
         if: ${{ inputs.testautomation_build }}
         run: |
-          JOB_STATUS=""
-          JOB_URL="https://jenkinsdev.cdservice.genesis.global/job/AppDev-CI_CD/job/PLT_QA_Automation/job/DB_Refresh_ExistingInstance/lastBuild/api/json"
+          set -euo pipefail
+          JENKINS_BASE_URL="https://jenkinsdev.cdservice.genesis.global"
 
-          while [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; do
-            RESPONSE=$(curl -s -u "jenkinsdeployuser:${{ secrets.JENKINS_TOKEN }}" "$JOB_URL")
-            JOB_STATUS=$(echo "$RESPONSE" | jq -r .result)
+          if [ -z "${{ secrets.JENKINS_TOKEN }}" ]; then
+            echo "JENKINS_TOKEN is required when testautomation_build is true."
+            exit 1
+          fi
+
+          QUEUE_URL="${{ steps.trigger_jenkins_job.outputs.queue_url }}"
+          QUEUE_API_URL="${QUEUE_URL%/}/api/json"
+          MAX_QUEUE_ATTEMPTS=60
+          MAX_BUILD_ATTEMPTS=180
+          ATTEMPT=0
+          BUILD_URL=""
+
+          while [ "$ATTEMPT" -lt "$MAX_QUEUE_ATTEMPTS" ]; do
+            RESPONSE=$(curl --fail --silent --show-error -u "jenkinsdeployuser:${{ secrets.JENKINS_TOKEN }}" "$QUEUE_API_URL")
+            CANCELLED=$(echo "$RESPONSE" | jq -r '.cancelled // false')
+            BUILD_URL=$(echo "$RESPONSE" | jq -r '.executable.url // empty')
+
+            if [ "$CANCELLED" == "true" ]; then
+              echo "Jenkins queue item was cancelled before starting."
+              exit 1
+            fi
+
+            if [ -n "$BUILD_URL" ]; then
+              if [[ "$BUILD_URL" == /* ]]; then
+                BUILD_URL="$JENKINS_BASE_URL$BUILD_URL"
+              fi
+              echo "Resolved Jenkins build URL: $BUILD_URL"
+              break
+            fi
+
+            WHY=$(echo "$RESPONSE" | jq -r '.why // "Waiting for executor"')
+            echo "Job is still queued: $WHY"
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 5
+          done
+
+          if [ -z "$BUILD_URL" ]; then
+            echo "Timed out waiting for Jenkins to assign a build number."
+            exit 1
+          fi
+
+          ATTEMPT=0
+          BUILD_API_URL="${BUILD_URL%/}/api/json"
+
+          while [ "$ATTEMPT" -lt "$MAX_BUILD_ATTEMPTS" ]; do
+            RESPONSE=$(curl --fail --silent --show-error -u "jenkinsdeployuser:${{ secrets.JENKINS_TOKEN }}" "$BUILD_API_URL")
+            BUILDING=$(echo "$RESPONSE" | jq -r '.building // false')
+            JOB_STATUS=$(echo "$RESPONSE" | jq -r '.result // empty')
+
+            if [ "$BUILDING" == "true" ] || [ -z "$JOB_STATUS" ]; then
+              echo "Jenkins build is still running..."
+              ATTEMPT=$((ATTEMPT + 1))
+              sleep 10
+              continue
+            fi
+
             echo "Current status: $JOB_STATUS"
 
             if [ "$JOB_STATUS" == "SUCCESS" ]; then
@@ -86,8 +157,11 @@ jobs:
             elif [ "$JOB_STATUS" == "ABORTED" ]; then
               echo "Jenkins job was aborted."
               exit 2
-            elif [ -z "$JOB_STATUS" ] || [ "$JOB_STATUS" == "null" ]; then
-              echo "Job is still running..."
-              sleep 10
+            else
+              echo "Unexpected Jenkins job status: $JOB_STATUS"
+              exit 1
             fi
           done
+
+          echo "Timed out waiting for Jenkins job to complete."
+          exit 1
