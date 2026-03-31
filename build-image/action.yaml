@@ -39,6 +39,11 @@ inputs:
     required: false
     default: true
     type: boolean
+  image-platform:
+    description: "Target platform (linux/amd64 or linux/arm64)"
+    required: talse
+    type: string
+    default: linux/amd64
 
 runs:
   using: "composite"
@@ -141,7 +146,14 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
+        ./gradlew buildImage \
+          -Pversion=${{ inputs.version }} \
+          --no-configuration-cache \
+          --no-build-cache \
+          --stacktrace \
+          --imagePlatform=${{ inputs.image-platform }} \
+          -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
+          -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}"
 
     - name: Push Image using bash
       if: inputs.push-image == 'true'
