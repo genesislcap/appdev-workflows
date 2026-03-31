@@ -281,19 +281,19 @@ jobs:
       run: |
         apt update
         apt install -y git
-    - name: Get Allure history
-      if: always()
-      uses: actions/checkout@v3
-      continue-on-error: true
-      with:
-        ref: gh-pages
-        path: gh-pages
+    # - name: Get Allure history
+    #   if: always()
+    #   uses: actions/checkout@v3
+    #   continue-on-error: true
+    #   with:
+    #     ref: gh-pages
+    #     path: gh-pages
     - name: Generate Allure report
       uses: simple-elf/allure-report-action@master
       if: always()
       id: allure-report
       with:
-        gh_pages: gh-pages
+        # gh_pages: gh-pages
         allure_results: ${{ inputs.test-root-path }}/build/allure-results
         allure_history: allure-history
         subfolder: ${{ inputs.profile }}
@@ -312,7 +312,7 @@ jobs:
         github_token: ${{ secrets.PAGES_TOKEN }}
         publish_dir: allure-history/${{ inputs.profile }}
         destination_dir: ${{ inputs.profile }}              # <= deploy under /<client>/
-        keep_files: true                                    # <= do not delete other clients
+        keep_files: false                                    # <= do not delete other clients
         enable_jekyll: false 
         
 #    - name: Notify failure on Slack
