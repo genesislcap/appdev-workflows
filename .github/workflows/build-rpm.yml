@@ -47,6 +47,11 @@ on:
         required: false
         default: true
         type: boolean
+      include-xray-report:
+        required: false
+        type: boolean
+        default: false
+        description: Include JFrog Xray report in the packaged distribution
 
     secrets:
       JFROG_USERNAME:
