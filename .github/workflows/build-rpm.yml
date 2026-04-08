@@ -169,7 +169,7 @@ jobs:
         if: inputs.include-xray-report
         run: |
           mkdir -p rpm/extra-content
-          cp rpm/extra-report/* rpm/extra-content/
+          cp rpm/extra-report/* rpm/extra-content/jfrog-scan-table.txt
           
       - name: Build RPM
         working-directory: rpm
@@ -191,9 +191,17 @@ jobs:
           cd ~/rpmbuild/SOURCES/
 
           if [ "${{ inputs.build_server }}" == "false" ]; then
-            rpmbuild -bb --define "web_only 1" product.spec
+            if [ "${{ inputs.include-xray-report }}" == "true" ]; then
+              rpmbuild -bb --define "web_only 1" --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb --define "web_only 1" product.spec
+            fi
           else
-            rpmbuild -bb product.spec
+            if [ "${{ inputs.include-xray-report }}" == "true" ]; then
+              rpmbuild -bb --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb product.spec
+            fi
           fi
 
       - name: Upload RPMs to S3
