@@ -206,6 +206,14 @@ jobs:
           cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-full.json
           ls -al rpm/extra-content
           
+      - name: Debug report staging
+        if: inputs.include-xray-report
+        run: |
+          echo "=== extra-report ==="
+          find rpm/extra-report -maxdepth 5 -type f | sort || true
+          echo "=== extra-content ==="
+          find rpm/extra-content -maxdepth 5 -type f | sort || true
+      
       - name: Build RPM
         working-directory: rpm
         run: |
