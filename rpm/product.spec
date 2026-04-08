@@ -10,6 +10,7 @@ URL:            https://genesis.global/
 %{!?web_only:Source0:        server-%{version}.tar.gz}
 %{!?web_only:Source1:        web-%{version}.tar.gz}
 %{?web_only:Source0:        web-%{version}.tar.gz}
+%{?include_xray_report:Source2:        jfrog-scan-table.txt}
 
 Requires:       %{name} = %{version}
 Requires:       /bin/sh
@@ -18,10 +19,12 @@ Requires:       rpmlib(FileDigests) <= 4.6.0-1
 Requires:       rpmlib(PayloadFilesHavePrefix) <= 4.0-1
 
 %description
+
 %files
 %dir %attr(1777, root, root) "/tmp"
 %{!?web_only:%attr(1777, root, root) "/tmp/server-%{version}.tar.gz"}
 %attr(1777, root, root) "/tmp/web-%{version}.tar.gz"
+%{?include_xray_report:%attr(1777, root, root) "/tmp/jfrog-scan-table.txt"}
 
 %install
 cd $HOME
@@ -32,6 +35,7 @@ mkdir rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp
 ls -al rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64
 %{!?web_only:cp rpmbuild/SOURCES/server-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/}
 cp rpmbuild/SOURCES/web-%{version}.tar.gz rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
+%{?include_xray_report:cp rpmbuild/SOURCES/jfrog-scan-table.txt rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/}
 cd rpmbuild/BUILDROOT/%{name}-%{version}-1.amzn2023.x86_64/tmp/
 ls
 pwd
