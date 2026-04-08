@@ -158,7 +158,7 @@ jobs:
           tar xf web-$VERSION.tar.gz
           mv *.tar.gz ../
           
-      - name: Download JFrog scan report
+      - name: Download summary JFrog scan report
         if: inputs.include-xray-report
         uses: actions/download-artifact@v4
         with:
@@ -166,7 +166,7 @@ jobs:
           path: rpm/extra-report
           merge-multiple: true
 
-      - name: Copy scan report into package
+      - name: Copy summary scan report into package
         if: inputs.include-xray-report
         shell: bash
         run: |
@@ -180,6 +180,30 @@ jobs:
           fi
 
           cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-table.txt
+          ls -al rpm/extra-content
+
+      - name: Download full JFrog scan report
+        if: inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-full-report--*-${{ github.run_number }}
+          path: rpm/full-report
+          merge-multiple: true
+
+      - name: Copy full scan report into package
+        if: inputs.include-xray-report
+        shell: bash
+        run: |
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/full-report -type f -name '*.json' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No full JFrog scan json file found"
+            find rpm/full-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-full.json
           ls -al rpm/extra-content
           
       - name: Build RPM
