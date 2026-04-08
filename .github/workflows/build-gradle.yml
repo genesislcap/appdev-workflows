@@ -117,7 +117,7 @@ on:
         description: "The location of the App Module"
         required: false
         default: false
-        type: boolean
+        type: string
 
     secrets:
       GRADLE_PROPERTIES:
