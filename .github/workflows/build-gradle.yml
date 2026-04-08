@@ -108,12 +108,6 @@ on:
         required: false
         default: true
         type: boolean
-      include-xray-report:
-        required: false
-        type: boolean
-        default: false
-        description: Run JFrog Xray scan and publish report
-
 
     secrets:
       GRADLE_PROPERTIES:
@@ -247,7 +241,6 @@ jobs:
           jfrog-password: ${{ secrets.JFROG_PASSWORD }}
           working-directory: ${{ inputs.working-directory }}
           server-path: ${{ inputs.server-path }}
-          include-xray-report: ${{ inputs.include-xray-report }}
 
       - name: Install Sast CLI
         if: inputs.sast
