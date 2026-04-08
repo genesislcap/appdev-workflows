@@ -157,7 +157,20 @@ jobs:
           echo "Unzipping tar as a test"
           tar xf web-$VERSION.tar.gz
           mv *.tar.gz ../
+          
+      - name: Download JFrog scan report
+        if: inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          name: xray-dependencies-scan--${{ inputs.product_name }}-${{ github.run_number }}
+          path: rpm/extra-report
 
+      - name: Copy scan report into package
+        if: inputs.include-xray-report
+        run: |
+          mkdir -p rpm/extra-content
+          cp rpm/extra-report/* rpm/extra-content/
+          
       - name: Build RPM
         working-directory: rpm
         run: |
@@ -169,6 +182,11 @@ jobs:
           sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
+
+          if [ "${{ inputs.include-xray-report }}" == "true" ] && [ -d extra-content ]; then
+            cp extra-content/* ~/rpmbuild/SOURCES/
+          fi
+
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
 
