@@ -162,14 +162,25 @@ jobs:
         if: inputs.include-xray-report
         uses: actions/download-artifact@v4
         with:
-          name: xray-dependencies-scan--${{ inputs.product_name }}-${{ github.run_number }}
+          pattern: xray-dependencies-scan--*-${{ github.run_number }}
           path: rpm/extra-report
+          merge-multiple: true
 
       - name: Copy scan report into package
         if: inputs.include-xray-report
+        shell: bash
         run: |
           mkdir -p rpm/extra-content
-          cp rpm/extra-report/* rpm/extra-content/jfrog-scan-table.txt
+          REPORT_FILE=$(find rpm/extra-report -type f -name '*.txt' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No JFrog scan report txt file found"
+            find rpm/extra-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-table.txt
+          ls -al rpm/extra-content
           
       - name: Build RPM
         working-directory: rpm
