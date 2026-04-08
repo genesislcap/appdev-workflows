@@ -226,9 +226,14 @@ jobs:
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
 
-          if [ "${{ inputs.include-xray-report }}" == "true" ] && [ -d extra-content ]; then
+          if [ "${{ inputs.include-xray-report }}" == "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
             cp extra-content/* ~/rpmbuild/SOURCES/
           fi
+
+          echo "=== local rpm dir ==="
+          find . -maxdepth 3 -type f | sort || true
+          echo "=== rpmbuild sources before spec ==="
+          find ~/rpmbuild/SOURCES -maxdepth 2 -type f | sort || true
 
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
