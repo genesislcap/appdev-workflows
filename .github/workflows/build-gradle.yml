@@ -234,7 +234,7 @@ jobs:
           cache-disabled: ${{ inputs.disable-cache }}
 
       - name: Scan artifact
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@pk/DCD-4457
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
