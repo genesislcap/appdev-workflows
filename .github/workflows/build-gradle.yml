@@ -109,7 +109,6 @@ on:
         default: true
         type: boolean
 
-
     secrets:
       GRADLE_PROPERTIES:
         required: true
@@ -242,6 +241,7 @@ jobs:
           jfrog-password: ${{ secrets.JFROG_PASSWORD }}
           working-directory: ${{ inputs.working-directory }}
           server-path: ${{ inputs.server-path }}
+          app-name: ${{ inputs.product_name }}
 
       - name: Install Sast CLI
         if: inputs.sast

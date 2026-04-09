@@ -99,3 +99,22 @@ runs:
       with:
         name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}
         path: ${{ steps.table_report.outputs.table_report_file }}
+
+    - name: Generate full JFrog scan report
+      if: steps.check_task.outputs.appDistZip == 'true'
+      id: full_report
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        REPORT_FILE="jfrog-scan-full.json"
+
+        jf s --licenses --vuln --format=json */build/dist/*.zip > "$REPORT_FILE"
+
+        mv "$REPORT_FILE" "$GITHUB_WORKSPACE/"
+        echo "full_report_file=$GITHUB_WORKSPACE/$REPORT_FILE" >> $GITHUB_OUTPUT
+
+    - name: Upload full JFrog scan report
+      uses: actions/upload-artifact@v4
+      with:
+        name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
+        path: ${{ steps.full_report.outputs.full_report_file }}
