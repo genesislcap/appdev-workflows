@@ -114,6 +114,7 @@ runs:
         echo "full_report_file=$GITHUB_WORKSPACE/$REPORT_FILE" >> $GITHUB_OUTPUT
 
     - name: Upload full JFrog scan report
+      if: steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
