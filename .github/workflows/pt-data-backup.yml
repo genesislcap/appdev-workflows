@@ -28,6 +28,11 @@ on:
         required: true
         default: 'genesis'
         type: string
+      product:
+        description: 'Product Name'
+        required: true
+        default: ''
+        type: string
       s3_bucket:
         description: 'S3 Bucket Name'
         required: false
@@ -82,7 +87,7 @@ jobs:
       - name: Check if Backup File Exists in S3
         id: check_s3
         run: |
-          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
           echo "Checking if file exists in S3: $S3_PATH"
 
           if aws s3 ls "$S3_PATH" >/dev/null 2>&1; then
@@ -97,8 +102,8 @@ jobs:
         if: env.EXISTS == 'true'
         run: |
           TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
-          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
-          S3_BACKUP_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}_${TIMESTAMP}.sql"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+          S3_BACKUP_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/${{ inputs.db_schema }}_${TIMESTAMP}.sql"
 
           echo "Renaming existing backup: $S3_PATH -> $S3_BACKUP_PATH"
           aws s3 mv "$S3_PATH" "$S3_BACKUP_PATH"
@@ -106,7 +111,7 @@ jobs:
       - name: Upload New Backup to S3
         run: |
           BACKUP_FILE="$PWD/backup/${{ inputs.db_schema }}.sql"
-          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/${{ inputs.db_schema }}.sql"
 
           echo "Uploading new backup: $BACKUP_FILE -> $S3_PATH"
           aws s3 cp "$BACKUP_FILE" "$S3_PATH"
