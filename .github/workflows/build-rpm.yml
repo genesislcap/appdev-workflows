@@ -47,6 +47,11 @@ on:
         required: false
         default: true
         type: boolean
+      include-xray-report:
+        required: false
+        type: boolean
+        default: false
+        description: Include JFrog Xray report in the packaged distribution
 
     secrets:
       JFROG_USERNAME:
@@ -152,7 +157,63 @@ jobs:
           echo "Unzipping tar as a test"
           tar xf web-$VERSION.tar.gz
           mv *.tar.gz ../
+          
+      - name: Download summary JFrog scan report
+        if: inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-dependencies-scan--*-${{ github.run_number }}
+          path: rpm/extra-report
+          merge-multiple: true
 
+      - name: Copy summary scan report into package
+        if: inputs.include-xray-report
+        shell: bash
+        run: |
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/extra-report -type f -name '*.txt' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No JFrog scan report txt file found"
+            find rpm/extra-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-table.txt
+          ls -al rpm/extra-content
+
+      - name: Download full JFrog scan report
+        if: inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-full-report--*-${{ github.run_number }}
+          path: rpm/full-report
+          merge-multiple: true
+
+      - name: Copy full scan report into package
+        if: inputs.include-xray-report
+        shell: bash
+        run: |
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/full-report -type f -name '*.json' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No full JFrog scan json file found"
+            find rpm/full-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-full.json
+          ls -al rpm/extra-content
+          
+      - name: Debug report staging
+        if: inputs.include-xray-report
+        run: |
+          echo "=== extra-report ==="
+          find rpm/extra-report -maxdepth 5 -type f | sort || true
+          echo "=== extra-content ==="
+          find rpm/extra-content -maxdepth 5 -type f | sort || true
+      
       - name: Build RPM
         working-directory: rpm
         run: |
@@ -164,13 +225,31 @@ jobs:
           sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
+
+          if [ "${{ inputs.include-xray-report }}" == "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
+            cp extra-content/* ~/rpmbuild/SOURCES/
+          fi
+
+          echo "=== local rpm dir ==="
+          find . -maxdepth 3 -type f | sort || true
+          echo "=== rpmbuild sources before spec ==="
+          find ~/rpmbuild/SOURCES -maxdepth 2 -type f | sort || true
+
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
 
           if [ "${{ inputs.build_server }}" == "false" ]; then
-            rpmbuild -bb --define "web_only 1" product.spec
+            if [ "${{ inputs.include-xray-report }}" == "true" ]; then
+              rpmbuild -bb --define "web_only 1" --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb --define "web_only 1" product.spec
+            fi
           else
-            rpmbuild -bb product.spec
+            if [ "${{ inputs.include-xray-report }}" == "true" ]; then
+              rpmbuild -bb --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb product.spec
+            fi
           fi
 
       - name: Upload RPMs to S3

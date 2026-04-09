@@ -1,0 +1,152 @@
+name: Jira Fix Version Automation
+
+on:
+  workflow_call:
+    inputs:
+      prev_tag:
+        description: 'Previous release tag'
+        required: true
+        type: string
+      cur_tag:
+        description: 'Current release tag'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run mode (yes/no)'  # If set to 'yes', no changes are made to Jira
+        required: true
+        type: string
+      fixversion_prefix:
+        description: 'Optional prefix to prepend to the fix version'
+        required: false
+        type: string
+
+    secrets:
+      JIRA_URL:
+        required: true
+      JIRA_API_TOKEN:
+        required: true
+      JIRA_USER:
+        required: true
+
+jobs:
+  jira-fixversion:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_REPO: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Checkout appdev repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'genesislcap/appdev-workflows'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: 'develop'
+          path: appdev
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests jira pandas
+
+      - name: Log input parameters
+        run: |
+          echo "Previous Tag: ${{ inputs.prev_tag }}"
+          echo "Current Tag: ${{ inputs.cur_tag }}"
+          echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "FixVersion Prefix: ${{ inputs.fixversion_prefix || '' }}"
+
+      - name: Extract Jira issues from commits
+        id: extract_jiras
+        run: |
+          set -x
+          set -e
+
+          PREV_TAG="${{ inputs.prev_tag }}"
+          CUR_TAG="${{ inputs.cur_tag }}"
+          DRY_RUN="${{ inputs.dry_run }}"
+          PREFIX="${{ inputs.fixversion_prefix || '' }}"
+
+          SANITIZED_CUR_TAG=$(echo "$CUR_TAG" | tr '/.' '_')
+          SANITIZED_PREV_TAG=$(echo "$PREV_TAG" | tr '/.' '_')
+
+          CSV_FILE="${GITHUB_WORKSPACE}/tag_${SANITIZED_CUR_TAG}-${SANITIZED_PREV_TAG}-jira-${GITHUB_RUN_NUMBER}.csv"
+
+          echo "The CSV file will be created at: $CSV_FILE"
+          mkdir -p "$(dirname "$CSV_FILE")"
+          echo "CommitJiraID,NewIssueKey,Project,Summary,Status,FixVersions" > "$CSV_FILE"
+
+          # actions/checkout may materialize the current ref as the peeled commit for
+          # annotated tags; force-refresh tags so subsequent tag lookups stay consistent.
+          git fetch --force --tags origin
+          COMMITS=$(git log $PREV_TAG..$CUR_TAG --pretty=format:"%H %s")
+
+          declare -A seen_jiras
+          ordered_jiras=()
+
+          while IFS= read -r COMMIT; do
+              COMMIT_HASH=$(echo "$COMMIT" | cut -d ' ' -f 1)
+              COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
+              echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
+
+              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
+              if [ -z "$JIRAS" ]; then
+                echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
+                continue
+              fi
+              for J in $JIRAS; do
+                  if [ -z "${seen_jiras[$J]}" ]; then
+                      seen_jiras[$J]=1
+                      ordered_jiras+=("$J")
+                      echo "Found new Jira ID: $J"
+                  else
+                      echo "Skipping duplicate Jira ID: $J"
+                  fi
+              done
+          done <<< "$COMMITS"
+
+          for J in "${ordered_jiras[@]}"; do
+              echo "$J,,,, " >> "$CSV_FILE"
+          done
+
+          echo "CSV file generated: $CSV_FILE"
+          echo "csv_file=$CSV_FILE" >> $GITHUB_OUTPUT
+          echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
+          echo "fixversion_prefix=$PREFIX" >> $GITHUB_OUTPUT
+
+      - name: Debug JIRA_URL
+        run: |
+          echo "JIRA_URL is: $JIRA_URL"
+          echo "JIRA_API_TOKEN is: $JIRA_API_TOKEN"
+          echo "JIRA_USER is: $JIRA_USER"
+
+      - name: Run Python script to set fix version
+        run: |
+          echo "Running Python script to set fix version"
+          python ./appdev/scripts/set_fix_version.py
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          CUR_TAG: ${{ inputs.cur_tag }}
+          CSV_FILE: ${{ steps.extract_jiras.outputs.csv_file }}
+          DRY_RUN: ${{ steps.extract_jiras.outputs.dry_run }}
+          FIXVERSION_PREFIX: ${{ steps.extract_jiras.outputs.fixversion_prefix }}
+
+      - name: Upload Jira CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tag_${{ inputs.cur_tag }}-${{ inputs.prev_tag }}-jira-${{ github.run_number }}
+          path: ${{ steps.extract_jiras.outputs.csv_file }}
