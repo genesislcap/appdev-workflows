@@ -30,6 +30,11 @@ on:
         required: true
         default: 'genesis'
         type: string
+      product:
+        description: 'Product Name'
+        required: true
+        default: ''
+        type: string
       s3_bucket:
         description: 'S3 Bucket Name'
         required: true
@@ -73,7 +78,7 @@ jobs:
       - name: Download Backup File from S3
         run: |
           BACKUP_FILE="${{ inputs.db_schema }}.sql"
-          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/$BACKUP_FILE"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/$BACKUP_FILE"
 
 
           echo "Downloading backup from $S3_PATH..."
@@ -115,7 +120,7 @@ jobs:
         if: inputs.istam
         run: |
           BACKUP_FILE="${{ inputs.db_schema }}.dump"
-          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.db_schema }}/${{ inputs.client_name }}/$BACKUP_FILE"
+          S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/$BACKUP_FILE"
 
           echo "Downloading .dump file from $S3_PATH..."
           aws s3 cp "$S3_PATH" "$PWD/backup/$BACKUP_FILE"
