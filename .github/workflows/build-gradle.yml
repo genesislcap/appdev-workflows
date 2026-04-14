@@ -288,8 +288,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Server Build
-        if: ${{ inputs.prbuild  }}
-        if: ${{ !inputs.skip-tests }}
+        if: ${{ inputs.prbuild  }}        
         run: |
           ./gradlew build \
             --build-cache \
