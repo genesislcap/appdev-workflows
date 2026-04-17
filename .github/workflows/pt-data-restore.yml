@@ -54,7 +54,7 @@ on:
 jobs:
   restore-db-schema:
     runs-on: appdev-small
-    environment: master
+    # environment: master
 
     steps:
       - name: Checkout Repository
