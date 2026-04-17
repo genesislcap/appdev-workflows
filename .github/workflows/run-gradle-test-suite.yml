@@ -184,9 +184,19 @@ jobs:
     - name: Install k6
       if: inputs.ptautomation_build
       run: |
-        curl -LO https://github.com/grafana/k6/releases/download/v1.0.0/k6-v1.0.0-linux-amd64.deb
-        apt-get update
-        apt-get install -y ./k6-v1.0.0-linux-amd64.deb
+        if command -v k6 >/dev/null 2>&1; then
+          echo "k6 is already installed"
+        elif command -v apt-get >/dev/null 2>&1; then
+          curl -LO https://github.com/grafana/k6/releases/download/v1.0.0/k6-v1.0.0-linux-amd64.deb
+          apt-get update
+          apt-get install -y ./k6-v1.0.0-linux-amd64.deb
+        elif command -v dnf >/dev/null 2>&1; then
+          curl -LO https://github.com/grafana/k6/releases/download/v0.51.0/k6-v0.51.0-linux-amd64.rpm
+          sudo dnf install -y --nogpgcheck ./k6-v0.51.0-linux-amd64.rpm
+        else
+          echo "::error::No supported package manager found to install k6"
+          exit 1
+        fi
 
     - name: Set defaultEnv value in config.properties
       if: inputs.defaultEnv
@@ -237,19 +247,6 @@ jobs:
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
 
-    - name: Run tests
-      if: ${{ inputs.cucumberTags == 'novalue' }}
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: >
-          build
-          -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }}
-          -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }}
-          -PuseDevRepo=true
-          --console=plain
-          --info
-        build-root-directory: "${{ inputs.test-root-path }}"
-
     - name: update CucumberRunner.java
       if: ${{ inputs.cucumberTags != 'novalue' }}
       working-directory: "${{ inputs.test-root-path }}/src/test/java/support/runner/"
@@ -259,7 +256,6 @@ jobs:
         cat CucumberRunner.java
 
     - name: Run tests
-      if: ${{ inputs.cucumberTags != 'novalue' }}
       uses: gradle/gradle-build-action@v2
       with:
         arguments: >
@@ -267,7 +263,7 @@ jobs:
           -PgenesisArtifactoryUser=${{ env.genesisArtifactoryUser }}
           -PgenesisArtifactoryPassword=${{ env.genesisArtifactoryPassword }}
           -PuseDevRepo=true
-          -PcucumberTags=${{ inputs.cucumberTags }}
+          ${{ inputs.cucumberTags != 'novalue' && format('-PcucumberTags={0}', inputs.cucumberTags) || '' }}
           --console=plain
           --info
         build-root-directory: "${{ inputs.test-root-path }}"
@@ -283,8 +279,19 @@ jobs:
       if: always()
       shell: bash
       run: |
-        apt update
-        apt install -y git
+        if command -v git >/dev/null 2>&1; then
+          echo "git is already installed"
+        elif command -v apt-get >/dev/null 2>&1; then
+          apt-get update
+          apt-get install -y git
+        elif command -v dnf >/dev/null 2>&1; then
+          sudo dnf install -y git
+        elif command -v yum >/dev/null 2>&1; then
+          sudo yum install -y git
+        else
+          echo "::error::No supported package manager found to install git"
+          exit 1
+        fi
     # - name: Get Allure history
     #   if: always()
     #   uses: actions/checkout@v3
