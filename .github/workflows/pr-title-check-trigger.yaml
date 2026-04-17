@@ -1,0 +1,16 @@
+name:  Ω PR - Title check
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check:
+    uses: genesislcap/appdev-workflows/.github/workflows/pr-title-check.yaml@develop
