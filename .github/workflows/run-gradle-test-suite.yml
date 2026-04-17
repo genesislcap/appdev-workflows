@@ -27,6 +27,10 @@ on:
         required: false
         type: string
         default: chrome-headless
+      use_playwright_container:
+        required: false
+        type: boolean
+        default: true
       branch:
         required: false
         type: string
@@ -109,8 +113,8 @@ jobs:
     # runs-on: [ appdev-selfhosted-al2023 ]
     runs-on: appdev-selfhosted-al2023
    
-    container:
-      image: mcr.microsoft.com/playwright/java:v1.35.1-jammy
+    # When enabled, the job runs inside the Playwright Java image, which is what triggers the image pull.
+    container: ${{ inputs.use_playwright_container && 'mcr.microsoft.com/playwright/java:v1.35.1-jammy' || null }}
     env:
       AI_ENABLED: ${{ inputs.aiEnabled }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
