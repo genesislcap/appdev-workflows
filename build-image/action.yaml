@@ -47,6 +47,10 @@ inputs:
     required: false
     type: boolean
     default: false
+  jfrogscan:
+        required: false
+        default: true
+        type: boolean
 
 runs:
   using: "composite"
@@ -126,6 +130,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Scan artifact
+      if: inputs.jfrogscan
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
       with:
         version: ${{ inputs.version }}

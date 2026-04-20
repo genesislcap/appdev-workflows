@@ -283,23 +283,6 @@ jobs:
         run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
-      # - name: Setup Gradle
-      #   if: ${{ inputs.prbuild  }}
-      #   uses: gradle/actions/setup-gradle@v3
-
-      # - name: Server PR Build
-      #   if: ${{ inputs.prbuild  }}        
-      #   run: |
-      #     ./gradlew build \
-      #       --build-cache \
-      #       --configuration-cache \
-      #       --parallel \
-      #       --stacktrace \
-      #       -PpushToCache=${{ inputs.push-to-artifactory-cache }} \
-      #       -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} \
-      #       ${{ inputs.server-build-gradle-arguments }}
-      #   working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-
       - name: Server Assemble
         if: inputs.skip-tests
         run: |
