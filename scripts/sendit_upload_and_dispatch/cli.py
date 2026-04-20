@@ -126,6 +126,24 @@ def upload_files(
     return keys
 
 
+def _session_payload_credentials(session: boto3.Session, fallback_region: str) -> dict[str, str]:
+    creds = session.get_credentials()
+    if creds is None:
+        eprint("Unable to resolve AWS credentials from the active session for payload forwarding.")
+        sys.exit(1)
+    frozen = creds.get_frozen_credentials()
+    if not frozen.access_key or not frozen.secret_key:
+        eprint("Active AWS session credentials are incomplete; cannot build dispatch payload credentials.")
+        sys.exit(1)
+
+    payload_creds: dict[str, str] = {
+        "aws_access_key_id": frozen.access_key,
+        "aws_secret_access_key": frozen.secret_key,
+        "aws_region": session.region_name or fallback_region,
+    }
+    return payload_creds
+
+
 @dataclass(frozen=True)
 class GithubAppCredentials:
     app_id: str
@@ -570,6 +588,7 @@ def main() -> None:
         "environment": args.environment,
         "uploaded_keys": keys,
     }
+    client_payload.update(_session_payload_credentials(session, region))
     print(f"Dispatching {EVENT_TYPE} correlation_id={correlation_id}")
     dispatch_started = datetime.now(timezone.utc)
     dispatch_repository_event(

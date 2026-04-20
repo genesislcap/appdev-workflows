@@ -62,7 +62,7 @@ Output binary will be created in `dist/`.
 | `GITHUB_API_URL` | No | Default `https://api.github.com` (set for GitHub Enterprise Server) |
 | `GITHUB_API_VERSION` | No | Default `2022-11-28` (GitHub `X-GitHub-Api-Version` header) |
 
-Do **not** put AWS keys in the `client_payload`; the Actions workflow uses repository **secrets** (below).
+The CLI forwards AWS credentials and region in `client_payload` for the repository-dispatch workflow execution path.
 
 ## GitHub authentication (AWS Secrets Manager)
 
@@ -122,7 +122,7 @@ Rotation is an AWS Secrets Manager change:
 
 ## GitHub repository configuration (`genesislcap/appdev-workflows`)
 
-Create these **Actions secrets** (used by the workflow when calling the SendIt composite):
+Create these **Actions secrets** (used by the workflow when calling the SendIt composite directly, outside the repository-dispatch payload path):
 
 | Secret | Purpose |
 |--------|---------|
@@ -163,6 +163,9 @@ Options:
   - `app_name` (string) — must match bucket tag `AppName`.
   - `environment` (string) — must match bucket tag `EnvironmentName`.
   - `uploaded_keys` (array of strings) — S3 keys under `sendit/` (informational).
+  - `aws_access_key_id` (string) — AWS access key used by the workflow.
+  - `aws_secret_access_key` (string) — AWS secret key used by the workflow.
+  - `aws_region` (string) — AWS region used by the workflow.
 
 The HTTP response to `POST .../dispatches` is **204** when the event is accepted; it does not wait for SendIt/SSM. Use default wait behavior or check the run in the Actions UI.
 
