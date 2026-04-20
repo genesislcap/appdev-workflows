@@ -57,11 +57,68 @@ Output binary will be created in `dist/`.
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Yes (for upload path) | Base credentials used to call STS assume-role |
 | `AWS_REGION` or `AWS_DEFAULT_REGION` | Yes | AWS region for STS, tagging API, and S3 |
 | `SENDIT_ASSUME_ROLE_ARN` | Yes (except `--dry-run` without role) | Full ARN of `CSVSendItCrossAccountRole` (or equivalent) |
-| `GITHUB_TOKEN` | Yes (unless `--dry-run`) | PAT or token with permission to dispatch and read Actions runs |
+| `GITHUB_TOKEN` | No | Optional override. If set, the CLI uses this token directly and does **not** read GitHub auth from Secrets Manager. |
 | `GITHUB_REPOSITORY` | No | Default `genesislcap/appdev-workflows` |
 | `GITHUB_API_URL` | No | Default `https://api.github.com` (set for GitHub Enterprise Server) |
+| `GITHUB_API_VERSION` | No | Default `2022-11-28` (GitHub `X-GitHub-Api-Version` header) |
 
 Do **not** put AWS keys in the `client_payload`; the Actions workflow uses repository **secrets** (below).
+
+## GitHub authentication (AWS Secrets Manager)
+
+By default, the CLI reads GitHub auth from AWS Secrets Manager secret:
+
+- `<AppName>/environment/<EnvironmentName>`
+
+That secret may be:
+
+1. A **raw string** token (legacy), or
+2. JSON with one of these supported shapes:
+
+### Option A: GitHub App credentials (recommended)
+
+Store durable credential material (not the short-lived installation token):
+
+```json
+{
+  "GH_APP_ID": "123456",
+  "GH_APP_PRIVATE_KEY": "-----BEGIN RSA PRIVATE KEY-----\\n...\\n-----END RSA PRIVATE KEY-----",
+  "GH_APP_INSTALLATION_ID": "12345678"
+}
+```
+
+Notes:
+
+- `GH_APP_INSTALLATION_ID` is optional. If omitted, the CLI discovers it via `GET /repos/{owner}/{repo}/installation` using an app JWT.
+- The CLI mints a **GitHub App installation access token** at runtime (short-lived, typically about 1 hour). It is **not** written back to Secrets Manager.
+
+
+### Option B: PAT-style token (legacy)
+
+```json
+{
+  "token": "ghp_..."
+}
+```
+
+Also accepted keys: `github_token`, `GITHUB_TOKEN`.
+
+### Permissions / GitHub App settings
+
+Regardless of whether you use a PAT or a GitHub App installation token, the effective token must be able to:
+
+- `POST /repos/{owner}/{repo}/dispatches`
+- Read workflow runs for polling (`GET` Actions endpoints)
+
+For GitHub Apps, ensure the app is installed on the target org/account with repository access to `--github-repository`, and grant the minimum permissions required for those endpoints.
+
+### Rotating GitHub App private keys
+
+Rotation is an AWS Secrets Manager change:
+
+1. Generate a new private key in the GitHub App settings.
+2. Update `GH_APP_PRIVATE_KEY` in the secret JSON.
+3. Optionally revoke the old private key in GitHub after confirming the CLI works.
 
 ## GitHub repository configuration (`genesislcap/appdev-workflows`)
 
@@ -73,15 +130,6 @@ Create these **Actions secrets** (used by the workflow when calling the SendIt c
 | `SENDIT_AWS_SECRET_ACCESS_KEY` | Same |
 | `SENDIT_AWS_REGION` | e.g. `eu-west-1` |
 
-### PAT for the CLI
-
-The token in `GITHUB_TOKEN` needs permission to:
-
-- `POST /repos/{owner}/{repo}/dispatches` (Contents or **custom** fine-grained: **Actions** write / **Metadata** read; classic PAT: **`repo`** scope covers private repo dispatch).
-- `GET` workflow runs for the repo (same scope).
-
-Fine-grained: enable **Read and write** for **Actions** on this repository (and **Metadata** read).
-
 ## Usage
 
 ```bash
@@ -89,7 +137,6 @@ export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
 export AWS_REGION=eu-west-1
 export SENDIT_ASSUME_ROLE_ARN=arn:aws:iam::ACCOUNT:role/CSVSendItCrossAccountRole
-export GITHUB_TOKEN=ghp_...
 
 python cli.py --app-name MY_APP --environment DEV ./data/file1.csv ./data/file2.csv
 ```
@@ -103,7 +150,7 @@ sendit-cli --app-name MY_APP --environment DEV ./data/file1.csv
 
 Options:
 
-- `--dry-run` — resolve bucket and print intended keys; no upload or GitHub calls (STS optional if `SENDIT_ASSUME_ROLE_ARN` unset, uses default credential chain for lookup only).
+- `--dry-run` — resolve bucket, validate GitHub auth resolution (Secrets Manager read and/or GitHub App token minting), and print intended keys; no upload, dispatch, or polling. `SENDIT_ASSUME_ROLE_ARN` is optional in this mode.
 - `--no-wait` — do not poll for workflow completion after dispatch.
 - `--wait-timeout SECONDS` — default `2700` (45 minutes).
 - `--github-repository owner/repo` — override dispatch target.
