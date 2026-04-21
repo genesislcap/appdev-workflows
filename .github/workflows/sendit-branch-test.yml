@@ -1,0 +1,48 @@
+name: SendIt (branch test)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: AppName tag value
+        required: true
+        type: string
+      environment:
+        description: EnvironmentName tag value
+        required: true
+        type: string
+      aws_access_key_id:
+        description: AWS access key id (supports temporary creds)
+        required: true
+        type: string
+      aws_secret_access_key:
+        description: AWS secret access key (supports temporary creds)
+        required: true
+        type: string
+      aws_session_token:
+        description: AWS session token (required for temporary creds)
+        required: false
+        type: string
+      aws_region:
+        description: AWS region
+        required: true
+        type: string
+
+jobs:
+  sendit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run local SendIt action from this branch
+      # Important: uses local action so branch changes are tested immediately.
+        uses: ./sendit
+        with:
+          app_name: ${{ inputs.app_name }}
+          environment: ${{ inputs.environment }}
+          aws-access-key-id: ${{ inputs.aws_access_key_id }}
+          aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
+          aws-session-token: ${{ inputs.aws_session_token }}
+          aws-region: ${{ inputs.aws_region }}
