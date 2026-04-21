@@ -108,7 +108,7 @@ on:
         required: false
         default: true
         type: boolean
-<<<<<<< DCD-4449
+
       jfrogscan:
         required: false
         default: true
@@ -117,7 +117,7 @@ on:
         required: false
         default: false
         type: boolean
-=======
+
       use_app_dist_zip:
         description: "Whether to use the app-dist.tar.gz file"
         required: false
@@ -128,7 +128,7 @@ on:
         required: false
         default: false
         type: string
->>>>>>> develop
+
 
     secrets:
       GRADLE_PROPERTIES:
