@@ -11,6 +11,8 @@ inputs:
     required: true
   aws-secret-access-key:
     required: true
+  aws-session-token:
+    required: false
   aws-region:
     required: true
 
@@ -22,6 +24,7 @@ runs:
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-session-token: ${{ inputs.aws-session-token }}
         aws-region: ${{ inputs.aws-region }}
 
     - name: Find S3 bucket by tags
@@ -51,7 +54,7 @@ runs:
         # Set the bucket name as an output
         echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
 
-    - uses: genesislcap/appdev-workflows/ssm-command@develop
+    - uses: ./ssm-command
       with:
         command:
           source /root/.bashrc &&
@@ -66,4 +69,5 @@ runs:
         app_name: ${{ inputs.app_name }}
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-session-token: ${{ inputs.aws-session-token }}
         aws-region: ${{ inputs.aws-region }}
