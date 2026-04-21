@@ -108,6 +108,16 @@ on:
         required: false
         default: true
         type: boolean
+      use_app_dist_zip:
+        description: "Whether to use the app-dist.tar.gz file"
+        required: false
+        default: false
+        type: boolean
+      app_module:
+        description: "The location of the App Module"
+        required: false
+        default: false
+        type: string
 
     secrets:
       GRADLE_PROPERTIES:
@@ -128,6 +138,7 @@ on:
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
   CACHE_OPTS: ${{ inputs.disable-cache && '--no-build-cache --no-configuration-cache' || '' }}
 
 # A workflow run is called from the devops appdev-workflow repos
@@ -326,7 +337,7 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/"
 
       - name: Create Giant Server Zip
-        if: inputs.upload
+        if: inputs.upload && !inputs.use_app_dist_zip
         shell: bash
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
         run: |
@@ -335,6 +346,28 @@ jobs:
           pwd
           ls -la
           tar czvf ../${{ env.DISTRIBUTION_DIR }}/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
+
+      - name: Create Dynamic App Distribution
+        if: inputs.upload && inputs.use_app_dist_zip
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
+        run: |
+          ./gradlew :${{ env.APP_MODULE }}:appDistTarGz --no-build-cache
+          mkdir -p ${{ env.DISTRIBUTION_DIR }}/build/distributions/
+          
+          FILE=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | head -n1)
+          if [ -z "$FILE" ]; then
+            echo "Error: No .tar.gz file found in ${{ env.APP_MODULE }}/build/dist/"
+            exit 1
+          fi
+          
+          COUNT=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | wc -l)
+          if [ "$COUNT" -gt 1 ]; then
+            echo "Error: Multiple .tar.gz files found, expected exactly one"
+            exit 1
+          fi
+          
+          mv "$FILE" "${{ env.DISTRIBUTION_DIR }}/build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz"
 
       - name: Upload Server Package
         if: inputs.upload
