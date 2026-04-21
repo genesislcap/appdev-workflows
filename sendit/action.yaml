@@ -54,7 +54,7 @@ runs:
         # Set the bucket name as an output
         echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
 
-    - uses: ./ssm-command
+    - uses: genesislcap/appdev-workflows/ssm-command@lukask/DCD-4500-send-it-script
       with:
         command:
           source /root/.bashrc &&
