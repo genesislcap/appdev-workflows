@@ -60,10 +60,10 @@ runs:
         command:
           source /root/.bashrc &&
           if [ -f /etc/profile.d/deploy.sh ]; then source /etc/profile.d/deploy.sh; fi &&
-          if [ -z "${AWS_ECR_REGISTRY:-}" ] || [ -z "${GENESIS_VERSION:-}" ]; then
-            echo "Missing required docker env vars on target host." &&
-            echo "AWS_ECR_REGISTRY=${AWS_ECR_REGISTRY:-<unset>} GENESIS_VERSION=${GENESIS_VERSION:-<unset>} APP_NAME=${APP_NAME:-<unset>}" &&
-            echo "Run the deploy workflow to populate /etc/profile.d/deploy.sh (Populate secrets & Docker Compose env vars step)." &&
+          if [ -z \"${AWS_ECR_REGISTRY:-}\" ] || [ -z \"${GENESIS_VERSION:-}\" ]; then
+            echo \"Missing required docker env vars on target host.\" &&
+            echo \"AWS_ECR_REGISTRY=${AWS_ECR_REGISTRY:-<unset>} GENESIS_VERSION=${GENESIS_VERSION:-<unset>} APP_NAME=${APP_NAME:-<unset>}\" &&
+            echo \"Run the deploy workflow to populate /etc/profile.d/deploy.sh (Populate secrets & Docker Compose env vars step).\" &&
             exit 1;
           fi &&
           mkdir -p /data/sendit &&
