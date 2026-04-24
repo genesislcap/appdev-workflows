@@ -13,9 +13,9 @@ inputs:
   app_name:
     required: true
   aws-access-key-id:
-    required: true
+    required: false
   aws-secret-access-key:
-    required: true
+    required: false
   aws-session-token:
     required: false
   aws-region:
@@ -25,11 +25,12 @@ runs:
   using: "composite"
   steps:
     - name: Configure AWS credentials
+      if: ${{ inputs.aws-access-key-id != '' && inputs.aws-secret-access-key != '' }}
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-session-token: ${{ inputs.aws-session-token }}
+#        aws-session-token: ${{ inputs.aws-session-token }}
         aws-region: ${{ inputs.aws-region }}
 
     - name: Run SSM Command

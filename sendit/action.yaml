@@ -8,9 +8,9 @@ inputs:
   app_name:
     required: true
   aws-access-key-id:
-    required: true
+    required: false
   aws-secret-access-key:
-    required: true
+    required: false
   aws-session-token:
     required: false
   aws-region:
@@ -20,11 +20,12 @@ runs:
   using: "composite"
   steps:
     - name: Configure AWS credentials
+      if: ${{ inputs.aws-access-key-id != '' && inputs.aws-secret-access-key != '' }}
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-session-token: ${{ inputs.aws-session-token }}
+#        aws-session-token: ${{ inputs.aws-session-token }}
         aws-region: ${{ inputs.aws-region }}
 
     - name: Find S3 bucket by tags
@@ -58,6 +59,13 @@ runs:
       with:
         command:
           source /root/.bashrc &&
+          if [ -f /etc/profile.d/deploy.sh ]; then source /etc/profile.d/deploy.sh; fi &&
+          if [ -z "${AWS_ECR_REGISTRY:-}" ] || [ -z "${GENESIS_VERSION:-}" ]; then
+            echo "Missing required docker env vars on target host." &&
+            echo "AWS_ECR_REGISTRY=${AWS_ECR_REGISTRY:-<unset>} GENESIS_VERSION=${GENESIS_VERSION:-<unset>} APP_NAME=${APP_NAME:-<unset>}" &&
+            echo "Run the deploy workflow to populate /etc/profile.d/deploy.sh (Populate secrets & Docker Compose env vars step)." &&
+            exit 1;
+          fi &&
           mkdir -p /data/sendit &&
           aws s3 sync s3://${{ steps.find-bucket.outputs.bucket-name }}/sendit /data/sendit --delete --exact-timestamps &&
           chmod -R 777 /data/sendit &&
