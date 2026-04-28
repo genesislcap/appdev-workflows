@@ -253,6 +253,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: ${{ inputs.server-path }}
           app-name: ${{ inputs.product_name }}
+          build-server-arguments: ${{ inputs.server-build-gradle-arguments }}
 
       - name: Install Sast CLI
         if: inputs.sast
