@@ -1,9 +1,0 @@
-README.md
-cli.py
-pyproject.toml
-sendit_upload_and_dispatch.egg-info/PKG-INFO
-sendit_upload_and_dispatch.egg-info/SOURCES.txt
-sendit_upload_and_dispatch.egg-info/dependency_links.txt
-sendit_upload_and_dispatch.egg-info/entry_points.txt
-sendit_upload_and_dispatch.egg-info/requires.txt
-sendit_upload_and_dispatch.egg-info/top_level.txt
