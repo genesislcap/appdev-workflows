@@ -17,6 +17,10 @@ inputs:
   server-path:
     default: server
     required: false
+    
+    
+  JENKINSGENESIS_SONAR:
+    required: false
 
 runs:
   using: "composite"
