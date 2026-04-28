@@ -164,7 +164,6 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
         JENKINSGENESIS_SONAR: ${{ inputs.JENKINSGENESIS_SONAR }}
-    
 
     - name: Build Image
       if: inputs.push-image == 'true'
