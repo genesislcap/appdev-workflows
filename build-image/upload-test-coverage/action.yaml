@@ -17,6 +17,8 @@ inputs:
   server-path:
     default: server
     required: false
+  JENKINSGENESIS_SONAR:
+    required: false
 
 runs:
   using: "composite"
@@ -27,8 +29,8 @@ runs:
     - name: Validate Sonar token
       shell: bash
       run: |
-        if [ -z "${JENKINSGENESIS_SONAR:-}" ]; then
-          echo "::error::JENKINSGENESIS_SONAR must be provided by the caller environment when sonar is enabled."
+        if [ -z "${{ inputs.JENKINSGENESIS_SONAR }}" ]; then
+          echo "::error::Sonar token must be provided by the caller environment when sonar is enabled."
           exit 1
         fi
 
@@ -36,7 +38,14 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew test jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token="${JENKINSGENESIS_SONAR}"
+        ./gradlew test jacocoTestReport sonarqube \
+          -Pversion=${{ inputs.version }} \
+          --no-configuration-cache \
+          --no-build-cache \
+          --stacktrace \
+          -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
+          -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
+          -Dsonar.token="${{ inputs.JENKINSGENESIS_SONAR }}"
 
     - name: Upload Test Reports
       uses: actions/upload-artifact@v4

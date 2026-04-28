@@ -51,6 +51,8 @@ inputs:
     required: false
     type: boolean
     default: false
+  JENKINSGENESIS_SONAR:
+    required: false
 
 runs:
   using: "composite"
@@ -161,6 +163,7 @@ runs:
         test-reports-suffix: ${{ inputs.test-reports-suffix }}
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
+        JENKINSGENESIS_SONAR: ${{ inputs.JENKINSGENESIS_SONAR }}
 
     - name: Build Image
       if: inputs.push-image == 'true'
