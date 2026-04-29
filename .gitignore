@@ -7,3 +7,6 @@
 
 # GitHub App credentials
 gha-creds-*.json
+
+# Intellij project structure
+.idea/
