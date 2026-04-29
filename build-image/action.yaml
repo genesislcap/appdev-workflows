@@ -143,7 +143,8 @@ runs:
         app-name: ${{ inputs.app-name }}
 
     - name: Run Tests
-      if: ${{ !inputs.skip-tests && !inputs.sonar-enabled }}
+      if: ${{ !inputs.skip-tests }}
+      # if: ${{ !inputs.skip-tests && !inputs.sonar-enabled }}
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
@@ -153,17 +154,17 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
-    - name: Run Sonar and Upload Coverage
-      if: ${{ !inputs.skip-tests && inputs.sonar-enabled }}
-      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
-      with:
-        version: ${{ inputs.version }}
-        jfrog-username: ${{ inputs.jfrog-username }}
-        jfrog-password: ${{ inputs.jfrog-password }}
-        test-reports-suffix: ${{ inputs.test-reports-suffix }}
-        working-directory: ${{ inputs.working-directory }}
-        server-path: ${{ inputs.server-path }}
-        JENKINSGENESIS_SONAR: ${{ inputs.JENKINSGENESIS_SONAR }}
+    # - name: Run Sonar and Upload Coverage
+    #   if: ${{ !inputs.skip-tests && inputs.sonar-enabled }}
+    #   uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
+    #   with:
+    #     version: ${{ inputs.version }}
+    #     jfrog-username: ${{ inputs.jfrog-username }}
+    #     jfrog-password: ${{ inputs.jfrog-password }}
+    #     test-reports-suffix: ${{ inputs.test-reports-suffix }}
+    #     working-directory: ${{ inputs.working-directory }}
+    #     server-path: ${{ inputs.server-path }}
+    #     JENKINSGENESIS_SONAR: ${{ inputs.JENKINSGENESIS_SONAR }}
 
     - name: Build Image
       if: inputs.push-image == 'true'
