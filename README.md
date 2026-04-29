@@ -1,10 +1,12 @@
 # appdev-workflows
 genesis cicd workflow files
 
-## SendIt CLI (S3 + repository dispatch)
+## SendIt workflow orchestration
 
-See [scripts/sendit_upload_and_dispatch/README.md](scripts/sendit_upload_and_dispatch/README.md) for:
+This repository owns the SendIt dispatch workflow:
 
-- Uploading CSVs to the tagged data bucket
-- Triggering [`.github/workflows/sendit-repository-dispatch.yml`](.github/workflows/sendit-repository-dispatch.yml)
-- Building distributable CLI binaries via [`.github/workflows/build-sendit-cli.yml`](.github/workflows/build-sendit-cli.yml)
+- [`.github/workflows/sendit-workflow-dispatch.yml`](.github/workflows/sendit-workflow-dispatch.yml)
+
+The workflow is triggered via `workflow_dispatch` and is intended to be called by the standalone SendIt CLI. Because the CLI can pass a specific git ref and the workflow uses the checked-out local `./sendit` action, workflow and action changes can be tested together from a feature branch before merging.
+
+The SendIt CLI source and binary build workflow now live in `genesislcap/devops-tools` under `sendit_upload_and_dispatch`.

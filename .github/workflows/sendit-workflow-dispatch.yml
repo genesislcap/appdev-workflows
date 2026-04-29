@@ -1,0 +1,102 @@
+name: SendIt (workflow dispatch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: AppName tag value
+        required: true
+        type: string
+      environment:
+        description: EnvironmentName tag value
+        required: true
+        type: string
+      target_account:
+        description: GitHub Environment / account selector
+        required: true
+        type: string
+      target_region:
+        description: Optional AWS region override
+        required: false
+        type: string
+      correlation_id:
+        description: Optional correlation id for tracing
+        required: false
+        type: string
+
+jobs:
+  sendit:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_account }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Summarize workflow inputs
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          ENV_NAME: ${{ inputs.environment }}
+          TARGET_ACCOUNT: ${{ inputs.target_account }}
+          TARGET_REGION: ${{ inputs.target_region }}
+          CORR: ${{ inputs.correlation_id }}
+        run: |
+          {
+            echo "## SendIt workflow_dispatch"
+            echo "- **correlation_id**: ${CORR:-"(not set)"}"
+            echo "- **app_name**: $APP_NAME"
+            echo "- **environment**: $ENV_NAME"
+            echo "- **target_account**: $TARGET_ACCOUNT"
+            if [ -n "$TARGET_REGION" ]; then
+              echo "- **target_region**: $TARGET_REGION"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve role and validate region
+        id: resolve-auth
+        env:
+          TARGET_ACCOUNT: ${{ inputs.target_account }}
+          TARGET_REGION: ${{ inputs.target_region }}
+          SENDIT_DEFAULT_REGION: ${{ vars.SENDIT_DEFAULT_REGION }}
+          SENDIT_ALLOWED_REGIONS: ${{ vars.SENDIT_ALLOWED_REGIONS }}
+        run: |
+          python3 scripts/sendit/resolve_auth_context.py
+
+      - name: Configure AWS credentials (Access key + secret key)
+        env:
+          SENDIT_AWS_ACCESS_KEY_ID: ${{ secrets.SENDIT_AWS_ACCESS_KEY_ID }}
+          SENDIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.SENDIT_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -z "$SENDIT_AWS_ACCESS_KEY_ID" ]; then
+            echo "::error::Missing SENDIT_AWS_ACCESS_KEY_ID secret in GitHub Environment '${{ inputs.target_account }}'."
+            exit 1
+          fi
+          if [ -z "$SENDIT_AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing SENDIT_AWS_SECRET_ACCESS_KEY secret in GitHub Environment '${{ inputs.target_account }}'."
+            exit 1
+          fi
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.SENDIT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SENDIT_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.resolve-auth.outputs.aws_region }}
+
+      - name: Summarize resolved account context
+        env:
+          TARGET_ACCOUNT: ${{ inputs.target_account }}
+          AWS_REGION: ${{ steps.resolve-auth.outputs.aws_region }}
+          ALLOWED_REGIONS: ${{ steps.resolve-auth.outputs.allowed_regions }}
+        run: |
+          {
+            echo "- **resolved_account**: $TARGET_ACCOUNT"
+            echo "- **aws_region**: $AWS_REGION"
+            echo "- **allowed_regions**: $ALLOWED_REGIONS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run SendIt composite
+        uses: ./sendit
+        with:
+          environment: ${{ inputs.environment }}
+          app_name: ${{ inputs.app_name }}
+          aws-region: ${{ steps.resolve-auth.outputs.aws_region }}
