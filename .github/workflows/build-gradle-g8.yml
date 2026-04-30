@@ -269,6 +269,14 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/server"
           cache-disabled: true
 
+      - name: Upload Genesis security permissions report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: genesis-security-permissions-report
+          path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
+          if-no-files-found: ignore
+
       - name: Upload Test Reports
         uses: actions/upload-artifact@v4
         with:
