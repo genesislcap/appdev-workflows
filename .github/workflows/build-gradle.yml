@@ -353,7 +353,7 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
         run: |
-          ./gradlew :${{ env.APP_MODULE }}:appDistTarGz --no-build-cache
+          ./gradlew :${{ env.APP_MODULE }}:appDistTarGz ${{ inputs.server-build-gradle-arguments }} --no-build-cache
           mkdir -p ${{ env.DISTRIBUTION_DIR }}/build/distributions/
           
           FILE=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | head -n1)
