@@ -110,12 +110,4 @@ jobs:
               },
               "tools": {}
             }
-          prompt: |-
-            You are a code review agent. Review pull request #${{ github.event.pull_request.number || github.event.issue.number }} in the repository ${{ github.repository }}.
-
-            Use your available MCP tools to:
-            1. Read the pull request details and diff using the mcp_github_pull_request_read tool
-            2. Analyze the changes for correctness, security, and best practices
-            3. Post your review using the mcp_github_pull_request_review_write tool with event "COMMENT"
-
-            Be constructive and concise. Only comment on actual issues found in the changed code.
+          prompt: '/gemini-review'
