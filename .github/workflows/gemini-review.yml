@@ -47,7 +47,7 @@ jobs:
         continue-on-error: true
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
-          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          GEMINI_CLI_TRUST_WORKSPACE: true
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
           ISSUE_BODY: '${{ github.event.pull_request.body || github.event.issue.body }}'
@@ -103,6 +103,7 @@ jobs:
               "tools": {
                 "core": [
                   "run_shell_command(cat)",
+                  "run_shell_command(git)",
                   "run_shell_command(echo)",
                   "run_shell_command(grep)",
                   "run_shell_command(head)",
