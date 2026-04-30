@@ -120,6 +120,8 @@ env:
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
+    env:
+      GENESIS_SYSDEF_genesis.check.permission.enabled: "true"
     steps:
       - uses: actions/checkout@v3
         with:
