@@ -108,17 +108,7 @@ jobs:
                   }
                 }
               },
-              "tools": {
-                "core": [
-                  "run_shell_command(cat)",
-                  "run_shell_command(git)",
-                  "run_shell_command(echo)",
-                  "run_shell_command(grep)",
-                  "run_shell_command(head)",
-                  "run_shell_command(tail)"
-                ],
-                "github": true
-              }
+              "tools": {}
             }
           prompt: |-
             You are a code review agent. Review pull request #${{ github.event.pull_request.number || github.event.issue.number }} in the repository ${{ github.repository }}.
