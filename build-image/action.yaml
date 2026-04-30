@@ -121,6 +121,11 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
+    - name: Enable Genesis permission check
+      shell: bash
+      run: |
+        echo 'GENESIS_SYSDEF_genesis.check.permission.enabled=true' >> "$GITHUB_ENV"
+
     - name: Run sast report
       if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
