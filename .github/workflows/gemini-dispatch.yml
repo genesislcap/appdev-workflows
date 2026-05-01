@@ -1,22 +1,7 @@
 name: '🔀 Gemini Dispatch'
 
 on:
-  pull_request_review_comment:
-    types:
-      - 'created'
-  pull_request_review:
-    types:
-      - 'submitted'
-  pull_request:
-    types:
-      - 'opened'
-  issues:
-    types:
-      - 'opened'
-      - 'reopened'
-  issue_comment:
-    types:
-      - 'created'
+  workflow_call:
 
 defaults:
   run:
@@ -124,7 +109,7 @@ jobs:
     needs: 'dispatch'
     if: |-
       ${{ needs.dispatch.outputs.command == 'review' }}
-    uses: './.github/workflows/gemini-review.yml'
+    uses: 'genesislcap/appdev-workflows/.github/workflows/gemini-review.yml@develop'
     permissions:
       contents: 'read'
       id-token: 'write'
