@@ -18,7 +18,6 @@ defaults:
 
 jobs:
   review:
-    continue-on-error: true
     runs-on: 'ubuntu-latest'
     timeout-minutes: 7
     permissions:
@@ -41,17 +40,32 @@ jobs:
 
       - name: 'Checkout repository'
         uses: 'actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8' # ratchet:actions/checkout@v6
+        with:
+          persist-credentials: 'false'
+
+      - name: 'Prepare prompt context'
+        shell: 'bash'
+        run: |-
+          mkdir -p .gemini
+          jq -n \
+            --arg repo "${REPOSITORY}" \
+            --arg pr "${PULL_REQUEST_NUMBER}" \
+            --arg context "${ADDITIONAL_CONTEXT}" \
+            '{repository: $repo, pull_request_number: $pr, additional_context: $context}' > .gemini/context.json
+        env:
+          REPOSITORY: '${{ github.repository }}'
+          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
 
       - name: 'Run Gemini pull request review'
-        id: 'gemini_pr_review'
-        continue-on-error: true
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        id: 'gemini_pr_review'
         env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-          ISSUE_TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
-          ISSUE_BODY: '${{ github.event.pull_request.body || github.event.issue.body }}'
-          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           REPOSITORY: '${{ github.repository }}'
+          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
         with:
           gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
@@ -67,6 +81,7 @@ jobs:
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
           upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
           workflow_name: 'gemini-review'
+          github_pr_number: '${{ github.event.pull_request.number }}'
           settings: |-
             {
               "model": {
@@ -86,27 +101,13 @@ jobs:
                     "--rm",
                     "-e",
                     "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server:v0.18.0"
-                  ],
-                  "includeTools": [
-                    "add_comment_to_pending_review",
-                    "create_pending_pull_request_review",
-                    "pull_request_read",
-                    "submit_pending_pull_request_review"
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
                   ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
                   }
                 }
               },
-              "tools": {
-                "core": [
-                  "run_shell_command(cat)",
-                  "run_shell_command(echo)",
-                  "run_shell_command(grep)",
-                  "run_shell_command(head)",
-                  "run_shell_command(tail)"
-                ]
-              }
+              "tools": {}
             }
           prompt: '/gemini-review'

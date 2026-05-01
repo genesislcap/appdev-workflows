@@ -43,7 +43,6 @@ jobs:
           env | grep '^DEBUG_'
 
   dispatch:
-    continue-on-error: true
     if: |-
       (
         github.event_name == 'pull_request' &&
@@ -140,7 +139,7 @@ jobs:
       - 'dispatch'
       - 'review'
     if: |-
-      ${{ always() && !cancelled() && (needs.dispatch.outputs.command == 'fallthrough' || needs.review.result == 'failure') }}
+      ${{ always() && !cancelled() && (failure() || needs.dispatch.outputs.command == 'fallthrough') }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -164,7 +163,7 @@ jobs:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           MESSAGE: |-
-            ${{ needs.review.result == 'failure' && format('🤖 Gemini is temporarily unavailable, @{0}. Please retry later. You can [see the logs]({1}/{2}/actions/runs/{3}) for details.', github.actor, github.server_url, github.repository, github.run_id) || format('🤖 I''m sorry @{0}, but I was unable to process your request. Please [see the logs]({1}/{2}/actions/runs/{3}) for more details.', github.actor, github.server_url, github.repository, github.run_id) }}
+            🤖 I'm sorry @${{ github.actor }}, but I was unable to process your request. Please [see the logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
           REPOSITORY: '${{ github.repository }}'
         run: |-
           gh issue comment "${ISSUE_NUMBER}" \
