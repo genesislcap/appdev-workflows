@@ -7,6 +7,10 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
+      review_prompt:
+        type: 'string'
+        description: 'User question/instruction; passed to Gemini as the prompt (replaces /gemini-review when non-empty)'
+        required: false
 
 concurrency:
   group: '${{ github.workflow }}-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -110,4 +114,4 @@ jobs:
               },
               "tools": {}
             }
-          prompt: '/gemini-review'
+          prompt: ${{ inputs.review_prompt != '' && inputs.review_prompt || '/gemini-review' }}
