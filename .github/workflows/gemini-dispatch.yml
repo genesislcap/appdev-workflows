@@ -76,13 +76,17 @@ jobs:
             core.setOutput('request', request);
 
             if (eventType === 'pull_request.opened') {
-              core.setOutput('command', 'review');
+              core.setOutput('command', 'await_review_prompt');
             } else if (['issues.opened', 'issues.reopened'].includes(eventType)) {
               core.setOutput('command', 'triage');
             } else if (request.startsWith("@gemini-cli /review")) {
-              core.setOutput('command', 'review');
               const additionalContext = request.replace(/^@gemini-cli \/review/, '').trim();
-              core.setOutput('additional_context', additionalContext);
+              if (additionalContext) {
+                core.setOutput('command', 'review');
+                core.setOutput('additional_context', additionalContext);
+              } else {
+                core.setOutput('command', 'review_missing_prompt');
+              }
             } else if (request.startsWith("@gemini-cli /triage")) {
               core.setOutput('command', 'triage');
             } else if (request.startsWith("@gemini-cli")) {
@@ -94,6 +98,8 @@ jobs:
             }
 
       - name: 'Acknowledge request'
+        if: |-
+          ${{ !contains(fromJSON('["await_review_prompt", "review_missing_prompt"]'), steps.extract_command.outputs.command) }}
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -104,6 +110,55 @@ jobs:
           gh issue comment "${ISSUE_NUMBER}" \
             --body "${MESSAGE}" \
             --repo "${REPOSITORY}"
+
+  review_guidance:
+    needs: 'dispatch'
+    if: |-
+      ${{ contains(fromJSON('["await_review_prompt", "review_missing_prompt"]'), needs.dispatch.outputs.command) }}
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.GH_APP_ID }}
+        uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.GH_APP_ID }}'
+          private-key: '${{ secrets.GH_APP_PRIVATE_KEY }}'
+          permission-contents: 'read'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Post review instructions'
+        env:
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+          COMMAND: '${{ needs.dispatch.outputs.command }}'
+          BODY_AWAIT: |
+            🤖 **Gemini PR review**
+
+            To run a review focused on your goal, comment on this PR with your question. That text is sent to Gemini as the instruction (instead of the default broad `/gemini-review`):
+
+            ```
+            @gemini-cli /review <your question>
+            ```
+
+            **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
+          BODY_MISSING_PROMPT: |
+            🤖 You used `@gemini-cli /review` without a question. Add your prompt on the same line.
+
+            **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
+        run: |
+          if [ "${COMMAND}" = 'await_review_prompt' ]; then
+            gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_AWAIT}"
+          else
+            gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_MISSING_PROMPT}"
+          fi
 
   review:
     needs: 'dispatch'
@@ -117,6 +172,7 @@ jobs:
       pull-requests: 'write'
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
+      review_prompt: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
 
   fallthrough:
