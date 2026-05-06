@@ -72,6 +72,10 @@ jobs:
         env:
           REVIEW_SCOPE: '${{ inputs.review_scope }}'
           REVIEW_PROMPT_INPUT: '${{ inputs.review_prompt }}'
+          GEMINI_TARGET_REPOSITORY: '${{ github.repository }}'
+          GEMINI_TARGET_OWNER: '${{ github.repository_owner }}'
+          GEMINI_TARGET_REPO_NAME: '${{ github.event.repository.name }}'
+          GEMINI_TARGET_PR_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
         run: |-
           set -euo pipefail
           eof_delim="_GEMINI_PROMPT_${RANDOM}_${RANDOM}_"
@@ -79,9 +83,18 @@ jobs:
             echo "prompt<<${eof_delim}"
             if [ "${REVIEW_SCOPE}" = summary_only ]; then
               printf '%s\n' \
-                'Review this pull request using the repository checkout, GitHub MCP (pull_request_read), and the diff.' \
+                'Review this pull request using the checked-out repo and GitHub MCP tools only.' \
                 '' \
-                'Publishing (mandatory): call add_issue_comment exactly once on this pull request with your final text.' \
+                'Target PR (authoritative — pass these to MCP; do not discover the PR via shell):' \
+                "- Owner: ${GEMINI_TARGET_OWNER}, Repo: ${GEMINI_TARGET_REPO_NAME} (same as ${GEMINI_TARGET_REPOSITORY})." \
+                "- Pull request number: ${GEMINI_TARGET_PR_NUMBER} (pull_request_read pullNumber; add_issue_comment issue_number)." \
+                '' \
+                'GitHub access rules:' \
+                '- First call MCP pull_request_read for this owner/repo/pullNumber to load metadata and the diff.' \
+                '- Optional: use read-only file tools on the workspace for context.' \
+                '- Do NOT use run_shell_command to run gh, `github`, curl to api.github.com, or any GitHub CLI/API — those invocations are blocked by Gemini CLI policy ("Tool execution denied by policy").' \
+                '' \
+                'Publishing (mandatory): call MCP add_issue_comment exactly once on this PR with your final markdown.' \
                 '' \
                 'Comment body — match this layout closely (like a normal GitHub PR bot summary):' \
                 '- Line 1: markdown heading exactly ## 📋 Review Summary' \
@@ -93,19 +106,28 @@ jobs:
                 'This is only the opening snapshot; the author will start a follow-up comment with @gemini-cli /review when they want deeper feedback.'
             elif [ -n "${REVIEW_PROMPT_INPUT}" ]; then
               printf '%s\n' \
-                'You are answering a question about an open GitHub pull request. Use GitHub MCP (pull_request_read) and the repository checkout / diff as needed.' \
+                'You are answering a question about an open GitHub pull request; use the checked-out repo and GitHub MCP tools.' \
+                '' \
+                'Target PR (authoritative — pass these to MCP; do not discover the PR via shell):' \
+                "- Owner: ${GEMINI_TARGET_OWNER}, Repo: ${GEMINI_TARGET_REPO_NAME} (full name ${GEMINI_TARGET_REPOSITORY})." \
+                "- Pull request number: ${GEMINI_TARGET_PR_NUMBER} (pull_request_read pullNumber; add_issue_comment issue_number)." \
+                '' \
+                'GitHub access rules:' \
+                '- Call MCP pull_request_read for this PR before answering; use local files only as a supplement.' \
+                '- Do NOT use run_shell_command for gh, `github`, or GitHub API HTTP calls — policy denies them.' \
                 '' \
                 'Maintainer question:' \
                 "${REVIEW_PROMPT_INPUT}" \
                 '' \
-                'Publishing (mandatory): call add_issue_comment exactly once on this pull request with your answer.' \
+                'Publishing (mandatory): call MCP add_issue_comment exactly once with your answer markdown.' \
                 '' \
                 'Comment body — same layout as the opening bot summary:' \
                 '- Line 1: ## 📋 Review Summary' \
                 '- Blank line, then --- on its own line' \
                 '- Blank line, then one or two sentences summarizing findings that answer the question (prose; backticks for identifiers).' \
                 '- No extra sections unless the question explicitly asks (no default General Feedback).' \
-                '- Your last action MUST be add_issue_comment—do not stop after subagent or local-only analysis.'
+                '- Your last successful tool call MUST be add_issue_comment.' \
+                '- Do not finish without posting; if a tool fails, retry with MCP pull_request_read/add_issue_comment only.'
             else
               printf '%s\n' '/gemini-review'
             fi

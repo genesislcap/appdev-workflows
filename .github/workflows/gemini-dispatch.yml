@@ -157,13 +157,15 @@ jobs:
           BODY_AWAIT: |
             🤖 **Gemini PR review**
 
-            Above is a short automatic summary of this PR. When you want tailored feedback, reply on this PR with **your own instructions** — that entire message (after the command) is sent to Gemini as the review prompt:
+            This workflow should also leave a separate comment with **📋 Review Summary** (a short snapshot of the PR). If you do not see it yet, refresh the conversation or open the latest **gemini / review / review** Actions run — when Gemini cannot reach GitHub MCP from the runner, only this instructions comment may appear.
+
+            When you want tailored feedback, reply on this PR with **your own instructions**. Everything after the command is sent to Gemini as the review prompt:
 
             ```
             @gemini-cli /review <your question>
             ```
 
-            Gemini will post **another comment** on this PR with a concise answer to your prompt.
+            Gemini should post **another comment** on this PR with a concise answer.
 
             **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
         run: |-
