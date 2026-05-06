@@ -100,3 +100,5 @@ jobs:
           environment: ${{ inputs.environment }}
           app_name: ${{ inputs.app_name }}
           aws-region: ${{ steps.resolve-auth.outputs.aws_region }}
+          aws-access-key-id: ${{ secrets.SENDIT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SENDIT_AWS_SECRET_ACCESS_KEY }}
