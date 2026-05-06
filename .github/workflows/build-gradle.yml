@@ -108,6 +108,16 @@ on:
         required: false
         default: true
         type: boolean
+
+      jfrogscan:
+        required: false
+        default: true
+        type: boolean
+      prbuild:
+        required: false
+        default: false
+        type: boolean
+
       use_app_dist_zip:
         description: "Whether to use the app-dist.tar.gz file"
         required: false
@@ -118,6 +128,7 @@ on:
         required: false
         default: false
         type: string
+
 
     secrets:
       GRADLE_PROPERTIES:
@@ -245,6 +256,7 @@ jobs:
           cache-disabled: ${{ inputs.disable-cache }}
 
       - name: Scan artifact
+        if: inputs.jfrogscan
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
