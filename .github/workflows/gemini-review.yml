@@ -9,8 +9,13 @@ on:
         required: false
       review_prompt:
         type: 'string'
-        description: 'User question/instruction; passed to Gemini as the prompt (replaces /gemini-review when non-empty)'
+        description: 'User question from @gemini-cli /review …; expanded into a posting prompt (Review Summary comment only)'
         required: false
+      review_scope:
+        type: 'string'
+        description: "'full' falls back to /gemini-review when no review_prompt; 'summary_only' posts one Review Summary comment (1–2 sentences) only"
+        required: false
+        default: 'full'
 
 concurrency:
   group: '${{ github.workflow }}-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -61,6 +66,52 @@ jobs:
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
 
+      - name: 'Compute Gemini prompt'
+        id: 'gemini_prompt'
+        shell: 'bash'
+        env:
+          REVIEW_SCOPE: '${{ inputs.review_scope }}'
+          REVIEW_PROMPT_INPUT: '${{ inputs.review_prompt }}'
+        run: |-
+          set -euo pipefail
+          eof_delim="_GEMINI_PROMPT_${RANDOM}_${RANDOM}_"
+          {
+            echo "prompt<<${eof_delim}"
+            if [ "${REVIEW_SCOPE}" = summary_only ]; then
+              printf '%s\n' \
+                'Review this pull request using the repository checkout, GitHub MCP (pull_request_read), and the diff.' \
+                '' \
+                'Publishing (mandatory): call add_issue_comment exactly once on this pull request with your final text.' \
+                '' \
+                'Comment body — match this layout closely (like a normal GitHub PR bot summary):' \
+                '- Line 1: markdown heading exactly ## 📋 Review Summary' \
+                '- Blank line, then a horizontal rule on its own line: ---' \
+                '- Blank line, then one or two short sentences (no bullets) stating what changed and the main goal.' \
+                '- Put environment names, paths, filenames, and important identifiers in backticks (`like-this`).' \
+                '- Stop there: no other headings or sections (no General Feedback, no bullet lists, no line-by-line review).' \
+                '' \
+                'This is only the opening snapshot; the author will start a follow-up comment with @gemini-cli /review when they want deeper feedback.'
+            elif [ -n "${REVIEW_PROMPT_INPUT}" ]; then
+              printf '%s\n' \
+                'You are answering a question about an open GitHub pull request. Use GitHub MCP (pull_request_read) and the repository checkout / diff as needed.' \
+                '' \
+                'Maintainer question:' \
+                "${REVIEW_PROMPT_INPUT}" \
+                '' \
+                'Publishing (mandatory): call add_issue_comment exactly once on this pull request with your answer.' \
+                '' \
+                'Comment body — same layout as the opening bot summary:' \
+                '- Line 1: ## 📋 Review Summary' \
+                '- Blank line, then --- on its own line' \
+                '- Blank line, then one or two sentences summarizing findings that answer the question (prose; backticks for identifiers).' \
+                '- No extra sections unless the question explicitly asks (no default General Feedback).' \
+                '- Your last action MUST be add_issue_comment—do not stop after subagent or local-only analysis.'
+            else
+              printf '%s\n' '/gemini-review'
+            fi
+            echo "${eof_delim}"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: 'Run Gemini pull request review'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         id: 'gemini_pr_review'
@@ -85,7 +136,7 @@ jobs:
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
           upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
           workflow_name: 'gemini-review'
-          github_pr_number: '${{ github.event.pull_request.number }}'
+          github_pr_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
           settings: |-
             {
               "model": {
@@ -107,11 +158,25 @@ jobs:
                     "GITHUB_PERSONAL_ACCESS_TOKEN",
                     "ghcr.io/github/github-mcp-server:v0.27.0"
                   ],
+                  "includeTools": [
+                    "add_comment_to_pending_review",
+                    "add_issue_comment",
+                    "pull_request_read",
+                    "pull_request_review_write"
+                  ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
                   }
                 }
               },
-              "tools": {}
+              "tools": {
+                "core": [
+                  "run_shell_command(cat)",
+                  "run_shell_command(echo)",
+                  "run_shell_command(grep)",
+                  "run_shell_command(head)",
+                  "run_shell_command(tail)"
+                ]
+              }
             }
-          prompt: ${{ inputs.review_prompt != '' && inputs.review_prompt || '/gemini-review' }}
+          prompt: '${{ steps.gemini_prompt.outputs.prompt }}'

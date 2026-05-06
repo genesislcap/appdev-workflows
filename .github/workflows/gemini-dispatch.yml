@@ -72,11 +72,11 @@ jobs:
         with:
           script: |
             const eventType = process.env.EVENT_TYPE;
-            const request = process.env.REQUEST;
+            const request = process.env.REQUEST || '';
             core.setOutput('request', request);
 
             if (eventType === 'pull_request.opened') {
-              core.setOutput('command', 'await_review_prompt');
+              core.setOutput('command', 'initial_review_summary');
             } else if (['issues.opened', 'issues.reopened'].includes(eventType)) {
               core.setOutput('command', 'triage');
             } else if (request.startsWith("@gemini-cli /review")) {
@@ -85,7 +85,7 @@ jobs:
                 core.setOutput('command', 'review');
                 core.setOutput('additional_context', additionalContext);
               } else {
-                core.setOutput('command', 'review_missing_prompt');
+                core.setOutput('command', 'initial_review_summary');
               }
             } else if (request.startsWith("@gemini-cli /triage")) {
               core.setOutput('command', 'triage');
@@ -99,7 +99,7 @@ jobs:
 
       - name: 'Acknowledge request'
         if: |-
-          ${{ !contains(fromJSON('["await_review_prompt", "review_missing_prompt"]'), steps.extract_command.outputs.command) }}
+          ${{ steps.extract_command.outputs.command != 'initial_review_summary' }}
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -111,10 +111,26 @@ jobs:
             --body "${MESSAGE}" \
             --repo "${REPOSITORY}"
 
-  review_guidance:
+  initial_review:
     needs: 'dispatch'
     if: |-
-      ${{ contains(fromJSON('["await_review_prompt", "review_missing_prompt"]'), needs.dispatch.outputs.command) }}
+      ${{ needs.dispatch.outputs.command == 'initial_review_summary' }}
+    uses: 'genesislcap/appdev-workflows/.github/workflows/gemini-review.yml@develop'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    with:
+      review_scope: 'summary_only'
+    secrets: 'inherit'
+
+  review_guidance:
+    needs:
+      - 'dispatch'
+      - 'initial_review'
+    if: |-
+      ${{ always() && !cancelled() && needs.dispatch.outputs.command == 'initial_review_summary' && needs.initial_review.result == 'success' }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -138,27 +154,20 @@ jobs:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
-          COMMAND: '${{ needs.dispatch.outputs.command }}'
           BODY_AWAIT: |
             🤖 **Gemini PR review**
 
-            To run a review focused on your goal, comment on this PR with your question. That text is sent to Gemini as the instruction (instead of the default broad `/gemini-review`):
+            Above is a short automatic summary of this PR. When you want tailored feedback, reply on this PR with **your own instructions** — that entire message (after the command) is sent to Gemini as the review prompt:
 
             ```
             @gemini-cli /review <your question>
             ```
 
-            **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
-          BODY_MISSING_PROMPT: |
-            🤖 You used `@gemini-cli /review` without a question. Add your prompt on the same line.
+            Gemini will post **another comment** on this PR with a concise answer to your prompt.
 
             **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
-        run: |
-          if [ "${COMMAND}" = 'await_review_prompt' ]; then
-            gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_AWAIT}"
-          else
-            gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_MISSING_PROMPT}"
-          fi
+        run: |-
+          gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_AWAIT}"
 
   review:
     needs: 'dispatch'
@@ -179,8 +188,13 @@ jobs:
     needs:
       - 'dispatch'
       - 'review'
+      - 'initial_review'
     if: |-
-      ${{ always() && !cancelled() && (failure() || needs.dispatch.outputs.command == 'fallthrough') }}
+      ${{ always() && !cancelled() && (
+        needs.dispatch.outputs.command == 'fallthrough' ||
+        (needs.dispatch.outputs.command == 'review' && needs.review.result == 'failure') ||
+        (needs.dispatch.outputs.command == 'initial_review_summary' && needs.initial_review.result == 'failure')
+      ) }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
