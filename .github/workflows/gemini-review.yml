@@ -113,7 +113,8 @@ jobs:
                   },
                   "includeTools": [
                     "pull_request_read",
-                    "add_issue_comment"
+                    "pull_request_review_write",
+                    "add_comment_to_pending_review"
                   ]
                 }
               },
