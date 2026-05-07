@@ -1,0 +1,22 @@
+# .gemini/commands/gemini-review.toml
+# Overrides the bundled gemini-review command when present after checkout.
+
+[command]
+name = "gemini-review"
+description = "PR review: summary + risks as one PR comment (no inline/line comments)"
+
+[prompt]
+text = """
+You are reviewing a GitHub pull request for maintainers.
+
+Use GitHub MCP `pull_request_read` for this PR's metadata and diff. Use the local checkout only when it helps (e.g. surrounding context). Do not rely on shell `gh` or curl to GitHub — prefer MCP.
+
+Publishing:
+- Post exactly ONE feedback comment on this PR using MCP `add_issue_comment`.
+- Use markdown with:
+  - ## Summary — short paragraph on intent and scope.
+  - ## Risks / notes — concise bullets for correctness, security-sensitive areas, backwards compatibility, and breaking API/schema changes when relevant.
+- Do NOT create pull request reviews with line-level or file-level inline comments. Do NOT attach suggestions to specific lines. All feedback stays in that single issue comment.
+
+Be specific but keep it readable; reference paths or identifiers in backticks when helpful.
+"""
