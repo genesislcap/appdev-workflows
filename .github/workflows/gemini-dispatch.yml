@@ -1,7 +1,22 @@
 name: '🔀 Gemini Dispatch'
 
 on:
-  workflow_call:
+  pull_request_review_comment:
+    types:
+      - 'created'
+  pull_request_review:
+    types:
+      - 'submitted'
+  pull_request:
+    types:
+      - 'opened'
+  issues:
+    types:
+      - 'opened'
+      - 'reopened'
+  issue_comment:
+    types:
+      - 'created'
 
 defaults:
   run:
@@ -72,21 +87,17 @@ jobs:
         with:
           script: |
             const eventType = process.env.EVENT_TYPE;
-            const request = process.env.REQUEST || '';
+            const request = process.env.REQUEST;
             core.setOutput('request', request);
 
             if (eventType === 'pull_request.opened') {
-              core.setOutput('command', 'initial_review_summary');
+              core.setOutput('command', 'review');
             } else if (['issues.opened', 'issues.reopened'].includes(eventType)) {
               core.setOutput('command', 'triage');
             } else if (request.startsWith("@gemini-cli /review")) {
+              core.setOutput('command', 'review');
               const additionalContext = request.replace(/^@gemini-cli \/review/, '').trim();
-              if (additionalContext) {
-                core.setOutput('command', 'review');
-                core.setOutput('additional_context', additionalContext);
-              } else {
-                core.setOutput('command', 'initial_review_summary');
-              }
+              core.setOutput('additional_context', additionalContext);
             } else if (request.startsWith("@gemini-cli /triage")) {
               core.setOutput('command', 'triage');
             } else if (request.startsWith("@gemini-cli")) {
@@ -98,8 +109,6 @@ jobs:
             }
 
       - name: 'Acknowledge request'
-        if: |-
-          ${{ steps.extract_command.outputs.command != 'initial_review_summary' }}
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -111,71 +120,11 @@ jobs:
             --body "${MESSAGE}" \
             --repo "${REPOSITORY}"
 
-  initial_review:
-    needs: 'dispatch'
-    if: |-
-      ${{ needs.dispatch.outputs.command == 'initial_review_summary' }}
-    uses: 'genesislcap/appdev-workflows/.github/workflows/gemini-review.yml@develop'
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      pull-requests: 'write'
-    with:
-      review_scope: 'summary_only'
-    secrets: 'inherit'
-
-  review_guidance:
-    needs:
-      - 'dispatch'
-      - 'initial_review'
-    if: |-
-      ${{ always() && !cancelled() && needs.dispatch.outputs.command == 'initial_review_summary' && needs.initial_review.result == 'success' }}
-    runs-on: 'ubuntu-latest'
-    permissions:
-      contents: 'read'
-      issues: 'write'
-      pull-requests: 'write'
-    steps:
-      - name: 'Mint identity token'
-        id: 'mint_identity_token'
-        if: |-
-          ${{ vars.GH_APP_ID }}
-        uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
-        with:
-          app-id: '${{ vars.GH_APP_ID }}'
-          private-key: '${{ secrets.GH_APP_PRIVATE_KEY }}'
-          permission-contents: 'read'
-          permission-issues: 'write'
-          permission-pull-requests: 'write'
-
-      - name: 'Post review instructions'
-        env:
-          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
-          REPOSITORY: '${{ github.repository }}'
-          BODY_AWAIT: |
-            🤖 **Gemini PR review**
-
-            This workflow should also leave a separate comment with **📋 Review Summary** (a short snapshot of the PR). If you do not see it yet, refresh the conversation or open the latest **gemini / review / review** Actions run — when Gemini cannot reach GitHub MCP from the runner, only this instructions comment may appear.
-
-            When you want tailored feedback, reply on this PR with **your own instructions**. Everything after the command is sent to Gemini as the review prompt:
-
-            ```
-            @gemini-cli /review <your question>
-            ```
-
-            Gemini should post **another comment** on this PR with a concise answer.
-
-            **Example:** `@gemini-cli /review Review this diff for correctness, failure modes, and backwards compatibility; flag security-sensitive paths and any breaking API, schema, or contract changes.`
-        run: |-
-          gh issue comment "${ISSUE_NUMBER}" --repo "${REPOSITORY}" --body "${BODY_AWAIT}"
-
   review:
     needs: 'dispatch'
     if: |-
       ${{ needs.dispatch.outputs.command == 'review' }}
-    uses: 'genesislcap/appdev-workflows/.github/workflows/gemini-review.yml@develop'
+    uses: './.github/workflows/gemini-review.yml'
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -183,20 +132,14 @@ jobs:
       pull-requests: 'write'
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
-      review_prompt: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
 
   fallthrough:
     needs:
       - 'dispatch'
       - 'review'
-      - 'initial_review'
     if: |-
-      ${{ always() && !cancelled() && (
-        needs.dispatch.outputs.command == 'fallthrough' ||
-        (needs.dispatch.outputs.command == 'review' && needs.review.result == 'failure') ||
-        (needs.dispatch.outputs.command == 'initial_review_summary' && needs.initial_review.result == 'failure')
-      ) }}
+      ${{ always() && !cancelled() && (failure() || needs.dispatch.outputs.command == 'fallthrough') }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
