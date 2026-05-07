@@ -1,6 +1,7 @@
 name: '🔀 Gemini Dispatch'
 
 on:
+  workflow_call:
   pull_request_review_comment:
     types:
       - 'created'
