@@ -166,8 +166,7 @@ runs:
         app-name: ${{ inputs.app-name }}
 
     - name: Run Tests
-      # if: ${{ !inputs.skip-tests }}
-      if: ${{ !inputs.skip-tests && !inputs.sonar-enabled }}
+      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled != 'true' }}
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
@@ -178,7 +177,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Run Sonar and Upload Coverage
-      if: ${{ !inputs.skip-tests && inputs.sonar-enabled }}
+      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
       uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@SONAR-UPDATE
       with:
         version: ${{ inputs.version }}
