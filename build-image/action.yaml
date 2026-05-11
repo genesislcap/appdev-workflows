@@ -135,14 +135,6 @@ runs:
       run: |
         echo 'GENESIS_SYSDEF_genesis.check.permission.enabled=true' >> "$GITHUB_ENV"
 
-    - name: Upload Genesis security permissions report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: genesis-security-permissions-report
-        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
-        if-no-files-found: ignore
-
     - name: Run sast report
       if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
@@ -194,6 +186,14 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
+
+    - name: Upload Genesis security permissions report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: genesis-security-permissions-report
+        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
+        if-no-files-found: ignore
 
     - name: Push Image using bash
       if: inputs.push-image == 'true'
