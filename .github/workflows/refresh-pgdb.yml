@@ -38,6 +38,12 @@ jobs:
 
     steps:
 
+      - name: Fix workspace permissions
+        shell: bash
+        run: |
+          sudo chown -R "$(whoami):$(id -gn)" "$GITHUB_WORKSPACE/.." || true
+          sudo chmod -R u+rwX "$GITHUB_WORKSPACE/.." || true
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
