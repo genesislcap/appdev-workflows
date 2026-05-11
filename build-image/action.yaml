@@ -133,7 +133,8 @@ runs:
     - name: Enable Genesis permission check
       shell: bash
       run: |
-        echo 'GENESIS_SYSDEF_genesis.check.permission.enabled=true' >> "$GITHUB_ENV"
+        mkdir -p ~/.gradle
+        echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
 
     - name: Run sast report
       if: inputs.sast
