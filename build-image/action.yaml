@@ -130,12 +130,6 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
-    - name: Enable Genesis permission check
-      shell: bash
-      run: |
-        mkdir -p "${GRADLE_USER_HOME}"
-        echo 'genesis.check.permission.enabled=true' >> "${GRADLE_USER_HOME}/gradle.properties"
-
     - name: Run sast report
       if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
@@ -145,6 +139,13 @@ runs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
+
+    - name: Enable Genesis permission check
+      shell: bash
+      run: |
+        GRADLE_HOME_DIR="${GRADLE_USER_HOME:-$HOME/.gradle}"
+        mkdir -p "${GRADLE_HOME_DIR}"
+        echo 'genesis.check.permission.enabled=true' >> "${GRADLE_HOME_DIR}/gradle.properties"
 
     - name: Scan artifact
       if: inputs.jfrogscan
