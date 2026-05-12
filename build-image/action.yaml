@@ -140,13 +140,6 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Enable Genesis permission check
-      shell: bash
-      run: |
-        GRADLE_HOME_DIR="${GRADLE_USER_HOME:-$HOME/.gradle}"
-        mkdir -p "${GRADLE_HOME_DIR}"
-        echo 'genesis.check.permission.enabled=true' >> "${GRADLE_HOME_DIR}/gradle.properties"
-
     - name: Scan artifact
       if: inputs.jfrogscan
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
@@ -187,7 +180,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
+        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Pgenesis.check.permission.enabled=true ${{ inputs.build-image-arguments }}
 
     - name: Upload Genesis security permissions report
       uses: actions/upload-artifact@v4
