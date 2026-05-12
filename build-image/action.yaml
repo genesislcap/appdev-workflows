@@ -171,7 +171,7 @@ runs:
 
     - name: Run Sonar and Upload Coverage
       if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
-      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@SONAR-UPDATE
+      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
       with:
         version: ${{ inputs.version }}
         jfrog-username: ${{ inputs.jfrog-username }}
