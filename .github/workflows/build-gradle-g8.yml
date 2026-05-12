@@ -132,8 +132,8 @@ jobs:
       - name: Enable Genesis permission check
         shell: bash
         run: |
-          mkdir -p ~/.gradle
-          echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
+          mkdir -p "${GRADLE_USER_HOME}"
+          echo 'genesis.check.permission.enabled=true' >> "${GRADLE_USER_HOME}/gradle.properties"
 
       - name: Set up JDK
         uses: actions/setup-java@v2
