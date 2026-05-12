@@ -28,33 +28,33 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # - name: Validate Sonar token
-    #   shell: bash
-    #   run: |
-    #     if [ -z "${{ inputs.JENKINSGENESIS_SONAR }}" ]; then
-    #       echo "::error::Sonar token must be provided by the caller environment when sonar is enabled."
-    #       exit 1
-    #     fi
+    - name: Validate Sonar token
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.sonar-token }}" ]; then
+          echo "::error::sonar-token must be provided by the caller environment when sonar is enabled."
+          exit 1
+        fi
 
     - name: Upload test coverage
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token=${{ inputs.sonar-token }}
+        ./gradlew jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token="${{ inputs.sonar-token }}"
 
-    # - name: Upload Test Reports
-    #   uses: actions/upload-artifact@v4
-    #   if: always()
-    #   with:
-    #     name: test-reports${{ inputs.test-reports-suffix }}
-    #     path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/**/*"
+    - name: Upload Test Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-reports${{ inputs.test-reports-suffix }}
+        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/**/*"
 
-    # - name: Publish All Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: |
-    #       ./**/surefire-reports/**/*.xml
-    #       ./**/build/test-results/**/*.xml
-    #     fail_on: nothing
-    #     report_suite_logs: any
+    - name: Publish All Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          ./**/surefire-reports/**/*.xml
+          ./**/build/test-results/**/*.xml
+        fail_on: nothing
+        report_suite_logs: any

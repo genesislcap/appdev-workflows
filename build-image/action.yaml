@@ -47,6 +47,8 @@ inputs:
     required: false
     type: boolean
     default: false
+  sonar-token:
+    required: false
 
   jfrogscan:
         required: false
@@ -131,15 +133,8 @@ runs:
     - name: Enable Genesis permission check
       shell: bash
       run: |
-        echo 'GENESIS_SYSDEF_genesis.check.permission.enabled=true' >> "$GITHUB_ENV"
-
-    - name: Upload Genesis security permissions report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: genesis-security-permissions-report
-        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
-        if-no-files-found: ignore
+        mkdir -p ~/.gradle
+        echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
 
     - name: Run sast report
       if: inputs.sast
@@ -164,8 +159,7 @@ runs:
         app-name: ${{ inputs.app-name }}
 
     - name: Run Tests
-      if: ${{ !inputs.skip-tests }}
-      # if: ${{ !inputs.skip-tests && !inputs.sonar-enabled }}
+      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled != 'true' }}
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
@@ -175,17 +169,17 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
 
-    # - name: Run Sonar and Upload Coverage
-    #   if: ${{ !inputs.skip-tests && inputs.sonar-enabled }}
-    #   uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
-    #   with:
-    #     version: ${{ inputs.version }}
-    #     jfrog-username: ${{ inputs.jfrog-username }}
-    #     jfrog-password: ${{ inputs.jfrog-password }}
-    #     test-reports-suffix: ${{ inputs.test-reports-suffix }}
-    #     working-directory: ${{ inputs.working-directory }}
-    #     server-path: ${{ inputs.server-path }}
-    #     JENKINSGENESIS_SONAR: ${{ inputs.JENKINSGENESIS_SONAR }}
+    - name: Run Sonar and Upload Coverage
+      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
+      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@SONAR-UPDATE
+      with:
+        version: ${{ inputs.version }}
+        jfrog-username: ${{ inputs.jfrog-username }}
+        jfrog-password: ${{ inputs.jfrog-password }}
+        test-reports-suffix: ${{ inputs.test-reports-suffix }}
+        working-directory: ${{ inputs.working-directory }}
+        server-path: ${{ inputs.server-path }}
+        sonar-token: ${{ inputs.sonar-token }}
 
     - name: Build Image
       if: inputs.push-image == 'true'
@@ -193,6 +187,14 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
+
+    - name: Upload Genesis security permissions report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: genesis-security-permissions-report
+        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
+        if-no-files-found: ignore
 
     - name: Push Image using bash
       if: inputs.push-image == 'true'
