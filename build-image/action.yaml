@@ -175,6 +175,12 @@ runs:
         server-path: ${{ inputs.server-path }}
         sonar-token: ${{ inputs.sonar-token }}
 
+    - name: Check Auth Permissions
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+
     - name: Build Image
       if: inputs.push-image == 'true'
       shell: bash
