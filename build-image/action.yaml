@@ -34,7 +34,7 @@ inputs:
     default: ""
   push-image:
     required: false
-    default: "true"
+    default: "false"
   sast:
     required: false
     default: true
@@ -129,12 +129,6 @@ runs:
       uses: genesislcap/appdev-workflows/read-dot-env@develop
       with:
         config-path: ${{ inputs.config-path }}
-
-    - name: Enable Genesis permission check
-      shell: bash
-      run: |
-        mkdir -p ~/.gradle
-        echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
 
     - name: Run sast report
       if: inputs.sast
