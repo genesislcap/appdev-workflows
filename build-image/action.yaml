@@ -130,6 +130,12 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
+    - name: Enable Genesis permission check
+      shell: bash
+      run: |
+        mkdir -p ~/.gradle
+        echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
+
     - name: Run sast report
       if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop

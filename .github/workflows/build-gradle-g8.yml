@@ -129,6 +129,12 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Enable Genesis permission check
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle
+          echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
+
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
