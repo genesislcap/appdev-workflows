@@ -38,7 +38,7 @@ runs:
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        if ./gradlew tasks --all -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon | grep -q "appDistZip"; then
+        if ./gradlew help --task appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon >/dev/null 2>&1; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
@@ -53,69 +53,40 @@ runs:
 
     - name: Run the JFrog scan
       if: steps.check_task.outputs.appDistZip == 'true'
+      id: scan
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        jf s --licenses --vuln --watches "scan" */build/dist/*.zip
+        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+        FULL_REPORT="$GITHUB_WORKSPACE/jfrog-scan-full.json"
+        TABLE_REPORT="$GITHUB_WORKSPACE/jfrog-scan-table-${TIMESTAMP}.txt"
 
-    - name: Get output status filename
-      if: steps.check_task.outputs.appDistZip == 'true'
-      shell: bash
-      id: status_filename
-      run: |
-        filename=$(ls $JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/)
-        echo "filename=$JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR/jfrog-command-summary/security/binaries-scans/$filename" >> $GITHUB_OUTPUT
+        jf s --licenses --vuln --format=json */build/dist/*.zip > "$FULL_REPORT"
+
+        jq -r '
+          ["CVE", "Severity", "Component", "Fixed Versions"],
+          ["---", "---", "---", "---"],
+          (.vulnerabilities[]? | [
+            .cves[0]?.cve // "N/A",
+            .severity // "N/A",
+            ((.components | to_entries[0].key) // "N/A"),
+            ((.fixed_versions // []) | join(", "))
+          ])
+          | @tsv
+        ' "$FULL_REPORT" > "$TABLE_REPORT"
+
+        echo "full_report_file=$FULL_REPORT" >> $GITHUB_OUTPUT
+        echo "table_report_file=$TABLE_REPORT" >> $GITHUB_OUTPUT
 
     - name: Create markdown summary
       if: steps.check_task.outputs.appDistZip == 'true'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
       with:
-        json_path: ${{ steps.status_filename.outputs.filename }}
-        
-    # -----------------------------
-    # stgenerate table scan
-    # -----------------------------
-    - name: Generate scan table report
-      if: steps.check_task.outputs.appDistZip == 'true'
-      id: table_report
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-      run: |
-        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-        TABLE_REPORT="jfrog-scan-table-${TIMESTAMP}.txt"
-
-        # Run JFrog scan in table format and only display critical and high
-        jf s --vuln --watches "vulnerabilities" --format=table */build/dist/*.zip | tee $TABLE_REPORT
-
-        # Move the report to the repo root so upload-artifact can use it
-        mv $TABLE_REPORT $GITHUB_WORKSPACE/
-
-        # Expose the filename
-        echo "table_report_file=$GITHUB_WORKSPACE/$TABLE_REPORT" >> $GITHUB_OUTPUT
+        json_path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog scan table report
       if: steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}
-        path: ${{ steps.table_report.outputs.table_report_file }}
-
-    - name: Generate full JFrog scan report
-      if: steps.check_task.outputs.appDistZip == 'true'
-      id: full_report
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-      run: |
-        REPORT_FILE="jfrog-scan-full.json"
-
-        jf s --licenses --vuln --format=json */build/dist/*.zip > "$REPORT_FILE"
-
-        mv "$REPORT_FILE" "$GITHUB_WORKSPACE/"
-        echo "full_report_file=$GITHUB_WORKSPACE/$REPORT_FILE" >> $GITHUB_OUTPUT
-
-    - name: Upload full JFrog scan report
-      if: steps.check_task.outputs.appDistZip == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
-        path: ${{ steps.full_report.outputs.full_report_file }}
+        path: ${{ steps.scan.outputs.table_report_file }}
