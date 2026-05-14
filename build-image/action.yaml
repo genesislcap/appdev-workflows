@@ -192,7 +192,7 @@ runs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: genesis-security-permissions-report
+        name: genesis-security-permissions-report-${{ inputs.app-name }}-${{ github.run_number }}
         path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
         if-no-files-found: ignore
 
