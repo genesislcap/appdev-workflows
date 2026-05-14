@@ -34,7 +34,7 @@ inputs:
     default: ""
   push-image:
     required: false
-    default: "false"
+    default: "true"
   sast:
     required: false
     default: true
@@ -175,7 +175,19 @@ runs:
         server-path: ${{ inputs.server-path }}
         sonar-token: ${{ inputs.sonar-token }}
 
+    - name: Check Auth Permissions task
+      id: auth_permissions_task
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Check Auth Permissions
+      if: steps.auth_permissions_task.outputs.exists == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
