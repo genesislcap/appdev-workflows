@@ -186,7 +186,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Pgenesis.check.permission.enabled=true ${{ inputs.build-image-arguments }}
+        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
 
     - name: Upload Genesis security permissions report
       uses: actions/upload-artifact@v4
