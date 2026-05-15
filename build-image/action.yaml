@@ -142,7 +142,7 @@ runs:
 
     - name: Scan artifact
       if: inputs.jfrogscan
-      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+      uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@codex/jfrog-scan-report-artifacts
       with:
         version: ${{ inputs.version }}
         jfrog-username: ${{ inputs.jfrog-username }}
