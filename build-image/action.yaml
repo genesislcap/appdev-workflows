@@ -152,25 +152,6 @@ runs:
         build-server-arguments: ${{ inputs.build-image-arguments }}
         app-name: ${{ inputs.app-name }}
 
-    - name: Check Auth Permissions task
-      id: auth_permissions_task
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-      run: |
-        if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
-          echo "exists=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "exists=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Check Auth Permissions
-      id: check_auth_permissions
-      if: steps.auth_permissions_task.outputs.exists == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
-      run: |
-        ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
-
     - name: Run Tests
       if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled != 'true' }}
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
@@ -193,6 +174,25 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
         sonar-token: ${{ inputs.sonar-token }}
+
+    - name: Check Auth Permissions task
+      id: auth_permissions_task
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check Auth Permissions
+      id: check_auth_permissions
+      if: steps.auth_permissions_task.outputs.exists == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
 
     - name: Build Image
       if: inputs.push-image == 'true'
