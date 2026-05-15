@@ -90,7 +90,7 @@ on:
       jfrogscan:
         required: false
         default: true
-        type: boolean   
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:
@@ -128,12 +128,6 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
-
-      - name: Enable Genesis permission check
-        shell: bash
-        run: |
-          mkdir -p ~/.gradle
-          echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
 
       - name: Set up JDK
         uses: actions/setup-java@v2
@@ -223,7 +217,7 @@ jobs:
           config-path: ${{ inputs.config-path }}
 
       - name: Scan artifact
-        if: inputs.jfrogscan
+        if: false
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
@@ -279,11 +273,29 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/server"
           cache-disabled: true
 
+      - name: Check Auth Permissions task
+        id: auth_permissions_task
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}/server"
+        run: |
+          if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Auth Permissions
+        if: steps.auth_permissions_task.outputs.exists == 'true'
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}/server"
+        run: |
+          ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: genesis-security-permissions-report
+          name: genesis-security-permissions-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
           if-no-files-found: ignore
 

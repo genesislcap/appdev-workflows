@@ -141,7 +141,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Scan artifact
-      if: inputs.jfrogscan
+      if: false
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
       with:
         version: ${{ inputs.version }}
@@ -165,7 +165,7 @@ runs:
 
     - name: Run Sonar and Upload Coverage
       if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
-      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
+      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@SONAR-UPDATE
       with:
         version: ${{ inputs.version }}
         jfrog-username: ${{ inputs.jfrog-username }}
