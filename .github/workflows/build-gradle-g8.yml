@@ -274,6 +274,7 @@ jobs:
           fi
 
       - name: Check Auth Permissions
+        id: check_auth_permissions
         if: steps.auth_permissions_task.outputs.exists == 'true'
         shell: bash
         working-directory: "${{ inputs.working-directory }}/server"
@@ -294,7 +295,7 @@ jobs:
 
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.check_auth_permissions.outcome == 'success'
         with:
           name: genesis-security-permissions-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
