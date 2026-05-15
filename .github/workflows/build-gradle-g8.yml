@@ -179,6 +179,7 @@ jobs:
 
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          echo "genesis.check.permission.enabled=true" >> ~/.gradle/gradle.properties
           sudo chmod +x ./gradlew
           sudo chmod +x ./server/gradlew
 
