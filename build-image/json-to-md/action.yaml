@@ -33,73 +33,42 @@ runs:
         # -------------------------------
         # jq helpers
         # -------------------------------
-        jq_str() {
-          jq -r "
-            def scan_root:
-              if type == \"object\"
-                 and has(\"summary\")
-                 and (.summary | type == \"object\")
-                 and (.summary | has(\"scans\"))
-                 and (.summary.scans | type == \"array\")
-                 and (.summary.scans | length > 0)
-              then .summary.scans[0]
-              elif type == \"object\" and (has(\"vulnerabilities\") or has(\"violations\")) then .
-              elif type == \"array\" then
-                (map(select(type == \"object\" and (has(\"summary\") or has(\"vulnerabilities\") or has(\"violations\"))))[0] // {})
-              else
-                ([.. | objects | select(has(\"vulnerabilities\") or has(\"violations\"))][0] // {})
-              end;
+        ROOT_FILE="$(mktemp)"
+        jq '
+          if type == "array" then
+            (map(select(type == "object"))[0] // {})
+          elif type == "object" then
+            .
+          else
+            {}
+          end
+        ' "$JSON_FILE" > "$ROOT_FILE"
 
-            scan_root as \$s
-            | (\$s | $1 // empty)
-          " "$JSON_FILE" 2>/dev/null || true
+        jq_str() {
+          jq -r "$1 // empty" "$ROOT_FILE" 2>/dev/null || true
         }
 
         jq_count() {
-          jq -r "
-            def scan_root:
-              if type == \"object\"
-                 and has(\"summary\")
-                 and (.summary | type == \"object\")
-                 and (.summary | has(\"scans\"))
-                 and (.summary.scans | type == \"array\")
-                 and (.summary.scans | length > 0)
-              then .summary.scans[0]
-              elif type == \"object\" and (has(\"vulnerabilities\") or has(\"violations\")) then .
-              elif type == \"array\" then
-                (map(select(type == \"object\" and (has(\"summary\") or has(\"vulnerabilities\") or has(\"violations\"))))[0] // {})
-              else
-                ([.. | objects | select(has(\"vulnerabilities\") or has(\"violations\"))][0] // {})
-              end;
-
-            def count_or_len:
-              if type == \"number\" then .
-              elif type == \"array\" then length
-              elif type == \"object\" then (to_entries | map(.value | count_or_len) | add // 0)
-              else 0 end;
-
-            scan_root as \$s
-            | try ((\$s | $1 // 0) | count_or_len) catch 0
-          " "$JSON_FILE" 2>/dev/null || echo 0
+          jq -r "[ $1 ] | length" "$ROOT_FILE" 2>/dev/null || echo 0
         }
         
         # -------------------------------
         # Extract fields safely
         # -------------------------------
-        TARGET=$(jq_str '.target')
-        NAME=$(jq_str '.name')
-        SCAN_ID=$(jq_str '.vulnerabilities?.sca?.scan_ids?[0]')
+        TARGET=$(jq_str '.component_id')
+        NAME=$(jq_str '.package_type')
+        SCAN_ID=$(jq_str '.scan_id')
         
         SCAN_URL=""
         if [ -n "$SCAN_ID" ]; then
           SCAN_URL="${BASE_URL}/${SCAN_ID}"
         fi
         
-        HIGH_VULN=$(jq_count '.vulnerabilities?.sca?.security?.High')
-        MED_VULN=$(jq_count '.vulnerabilities?.sca?.security?.Medium')
+        HIGH_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "High")')
+        MED_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Medium")')
         
-        HIGH_VIOL=$(jq_count '.violations?.sca?.security?.High')
-        CRIT_LICENSE=$(jq_count '.violations?.sca?.license?.Critical')
+        HIGH_VIOL=0
+        CRIT_LICENSE=$(jq_count '.licenses[]?')
         
         # -------------------------------
         # Write markdown
@@ -148,3 +117,5 @@ runs:
           cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
           echo "Appended markdown to GitHub Actions summary."
         fi
+
+        rm -f "$ROOT_FILE"
