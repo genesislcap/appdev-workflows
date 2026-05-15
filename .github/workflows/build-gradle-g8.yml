@@ -217,7 +217,7 @@ jobs:
           config-path: ${{ inputs.config-path }}
 
       - name: Scan artifact
-        if: false
+        if: inputs.jfrogscan
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
