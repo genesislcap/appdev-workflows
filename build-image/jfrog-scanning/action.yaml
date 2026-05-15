@@ -64,16 +64,27 @@ runs:
         jf s --licenses --vuln --format=json */build/dist/*.zip > "$FULL_REPORT"
 
         if ! jq -r '
-          def doc: if type == "array" then (.[0] // {}) else . end;
-          doc
-          | ["CVE", "Severity", "Component", "Fixed Versions"],
-            ["---", "---", "---", "---"],
-            (.vulnerabilities[]? | [
-              .cves[0]?.cve // "N/A",
-              .severity // "N/A",
-              ((.components | to_entries[0].key) // "N/A"),
-              ((.fixed_versions // []) | join(", "))
-            ])
+          def root:
+            if type == "array" then
+              (map(select(type == "object" and has("vulnerabilities")))[0]
+                // map(select(type == "object"))[0]
+                // .[0]
+                // {})
+            else
+              .
+            end;
+
+          def vulns:
+            (root | .vulnerabilities? // []);
+
+          (["CVE", "Severity", "Component", "Fixed Versions"],
+           ["---", "---", "---", "---"]),
+          (vulns[]? | [
+            .cves[0]?.cve // "N/A",
+            .severity // "N/A",
+            ((.components | to_entries[0].key) // "N/A"),
+            ((.fixed_versions // []) | join(", "))
+          ])
           | @tsv
         ' "$FULL_REPORT" > "$TABLE_REPORT"; then
           {
