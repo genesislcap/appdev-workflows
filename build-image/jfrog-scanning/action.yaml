@@ -66,25 +66,21 @@ runs:
         if ! jq -r '
           def root:
             if type == "array" then
-              (map(select(type == "object" and has("vulnerabilities")))[0]
-                // map(select(type == "object"))[0]
-                // .[0]
-                // {})
+              (map(select(type == "object"))[0] // {})
             else
               .
             end;
 
-          def vulns:
-            (root | .vulnerabilities? // []);
-
-          (["CVE", "Severity", "Component", "Fixed Versions"],
-           ["---", "---", "---", "---"]),
-          (vulns[]? | [
-            .cves[0]?.cve // "N/A",
-            .severity // "N/A",
-            ((.components | to_entries[0].key) // "N/A"),
-            ((.fixed_versions // []) | join(", "))
-          ])
+          root as $root
+          | ($root.vulnerabilities? // []) as $vulns
+          | (["CVE", "Severity", "Component", "Fixed Versions"],
+             ["---", "---", "---", "---"]),
+            ($vulns[]? | [
+              .cves[0]?.cve // "N/A",
+              .severity // "N/A",
+              ((.components | to_entries[0].key) // "N/A"),
+              ((.fixed_versions // []) | join(", "))
+            ])
           | @tsv
         ' "$FULL_REPORT" > "$TABLE_REPORT"; then
           {
