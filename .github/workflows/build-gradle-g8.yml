@@ -89,7 +89,7 @@ on:
         type: boolean
       jfrogscan:
         required: false
-        default: false
+        default: true
         type: boolean
 
     secrets:
@@ -216,7 +216,7 @@ jobs:
           config-path: ${{ inputs.config-path }}
 
       - name: Scan artifact
-        if: inputs.jfrogscan
+        if: false
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}

@@ -111,7 +111,7 @@ on:
 
       jfrogscan:
         required: false
-        default: false
+        default: true
         type: boolean   
       prbuild:
         required: false
@@ -256,7 +256,7 @@ jobs:
           cache-disabled: ${{ inputs.disable-cache }}
 
       - name: Scan artifact
-        if: inputs.jfrogscan
+        if: false
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}

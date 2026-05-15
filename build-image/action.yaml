@@ -52,7 +52,7 @@ inputs:
 
   jfrogscan:
         required: false
-        default: false
+        default: true
         type: boolean
 
   sonar-enabled:
@@ -141,7 +141,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Scan artifact
-      if: inputs.jfrogscan
+      if: false
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
       with:
         version: ${{ inputs.version }}
