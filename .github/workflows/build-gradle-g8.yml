@@ -89,8 +89,8 @@ on:
         type: boolean
       jfrogscan:
         required: false
-        default: true
-        type: boolean   
+        default: false
+        type: boolean
 
     secrets:
       GRADLE_PROPERTIES:

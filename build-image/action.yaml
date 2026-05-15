@@ -52,7 +52,7 @@ inputs:
 
   jfrogscan:
         required: false
-        default: true
+        default: false
         type: boolean
 
   sonar-enabled:

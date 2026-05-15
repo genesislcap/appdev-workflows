@@ -111,8 +111,8 @@ on:
 
       jfrogscan:
         required: false
-        default: true
-        type: boolean
+        default: false
+        type: boolean   
       prbuild:
         required: false
         default: false
