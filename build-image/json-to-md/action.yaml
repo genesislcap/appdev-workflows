@@ -64,8 +64,8 @@ runs:
           SCAN_URL="${BASE_URL}/${SCAN_ID}"
         fi
         
+        CRIT_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Critical")')
         HIGH_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "High")')
-        MED_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Medium")')
         
         HIGH_VIOL=0
         CRIT_LICENSE=$(jq_count '.licenses[]?')
@@ -95,8 +95,8 @@ runs:
         printf '%s\n\n' "## 🛡️ Vulnerabilities" >> "$MD_FILE"
         printf '%s\n' "<table>" >> "$MD_FILE"
         printf '%s\n' "  <tr><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Critical</td><td>${CRIT_VULN}</td></tr>" >> "$MD_FILE"
         printf '%s\n' "  <tr><td>High</td><td>${HIGH_VULN}</td></tr>" >> "$MD_FILE"
-        printf '%s\n' "  <tr><td>Medium</td><td>${MED_VULN}</td></tr>" >> "$MD_FILE"
         printf '%s\n\n' "</table>" >> "$MD_FILE"
         
         # -------------------------------
