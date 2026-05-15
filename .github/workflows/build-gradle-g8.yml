@@ -262,18 +262,6 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}     
       
 
-      - name: Test and Coverage
-        if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
-
       - name: Check Auth Permissions task
         id: auth_permissions_task
         shell: bash
@@ -291,6 +279,18 @@ jobs:
         working-directory: "${{ inputs.working-directory }}/server"
         run: |
           ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+
+      - name: Test and Coverage
+        if: inputs.sonar_enabled
+        uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          arguments: >
+            test jacocoTestReport sonarqube --no-configuration-cache
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+          build-root-directory: "${{ inputs.working-directory }}/server"
+          cache-disabled: true
 
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
