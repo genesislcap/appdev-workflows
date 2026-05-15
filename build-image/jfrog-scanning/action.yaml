@@ -72,7 +72,7 @@ runs:
             end;
 
           root as $root
-          | ($root.vulnerabilities? // []) as $vulns
+          | (if ($root | type) == "object" then ($root.vulnerabilities // []) else [] end) as $vulns
           | (["CVE", "Severity", "Component", "Fixed Versions"],
              ["---", "---", "---", "---"]),
             ($vulns[]? | [
