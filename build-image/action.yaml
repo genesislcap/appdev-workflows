@@ -130,12 +130,6 @@ runs:
       with:
         config-path: ${{ inputs.config-path }}
 
-    - name: Enable Genesis permission check
-      shell: bash
-      run: |
-        mkdir -p ~/.gradle
-        echo 'genesis.check.permission.enabled=true' >> ~/.gradle/gradle.properties
-
     - name: Run sast report
       if: inputs.sast
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
@@ -171,7 +165,7 @@ runs:
 
     - name: Run Sonar and Upload Coverage
       if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
-      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
+      uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@SONAR-UPDATE
       with:
         version: ${{ inputs.version }}
         jfrog-username: ${{ inputs.jfrog-username }}
@@ -180,6 +174,24 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
         sonar-token: ${{ inputs.sonar-token }}
+
+    - name: Check Auth Permissions task
+      id: auth_permissions_task
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check Auth Permissions
+      if: steps.auth_permissions_task.outputs.exists == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
 
     - name: Build Image
       if: inputs.push-image == 'true'
@@ -192,7 +204,7 @@ runs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: genesis-security-permissions-report
+        name: genesis-security-permissions-report-${{ inputs.app-name }}-${{ github.run_number }}
         path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
         if-no-files-found: ignore
 
