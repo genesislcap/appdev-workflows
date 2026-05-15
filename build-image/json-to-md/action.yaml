@@ -53,17 +53,9 @@ runs:
         }
         
         # -------------------------------
-        # Extract fields safely
+        # Extract counts safely
         # -------------------------------
-        TARGET=$(jq_str '.component_id')
-        NAME=$(jq_str '.package_type')
-        SCAN_ID=$(jq_str '.scan_id')
-        
-        SCAN_URL=""
-        if [ -n "$SCAN_ID" ]; then
-          SCAN_URL="${BASE_URL}/${SCAN_ID}"
-        fi
-        
+
         CRIT_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Critical")')
         HIGH_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "High")')
         
@@ -78,14 +70,6 @@ runs:
         printf '%s\n' "# 🔍 JFrog Scan Summary" >> "$MD_FILE"
         printf '\n' >> "$MD_FILE"
         
-        [ -n "$TARGET" ] && printf '%s\n' "**Target:** \`$TARGET\`" >> "$MD_FILE"
-        [ -n "$NAME" ]   && printf '%s\n' "**Name:** \`$NAME\`" >> "$MD_FILE"
-        
-        printf '\n' >> "$MD_FILE"
-        
-        if [ -n "$SCAN_URL" ]; then
-          printf '%s\n\n' "**📄 Full Scan Report:** <a href=\"$SCAN_URL\">View in JFrog Xray</a>" >> "$MD_FILE"
-        fi
         
         printf '%s\n\n' "---" >> "$MD_FILE"
         
