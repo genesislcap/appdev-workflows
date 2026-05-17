@@ -257,7 +257,7 @@ jobs:
 
       - name: Scan artifact
         if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@codex/jfrog-scan-report-artifacts
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
