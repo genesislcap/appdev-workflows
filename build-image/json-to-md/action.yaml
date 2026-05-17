@@ -59,7 +59,7 @@ runs:
         CRIT_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Critical")')
         HIGH_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "High")')
         
-        HIGH_VIOL=0
+        HIGH_VIOL=$(jq_count '.violations[]? | select((.type // .category // "") == "Security" and (.severity // "") == "High")')
         CRIT_LICENSE=$(jq_count '.licenses[]?')
         
         # -------------------------------
