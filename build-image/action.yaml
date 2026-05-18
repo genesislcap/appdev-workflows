@@ -141,7 +141,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
 
     - name: Scan artifact
-      if: false
+      if: inputs.jfrogscan
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
       with:
         version: ${{ inputs.version }}
@@ -187,6 +187,7 @@ runs:
         fi
 
     - name: Check Auth Permissions
+      id: check_auth_permissions
       if: steps.auth_permissions_task.outputs.exists == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
@@ -202,7 +203,7 @@ runs:
 
     - name: Upload Genesis security permissions report
       uses: actions/upload-artifact@v4
-      if: always()
+      if: always() && steps.check_auth_permissions.outcome == 'success'
       with:
         name: genesis-security-permissions-report-${{ inputs.app-name }}-${{ github.run_number }}
         path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"

@@ -256,7 +256,7 @@ jobs:
           cache-disabled: ${{ inputs.disable-cache }}
 
       - name: Scan artifact
-        if: false
+        if: inputs.jfrogscan
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}

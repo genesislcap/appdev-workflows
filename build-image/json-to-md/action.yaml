@@ -33,41 +33,40 @@ runs:
         # -------------------------------
         # jq helpers
         # -------------------------------
+        ROOT_FILE="$(mktemp)"
+        jq '
+          if type == "array" then
+            (map(select(type == "object"))[0] // {})
+          elif type == "object" then
+            .
+          else
+            {}
+          end
+        ' "$JSON_FILE" > "$ROOT_FILE"
+
         jq_str() {
-          jq -r "$1 // empty" "$JSON_FILE" 2>/dev/null || true
+          jq -r "$1 // empty" "$ROOT_FILE" 2>/dev/null || true
         }
-        
-        jq_num() {
-          jq -r "$1 // 0" "$JSON_FILE" 2>/dev/null || echo 0
-        }
-        
-        jq_sum() {
-          jq -r '
-            '"$1"'?
-            | to_entries?
-            | map(.value)?
-            | add?
-            // 0
-          ' "$JSON_FILE" 2>/dev/null || echo 0
+
+        jq_count() {
+          jq -r "[ $1 ] | length" "$ROOT_FILE" 2>/dev/null || echo 0
         }
         
         # -------------------------------
-        # Extract fields safely
+        # Extract counts safely
         # -------------------------------
-        TARGET=$(jq_str '.summary.scans[0]?.target')
-        NAME=$(jq_str '.summary.scans[0]?.name')
-        SCAN_ID=$(jq_str '.summary.scans[0]?.vulnerabilities?.sca?.scan_ids?[0]')
+
+        CRIT_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "Critical")')
+        HIGH_VULN=$(jq_count '.vulnerabilities[]? | select(.severity == "High")')
         
-        SCAN_URL=""
-        if [ -n "$SCAN_ID" ]; then
-          SCAN_URL="${BASE_URL}/${SCAN_ID}"
-        fi
-        
-        HIGH_VULN=$(jq_sum '.summary.scans[0]?.vulnerabilities?.sca?.security?.High')
-        MED_VULN=$(jq_sum '.summary.scans[0]?.vulnerabilities?.sca?.security?.Medium')
-        
-        HIGH_VIOL=$(jq_sum '.summary.scans[0]?.violations?.sca?.security?.High')
-        CRIT_LICENSE=$(jq_sum '.summary.scans[0]?.violations?.sca?.license?.Critical')
+        HIGH_VIOL=$(jq_count '
+          if (.violations? | type) == "array" and (.violations | length) > 0 then
+            .violations[]? | select((.type // .category // "") == "Security" and (.severity // "") == "High")
+          else
+            .vulnerabilities[]? | select(.severity == "High")
+          end
+        ')
+        CRIT_LICENSE=$(jq_count '.licenses[]? | select((.severity // .license_severity // "") == "Critical")')
         
         # -------------------------------
         # Write markdown
@@ -77,14 +76,6 @@ runs:
         printf '%s\n' "# 🔍 JFrog Scan Summary" >> "$MD_FILE"
         printf '\n' >> "$MD_FILE"
         
-        [ -n "$TARGET" ] && printf '%s\n' "**Target:** \`$TARGET\`" >> "$MD_FILE"
-        [ -n "$NAME" ]   && printf '%s\n' "**Name:** \`$NAME\`" >> "$MD_FILE"
-        
-        printf '\n' >> "$MD_FILE"
-        
-        if [ -n "$SCAN_URL" ]; then
-          printf '%s\n\n' "**📄 Full Scan Report:** <a href=\"$SCAN_URL\">View in JFrog Xray</a>" >> "$MD_FILE"
-        fi
         
         printf '%s\n\n' "---" >> "$MD_FILE"
         
@@ -94,8 +85,8 @@ runs:
         printf '%s\n\n' "## 🛡️ Vulnerabilities" >> "$MD_FILE"
         printf '%s\n' "<table>" >> "$MD_FILE"
         printf '%s\n' "  <tr><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Critical</td><td>${CRIT_VULN}</td></tr>" >> "$MD_FILE"
         printf '%s\n' "  <tr><td>High</td><td>${HIGH_VULN}</td></tr>" >> "$MD_FILE"
-        printf '%s\n' "  <tr><td>Medium</td><td>${MED_VULN}</td></tr>" >> "$MD_FILE"
         printf '%s\n\n' "</table>" >> "$MD_FILE"
         
         # -------------------------------
@@ -116,3 +107,5 @@ runs:
           cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
           echo "Appended markdown to GitHub Actions summary."
         fi
+
+        rm -f "$ROOT_FILE"
