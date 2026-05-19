@@ -76,83 +76,18 @@ runs:
 
         echo "Command sent. Command ID: $COMMAND_ID"
 
-        # Wait for the command to complete and print concise progress while it runs.
+        # Wait for the command to complete and check status
         echo "Waiting for command to complete..."
-        declare -A LAST_STDOUT_LENGTHS
-        declare -A LAST_STDERR_LENGTHS
-        declare -A LAST_REPORTED_STATUS
 
-        print_invocation_output() {
-            local instance_id="$1"
-            local status output stderr output_len stderr_len last_output_len last_stderr_len new_output new_stderr
-
-            status=$(aws ssm list-command-invocations \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$instance_id" \
-                --query "CommandInvocations[0].Status" \
-                --output text 2>/dev/null || true)
-
-            if [ -z "$status" ] || [ "$status" = "None" ]; then
-                echo "Instance $instance_id: waiting for invocation details..."
-                return
-            fi
-
-            output=$(aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$instance_id" \
-                --query "StandardOutputContent" \
-                --output text 2>/dev/null || true)
-
-            stderr=$(aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$instance_id" \
-                --query "StandardErrorContent" \
-                --output text 2>/dev/null || true)
-
-            if [ "${LAST_REPORTED_STATUS[$instance_id]:-}" != "$status" ]; then
-                echo "Instance $instance_id status: $status"
-                LAST_REPORTED_STATUS[$instance_id]="$status"
-            fi
-
-            output_len=${#output}
-            stderr_len=${#stderr}
-            last_output_len=${LAST_STDOUT_LENGTHS[$instance_id]:-0}
-            last_stderr_len=${LAST_STDERR_LENGTHS[$instance_id]:-0}
-
-            if [ "$output_len" -gt "$last_output_len" ]; then
-                new_output="${output:$last_output_len}"
-                echo "---- stdout tail ($instance_id) ----"
-                printf '%s\n' "$new_output" | tail -n 5
-                LAST_STDOUT_LENGTHS[$instance_id]=$output_len
-            fi
-
-            if [ "$stderr_len" -gt "$last_stderr_len" ]; then
-                new_stderr="${stderr:$last_stderr_len}"
-                echo "---- stderr ($instance_id) ----"
-                printf '%s\n' "$new_stderr"
-                LAST_STDERR_LENGTHS[$instance_id]=$stderr_len
-            fi
-        }
-
+        # Poll command status
         while true; do
-            ACTIVE=0
-            for INSTANCE_ID in $INSTANCE_IDS; do
-                STATUS=$(aws ssm list-command-invocations \
-                    --command-id "$COMMAND_ID" \
-                    --instance-id "$INSTANCE_ID" \
-                    --query "CommandInvocations[0].Status" \
-                    --output text 2>/dev/null || true)
+            STATUSES=$(aws ssm list-command-invocations \
+                --command-id "$COMMAND_ID" \
+                --details \
+                --query "CommandInvocations[].Status" \
+                --output text)
 
-                case "$STATUS" in
-                    Pending|InProgress|Delayed|"")
-                        ACTIVE=1
-                        ;;
-                esac
-
-                print_invocation_output "$INSTANCE_ID"
-            done
-
-            if [ "$ACTIVE" -eq 1 ]; then
+            if echo "$STATUSES" | grep -q "InProgress"; then
                 echo "Command still running..."
                 sleep 5
             else
