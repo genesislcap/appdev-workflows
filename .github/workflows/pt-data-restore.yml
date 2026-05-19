@@ -25,6 +25,11 @@ on:
         required: true
         default: ''
         type: string
+      sql_file_name:
+        description: 'SQL backup file name to restore'
+        required: false
+        default: 'tamhsbcperf'
+        type: string
       client_name:
         description: 'Client Name'
         required: true
@@ -77,7 +82,10 @@ jobs:
 
       - name: Download Backup File from S3
         run: |
-          BACKUP_FILE="${{ inputs.db_schema }}.sql"
+          BACKUP_FILE="${{ inputs.sql_file_name }}"
+          if [ -z "$BACKUP_FILE" ]; then
+            BACKUP_FILE="${{ inputs.db_schema }}.sql"
+          fi
           S3_PATH="${{ inputs.s3_bucket }}${{ inputs.product }}/${{ inputs.client_name }}/$BACKUP_FILE"
 
 
@@ -89,7 +97,10 @@ jobs:
       - name: Restore PostgreSQL Schema Using Docker
         if: ${{ !inputs.istam }}
         run: |
-          BACKUP_FILE="${{ inputs.db_schema }}.sql"
+          BACKUP_FILE="${{ inputs.sql_file_name }}"
+          if [ -z "$BACKUP_FILE" ]; then
+            BACKUP_FILE="${{ inputs.db_schema }}.sql"
+          fi
 
           echo "Restoring schema ${{ inputs.db_schema }} in database ${{ inputs.db_name }} using Docker..."
 
