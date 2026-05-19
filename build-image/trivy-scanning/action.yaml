@@ -1,0 +1,232 @@
+name: Scan Docker Image with Trivy
+description: Scan a built Docker image with Trivy and publish JSON, SARIF, and markdown reports
+
+inputs:
+  image-ref:
+    description: Image reference to scan
+    required: true
+  app-name:
+    description: Application or product name used in artifact names
+    required: false
+    default: ""
+  severity-threshold:
+    description: Comma-separated severities that should fail the build when fail-build is true
+    required: false
+    default: "HIGH,CRITICAL"
+  fail-build:
+    description: Fail the build when findings meet the severity threshold
+    required: false
+    default: false
+    type: boolean
+  license-full:
+    description: Enable full license scanning
+    required: false
+    default: false
+    type: boolean
+  output-dir:
+    description: Directory where reports will be written
+    required: false
+    default: "."
+
+outputs:
+  json_path:
+    value: ${{ steps.scan.outputs.json_path }}
+  sarif_path:
+    value: ${{ steps.scan.outputs.sarif_path }}
+  markdown_path:
+    value: ${{ steps.scan.outputs.markdown_path }}
+  threshold_findings:
+    value: ${{ steps.gate.outputs.threshold_findings }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Trivy
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        TRIVY_BIN_DIR="$RUNNER_TEMP/trivy-bin"
+        mkdir -p "$TRIVY_BIN_DIR"
+
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b "$TRIVY_BIN_DIR"
+
+        echo "$TRIVY_BIN_DIR" >> "$GITHUB_PATH"
+        trivy --version
+
+    - name: Prepare report paths
+      id: meta
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        APP_NAME="${{ inputs.app-name }}"
+        if [ -z "$APP_NAME" ]; then
+          APP_NAME="scan"
+        fi
+
+        SAFE_APP_NAME="$(printf '%s' "$APP_NAME" | tr ' /' '--' | tr -cd '[:alnum:]._:-')"
+        REPORT_DIR="${{ inputs.output-dir }}"
+        mkdir -p "$REPORT_DIR"
+
+        JSON_FILE="$REPORT_DIR/trivy-scan.json"
+        SARIF_FILE="$REPORT_DIR/trivy-scan.sarif"
+        MD_FILE="$REPORT_DIR/trivy-scan.md"
+
+        echo "app_name=$SAFE_APP_NAME" >> "$GITHUB_OUTPUT"
+        echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+        echo "json_file=$JSON_FILE" >> "$GITHUB_OUTPUT"
+        echo "sarif_file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        echo "md_file=$MD_FILE" >> "$GITHUB_OUTPUT"
+
+    - name: Run Trivy scan
+      id: scan
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        JSON_FILE="${{ steps.meta.outputs.json_file }}"
+        SARIF_FILE="${{ steps.meta.outputs.sarif_file }}"
+        IMAGE_REF="${{ inputs.image-ref }}"
+
+        LICENSE_FULL_FLAG=""
+        if [ "${{ inputs.license-full }}" = "true" ]; then
+          LICENSE_FULL_FLAG="--license-full"
+        fi
+
+        trivy image \
+          --scanners vuln,license \
+          $LICENSE_FULL_FLAG \
+          --format json \
+          --output "$JSON_FILE" \
+          "$IMAGE_REF"
+
+        trivy convert \
+          --format sarif \
+          --output "$SARIF_FILE" \
+          "$JSON_FILE"
+
+        echo "json_path=$JSON_FILE" >> "$GITHUB_OUTPUT"
+        echo "sarif_path=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        echo "markdown_path=${{ steps.meta.outputs.md_file }}" >> "$GITHUB_OUTPUT"
+
+    - name: Create markdown summary
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        JSON_FILE="${{ steps.scan.outputs.json_path }}"
+        MD_FILE="${{ steps.scan.outputs.markdown_path }}"
+        IMAGE_REF="${{ inputs.image-ref }}"
+        SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
+
+        if [ ! -f "$JSON_FILE" ]; then
+          echo "Trivy JSON report not found: $JSON_FILE"
+          exit 1
+        fi
+
+        jq_count() {
+          jq -r "$1 | length" "$JSON_FILE" 2>/dev/null || echo 0
+        }
+
+        CRIT_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "CRITICAL")]')
+        HIGH_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "HIGH")]')
+        MED_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "MEDIUM")]')
+        LOW_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "LOW")]')
+        UNK_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "UNKNOWN")]')
+
+        CRIT_LICENSE=$(jq_count '[.Results[]? | .Licenses[]? | select((.Severity // "" | ascii_upcase) == "CRITICAL")]')
+        HIGH_LICENSE=$(jq_count '[.Results[]? | .Licenses[]? | select((.Severity // "" | ascii_upcase) == "HIGH")]')
+        MED_LICENSE=$(jq_count '[.Results[]? | .Licenses[]? | select((.Severity // "" | ascii_upcase) == "MEDIUM")]')
+        LOW_LICENSE=$(jq_count '[.Results[]? | .Licenses[]? | select((.Severity // "" | ascii_upcase) == "LOW")]')
+        UNK_LICENSE=$(jq_count '[.Results[]? | .Licenses[]? | select((.Severity // "" | ascii_upcase) == "UNKNOWN")]')
+
+        : > "$MD_FILE"
+
+        printf '%s\n' "# Trivy Scan Summary" >> "$MD_FILE"
+        printf '\n' >> "$MD_FILE"
+        printf 'Image: `%s`\n\n' "$IMAGE_REF" >> "$MD_FILE"
+        printf 'Threshold: `%s`\n\n' "$SEVERITY_THRESHOLD" >> "$MD_FILE"
+        printf '%s\n\n' "---" >> "$MD_FILE"
+
+        printf '%s\n\n' "## Vulnerabilities" >> "$MD_FILE"
+        printf '%s\n' "<table>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Critical</td><td>${CRIT_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>High</td><td>${HIGH_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Medium</td><td>${MED_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Low</td><td>${LOW_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Unknown</td><td>${UNK_VULN}</td></tr>" >> "$MD_FILE"
+        printf '%s\n\n' "</table>" >> "$MD_FILE"
+
+        printf '%s\n\n' "## Licenses" >> "$MD_FILE"
+        printf '%s\n' "<table>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><th>Severity</th><th>Count</th></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Critical</td><td>${CRIT_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>High</td><td>${HIGH_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Medium</td><td>${MED_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Low</td><td>${LOW_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n' "  <tr><td>Unknown</td><td>${UNK_LICENSE}</td></tr>" >> "$MD_FILE"
+        printf '%s\n\n' "</table>" >> "$MD_FILE"
+
+        printf '%s\n' "---" >> "$MD_FILE"
+
+        echo "Wrote markdown to $MD_FILE"
+
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$MD_FILE" ]; then
+          cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Appended markdown to GitHub Actions summary."
+        fi
+
+    - name: Upload Trivy JSON report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-scan-json--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.scan.outputs.json_path }}
+
+    - name: Upload Trivy SARIF report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-scan-sarif--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.scan.outputs.sarif_path }}
+
+    - name: Upload Trivy markdown report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-scan-md--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.scan.outputs.markdown_path }}
+
+    - name: Evaluate threshold
+      id: gate
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [ "${{ inputs.fail-build }}" != "true" ]; then
+          echo "threshold_findings=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        JSON_FILE="${{ steps.scan.outputs.json_path }}"
+        SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
+
+        THRESHOLD_FINDINGS=$(jq -r --arg severities "$SEVERITY_THRESHOLD" '
+          def allowed:
+            ($severities | split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_upcase));
+          def matches_threshold:
+            ((.Severity // .severity // "" | ascii_upcase) as $sev
+             | (allowed | index($sev)) != null);
+          ([.Results[]? | .Vulnerabilities[]? | select(matches_threshold)] | length)
+          + ([.Results[]? | .Licenses[]? | select(matches_threshold)] | length)
+        ' "$JSON_FILE" 2>/dev/null || echo 0)
+
+        echo "threshold_findings=$THRESHOLD_FINDINGS" >> "$GITHUB_OUTPUT"
+
+        if [ "$THRESHOLD_FINDINGS" -gt 0 ]; then
+          echo "Trivy found $THRESHOLD_FINDINGS findings at or above severity threshold '$SEVERITY_THRESHOLD'."
+          exit 1
+        fi

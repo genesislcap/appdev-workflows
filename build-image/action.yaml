@@ -59,6 +59,22 @@ inputs:
     required: false
     type: boolean
     default: false
+  trivy-scan:
+    required: false
+    type: boolean
+    default: false
+  trivy-fail-build:
+    required: false
+    type: boolean
+    default: false
+  trivy-license-full:
+    required: false
+    type: boolean
+    default: false
+  trivy-severity-threshold:
+    required: false
+    type: string
+    default: "HIGH,CRITICAL"
   JENKINSGENESIS_SONAR:
     required: false
 
@@ -200,6 +216,17 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
+
+    - name: Trivy Scan
+      if: ${{ inputs.push-image == 'true' && inputs.trivy-scan == 'true' }}
+      uses: genesislcap/appdev-workflows/build-image/trivy-scanning@codex/trivy-scan-action-fresh
+      with:
+        image-ref: genesis/${{ env.PRODUCT_NAME }}:${{ inputs.version }}
+        app-name: ${{ inputs.app-name }}
+        severity-threshold: ${{ inputs.trivy-severity-threshold }}
+        fail-build: ${{ inputs.trivy-fail-build }}
+        license-full: ${{ inputs.trivy-license-full }}
+        output-dir: ${{ inputs.working-directory }}/trivy-reports
 
     - name: Upload Genesis security permissions report
       uses: actions/upload-artifact@v4
