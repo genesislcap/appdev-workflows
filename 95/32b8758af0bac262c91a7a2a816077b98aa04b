@@ -1,0 +1,33 @@
+.github/workflows/pr-title-check-trigger.yaml
+  s_5dda8695a65cf5::t_2b999042d4c0c9 11-14
+  s_5dda8695a65cf5::t_f5b1c803884380 20
+.github/workflows/build-gradle.yml
+  s_5dda8695a65cf5::t_8d011aabdbb3cd 293-296,298-306
+  s_5dda8695a65cf5::t_bb135d967c3535 168,174,422,428
+  s_5dda8695a65cf5::t_0f537a3a2259d2 297
+build-image/jfrog-scanning/action.yaml
+  s_5dda8695a65cf5::t_7e5ab7cf32fe15 97
+.github/workflows/build-gradle-g8.yml
+  s_5dda8695a65cf5::t_3d910c18c8f5f7 133
+  s_5dda8695a65cf5::t_7052b38a6f4595 251-256,258-264
+  s_5dda8695a65cf5::t_4f00fe669eb173 257
+  s_5dda8695a65cf5::t_81b3611baf9db8 140,146
+  s_5dda8695a65cf5::t_72305a68fd9ead 127
+  s_5dda8695a65cf5::t_79ae14821540cf 215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "9532b8758af0bac262c91a7a2a816077b98aa04b",
+  "prompts": {},
+  "sessions": {
+    "s_5dda8695a65cf5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0dcda413-2612-4225-b68a-f7808c6e43a7",
+        "model": "claude-4.6-sonnet-medium-thinking"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
