@@ -53,7 +53,7 @@ runs:
           | sh -s -- -b "$TRIVY_BIN_DIR"
 
         echo "$TRIVY_BIN_DIR" >> "$GITHUB_PATH"
-        trivy --version
+        "$TRIVY_BIN_DIR/trivy" --version
 
     - name: Prepare report paths
       id: meta
@@ -86,6 +86,7 @@ runs:
       run: |
         set -euo pipefail
 
+        TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         JSON_FILE="${{ steps.meta.outputs.json_file }}"
         SARIF_FILE="${{ steps.meta.outputs.sarif_file }}"
         IMAGE_REF="${{ inputs.image-ref }}"
@@ -95,14 +96,14 @@ runs:
           LICENSE_FULL_FLAG="--license-full"
         fi
 
-        trivy image \
+        "$TRIVY_BIN" image \
           --scanners vuln,license \
           $LICENSE_FULL_FLAG \
           --format json \
           --output "$JSON_FILE" \
           "$IMAGE_REF"
 
-        trivy convert \
+        "$TRIVY_BIN" convert \
           --format sarif \
           --output "$SARIF_FILE" \
           "$JSON_FILE"
