@@ -8,9 +8,13 @@ on:
       - synchronize
       - reopened
 
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   pull-requests: read
 
 jobs:
   check:
-    uses: genesislcap/appdev-workflows/.github/workflows/pr-title-check.yaml@develop
+    uses: genesislcap/appdev-workflows/.github/workflows/pr-title-check.yaml@github_workflow_analysis

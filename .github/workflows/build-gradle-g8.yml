@@ -124,26 +124,26 @@ jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
           distribution: 'adopt'
 
       - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
@@ -212,20 +212,9 @@ jobs:
 
       - name: Read .env file for build
         if: ${{ inputs.config-path }}
-        uses: genesislcap/appdev-workflows/read-dot-env@develop
+        uses: genesislcap/appdev-workflows/read-dot-env@github_workflow_analysis
         with:
           config-path: ${{ inputs.config-path }}
-
-      - name: Scan artifact
-        if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
-        with:
-          version: ${{ env.RELEASE_VERSION }}
-          jfrog-username: ${{ secrets.JFROG_USERNAME }}
-          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
-          working-directory: ${{ inputs.working-directory }}
-          server-path: "${{ inputs.working-directory }}/server"
-          app-name: ${{ inputs.product_name }}
 
       - name: Install Bearer CLI
         if: inputs.sast
@@ -259,8 +248,20 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}     
-      
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      # Runs after the build so Gradle's appDistZip task finds its outputs already
+      # on disk and completes as UP-TO-DATE, avoiding a second full compilation.
+      - name: Scan artifact
+        if: inputs.jfrogscan
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analysis
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: "${{ inputs.working-directory }}/server"
+          app-name: ${{ inputs.product_name }}
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
