@@ -94,7 +94,7 @@ runs:
 
     - name: Create markdown summary
       if: steps.check_task.outputs.appDistZip == 'true'
-      uses: genesislcap/appdev-workflows/build-image/json-to-md@github_workflow_analysis
+      uses: genesislcap/appdev-workflows/build-image/json-to-md@github_workflow_analyis
       with:
         json_path: ${{ steps.scan.outputs.full_report_file }}
 

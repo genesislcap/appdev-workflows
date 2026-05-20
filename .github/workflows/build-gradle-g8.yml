@@ -122,7 +122,7 @@ env:
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
-    runs-on: [ appdev-selfhosted-al2023 ]
+    runs-on: [ self-hosted, selfhosted-services ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -212,7 +212,7 @@ jobs:
 
       - name: Read .env file for build
         if: ${{ inputs.config-path }}
-        uses: genesislcap/appdev-workflows/read-dot-env@github_workflow_analysis
+        uses: genesislcap/appdev-workflows/read-dot-env@github_workflow_analyis
         with:
           config-path: ${{ inputs.config-path }}
 
@@ -254,7 +254,7 @@ jobs:
       # on disk and completes as UP-TO-DATE, avoiding a second full compilation.
       - name: Scan artifact
         if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analysis
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}

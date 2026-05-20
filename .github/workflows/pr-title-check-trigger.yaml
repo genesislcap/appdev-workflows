@@ -17,4 +17,4 @@ permissions:
 
 jobs:
   check:
-    uses: genesislcap/appdev-workflows/.github/workflows/pr-title-check.yaml@github_workflow_analysis
+    uses: genesislcap/appdev-workflows/.github/workflows/pr-title-check.yaml@github_workflow_analyis
