@@ -17,7 +17,11 @@ const severityRank = {
 
 const text = await fs.readFile(jsonPath, 'utf8');
 const data = JSON.parse(text);
-const results = Array.isArray(data) ? data : [data];
+const results = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.Results)
+    ? data.Results
+    : [data];
 
 const esc = (s = '') => String(s)
   .replace(/&/g, '&amp;')
@@ -34,7 +38,14 @@ function licenseSeverity(license) {
   if (!value) return 'UNKNOWN';
   if (
     value.includes('AGPL') ||
-    value.includes('GPL') ||
+    (value.includes('GPL') && !value.includes('LGPL')) ||
+    value.includes('ARTISTIC') ||
+    value.includes('SSPL') ||
+    value.includes('CPAL')
+  ) {
+    return 'HIGH';
+  }
+  if (
     value.includes('LGPL') ||
     value.includes('CDDL') ||
     value.includes('CPL') ||
@@ -42,12 +53,6 @@ function licenseSeverity(license) {
     value.includes('EUPL') ||
     value.includes('MPL') ||
     value.includes('ODBL') ||
-    value.includes('SSPL') ||
-    value.includes('CPAL')
-  ) {
-    return 'MEDIUM';
-  }
-  if (
     value.includes('UNLICENSE') ||
     value.includes('MIT') ||
     value.includes('APACHE') ||
