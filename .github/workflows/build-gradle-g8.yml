@@ -216,6 +216,17 @@ jobs:
         with:
           config-path: ${{ inputs.config-path }}
 
+      - name: Scan artifact
+        if: inputs.jfrogscan
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: "${{ inputs.working-directory }}/server"
+          app-name: ${{ inputs.product_name }}
+
       - name: Install Bearer CLI
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
@@ -249,19 +260,6 @@ jobs:
           cache-disabled: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      # Runs after the build so Gradle's appDistZip task finds its outputs already
-      # on disk and completes as UP-TO-DATE, avoiding a second full compilation.
-      - name: Scan artifact
-        if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
-        with:
-          version: ${{ env.RELEASE_VERSION }}
-          jfrog-username: ${{ secrets.JFROG_USERNAME }}
-          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
-          working-directory: ${{ inputs.working-directory }}
-          server-path: "${{ inputs.working-directory }}/server"
-          app-name: ${{ inputs.product_name }}
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
