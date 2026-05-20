@@ -156,7 +156,7 @@ env:
 jobs:
   build-server:
     if: ${{ inputs.build_server }}
-    runs-on: [ appdev-selfhosted-al2023 ]
+    runs-on: [ self-hosted, selfhosted-services ]
     steps:
       - uses: actions/checkout@v4
         with:
