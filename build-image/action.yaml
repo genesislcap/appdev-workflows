@@ -219,7 +219,7 @@ runs:
 
     - name: Trivy Scan
       if: ${{ inputs.push-image == 'true' && inputs.trivy-scan == 'true' }}
-      uses: genesislcap/appdev-workflows/build-image/trivy-scanning@codex/trivy-scan-action-fresh
+      uses: genesislcap/appdev-workflows/build-image/trivy-scanning@develop
       with:
         image-ref: genesis/${{ env.PRODUCT_NAME }}:${{ inputs.version }}
         app-name: ${{ inputs.app-name }}
