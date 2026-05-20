@@ -81,6 +81,59 @@ function renderTable(headers, rows) {
   return `<table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
+const vulnerabilityRows = [];
+const licenseRows = [];
+
+for (const result of results) {
+  const target = targetLabel(result);
+  const vulnerabilities = Array.isArray(result?.Vulnerabilities) ? result.Vulnerabilities : [];
+  const packages = Array.isArray(result?.Packages) ? result.Packages : [];
+
+  for (const vuln of vulnerabilities) {
+    vulnerabilityRows.push({
+      target,
+      severity: (vuln?.Severity || '').toUpperCase(),
+      id: vuln?.VulnerabilityID || '',
+      pkg: vuln?.PkgName || '',
+      installed: vuln?.InstalledVersion || '',
+      fixed: vuln?.FixedVersion || '',
+      title: vuln?.Title || '',
+    });
+  }
+
+  for (const pkg of packages) {
+    if (!Array.isArray(pkg?.Licenses)) continue;
+    for (const lic of pkg.Licenses) {
+      licenseRows.push({
+        target,
+        severity: licenseSeverity(lic),
+        pkg: pkg?.Name || '',
+        licenses: lic || '',
+      });
+    }
+  }
+}
+
+vulnerabilityRows.sort((a, b) => {
+  const ra = severityRank[a.severity] ?? 99;
+  const rb = severityRank[b.severity] ?? 99;
+  if (ra !== rb) return ra - rb;
+  const ta = String(a.target || '');
+  const tb = String(b.target || '');
+  if (ta !== tb) return ta.localeCompare(tb);
+  return String(a.id || '').localeCompare(String(b.id || ''));
+});
+
+licenseRows.sort((a, b) => {
+  const ra = severityRank[a.severity] ?? 99;
+  const rb = severityRank[b.severity] ?? 99;
+  if (ra !== rb) return ra - rb;
+  const ta = String(a.target || '');
+  const tb = String(b.target || '');
+  if (ta !== tb) return ta.localeCompare(tb);
+  return String(a.pkg || '').localeCompare(String(b.pkg || ''));
+});
+
 let html = `<!doctype html>
 <html lang="en">
 <head>
@@ -104,54 +157,29 @@ th{background:#f3f4f6;position:sticky;top:0}
 <h1>Trivy Detailed Report</h1>
 `;
 
-for (const result of results) {
-  const vulnerabilities = Array.isArray(result?.Vulnerabilities) ? [...result.Vulnerabilities].sort(sortVulns) : [];
-  const packages = Array.isArray(result?.Packages) ? result.Packages : [];
-  const licenseRows = [];
+if (vulnerabilityRows.length) {
+  html += `<div class="section"><h2>Vulnerabilities</h2>`;
+  html += renderTable(
+    ['Severity', 'Target', 'ID', 'Package', 'Installed', 'Fixed', 'Title'],
+    vulnerabilityRows.map((v) => [
+      v.severity,
+      v.target,
+      v.id,
+      v.pkg,
+      v.installed,
+      v.fixed,
+      v.title,
+    ]),
+  );
+  html += `</div>`;
+}
 
-  for (const pkg of packages) {
-    if (!Array.isArray(pkg?.Licenses)) continue;
-    for (const lic of pkg.Licenses) {
-      licenseRows.push({
-        severity: licenseSeverity(lic),
-        pkg: pkg?.Name || '',
-        licenses: lic || '',
-      });
-    }
-  }
-
-  licenseRows.sort((a, b) => {
-    const ra = severityRank[a.severity] ?? 99;
-    const rb = severityRank[b.severity] ?? 99;
-    if (ra !== rb) return ra - rb;
-    return String(a.pkg).localeCompare(String(b.pkg));
-  });
-
-  html += `<div class="section"><div class="muted">Target: <code>${esc(targetLabel(result))}</code></div>`;
-
-  if (vulnerabilities.length) {
-    html += `<h2>Vulnerabilities</h2>`;
-    html += renderTable(
-      ['Severity', 'ID', 'Package', 'Installed', 'Fixed', 'Title'],
-      vulnerabilities.map((v) => [
-        v.Severity || '',
-        v.VulnerabilityID || '',
-        v.PkgName || '',
-        v.InstalledVersion || '',
-        v.FixedVersion || '',
-        v.Title || '',
-      ]),
-    );
-  }
-
-  if (licenseRows.length) {
-    html += `<h2>Licenses</h2>`;
-    html += renderTable(
-      ['Severity', 'Package', 'Licenses'],
-      licenseRows.map((r) => [r.severity, r.pkg, r.licenses]),
-    );
-  }
-
+if (licenseRows.length) {
+  html += `<div class="section"><h2>Licenses</h2>`;
+  html += renderTable(
+    ['Severity', 'Target', 'Package', 'Licenses'],
+    licenseRows.map((r) => [r.severity, r.target, r.pkg, r.licenses]),
+  );
   html += `</div>`;
 }
 
