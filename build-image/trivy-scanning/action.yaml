@@ -190,13 +190,6 @@ runs:
           echo "Appended markdown to GitHub Actions summary."
         fi
 
-    - name: Upload Trivy JSON report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: trivy-scan-json--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
-        path: ${{ steps.scan.outputs.json_path }}
-
     - name: Upload Trivy SARIF report
       if: always()
       uses: actions/upload-artifact@v4
