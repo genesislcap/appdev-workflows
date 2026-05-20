@@ -113,11 +113,9 @@ runs:
           --output "$SARIF_FILE" \
           "$JSON_FILE"
 
-        "$TRIVY_BIN" convert \
-          --format template \
-          --template "@contrib/html.tpl" \
-          --output "$HTML_FILE" \
-          "$JSON_FILE"
+        node "${{ github.action_path }}/render-trivy-html.mjs" \
+          "$JSON_FILE" \
+          "$HTML_FILE"
 
         echo "json_path=$JSON_FILE" >> "$GITHUB_OUTPUT"
         echo "sarif_path=$SARIF_FILE" >> "$GITHUB_OUTPUT"
