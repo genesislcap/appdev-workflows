@@ -1,5 +1,5 @@
 name: Scan Docker Image with Trivy
-description: Scan a built Docker image with Trivy and publish JSON, HTML, SARIF, and markdown reports
+description: Scan a built Docker image with Trivy and publish HTML and markdown reports
 
 inputs:
   image-ref:
@@ -31,8 +31,6 @@ inputs:
 outputs:
   json_path:
     value: ${{ steps.scan.outputs.json_path }}
-  sarif_path:
-    value: ${{ steps.scan.outputs.sarif_path }}
   html_path:
     value: ${{ steps.scan.outputs.html_path }}
   markdown_path:
@@ -73,14 +71,12 @@ runs:
         mkdir -p "$REPORT_DIR"
 
         JSON_FILE="$REPORT_DIR/trivy-scan.json"
-        SARIF_FILE="$REPORT_DIR/trivy-scan.sarif"
         HTML_FILE="$REPORT_DIR/trivy-scan.html"
         MD_FILE="$REPORT_DIR/trivy-scan.md"
 
         echo "app_name=$SAFE_APP_NAME" >> "$GITHUB_OUTPUT"
         echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
         echo "json_file=$JSON_FILE" >> "$GITHUB_OUTPUT"
-        echo "sarif_file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
         echo "html_file=$HTML_FILE" >> "$GITHUB_OUTPUT"
         echo "md_file=$MD_FILE" >> "$GITHUB_OUTPUT"
 
@@ -92,7 +88,6 @@ runs:
 
         TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         JSON_FILE="${{ steps.meta.outputs.json_file }}"
-        SARIF_FILE="${{ steps.meta.outputs.sarif_file }}"
         HTML_FILE="${{ steps.meta.outputs.html_file }}"
         IMAGE_REF="${{ inputs.image-ref }}"
 
@@ -108,17 +103,11 @@ runs:
           --output "$JSON_FILE" \
           "$IMAGE_REF"
 
-        "$TRIVY_BIN" convert \
-          --format sarif \
-          --output "$SARIF_FILE" \
-          "$JSON_FILE"
-
         node "${{ github.action_path }}/render-trivy-html.mjs" \
           "$JSON_FILE" \
           "$HTML_FILE"
 
         echo "json_path=$JSON_FILE" >> "$GITHUB_OUTPUT"
-        echo "sarif_path=$SARIF_FILE" >> "$GITHUB_OUTPUT"
         echo "html_path=$HTML_FILE" >> "$GITHUB_OUTPUT"
         echo "markdown_path=${{ steps.meta.outputs.md_file }}" >> "$GITHUB_OUTPUT"
 
@@ -189,13 +178,6 @@ runs:
           cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
           echo "Appended markdown to GitHub Actions summary."
         fi
-
-    - name: Upload Trivy SARIF report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: trivy-scan-sarif--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
-        path: ${{ steps.scan.outputs.sarif_path }}
 
     - name: Upload Trivy HTML report
       if: always()
