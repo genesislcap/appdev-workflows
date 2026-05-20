@@ -1,0 +1,26 @@
+.github/workflows/build-gradle-g8.yml
+  s_5dda8695a65cf5::t_bc2880d4a9d7fb 215
+  s_5dda8695a65cf5::t_220a2b1c0c7a53 257
+build-image/jfrog-scanning/action.yaml
+  s_5dda8695a65cf5::t_7552d182c80873 97
+.github/workflows/pr-title-check-trigger.yaml
+  s_5dda8695a65cf5::t_17d688334d6840 20
+.github/workflows/build-gradle.yml
+  s_5dda8695a65cf5::t_3507ab704329b0 297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "3757ba0963685393e337126fc80297ade0a89abc",
+  "prompts": {},
+  "sessions": {
+    "s_5dda8695a65cf5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0dcda413-2612-4225-b68a-f7808c6e43a7",
+        "model": "claude-4.6-sonnet-medium-thinking"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
