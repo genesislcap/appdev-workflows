@@ -244,7 +244,7 @@ jobs:
       - name: Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace --refresh-dependencies -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=false ${{ inputs.server-build-gradle-arguments }}
+          arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=false ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
         env:
