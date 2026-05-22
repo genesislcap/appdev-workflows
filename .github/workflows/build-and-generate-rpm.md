@@ -67,6 +67,7 @@ Everything else from the build and RPM flows is preserved.
 | `spec-file-branch` | No | `string` | `qaautomation` | Branch used to fetch the RPM spec file from `appdev-workflows`. |
 | `nginx-conf` | No | `string` | None | Optional nginx config copied into the staged web package. |
 | `site-distribution` | No | `string` | None | Optional site-specific archive downloaded before RPM packaging. |
+| `build_server` | No | `boolean` | `true` | Controls whether the RPM stage includes the server package or builds a web-only RPM. |
 | `include-xray-report` | No | `boolean` | `false` | Bundles the JFrog Xray summary and full scan reports into the RPM. |
 | `use_app_dist_zip` | No | `boolean` | `false` | Builds the app distribution zip form used by the older Gradle flow. |
 | `skip-tests` | No | `boolean` | `false` | Skips the test/coverage branch and switches the server build to assemble mode. |
@@ -120,6 +121,11 @@ When `build_rpm` is `true`, the workflow:
 - repackages the server and web archives into RPM inputs
 - builds the RPM locally
 - uploads the RPM to S3
+
+When `build_server` is `false`, the workflow:
+- skips the server build and server package staging steps
+- packages the RPM in web-only mode
+- still supports `include-xray-report` if the reports should be bundled
 
 ### Skip Tests
 

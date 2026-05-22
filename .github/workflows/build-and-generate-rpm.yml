@@ -81,6 +81,10 @@ on:
       site-distribution:
         required: false
         type: string
+      build_server:
+        required: false
+        type: boolean
+        default: true
       include-xray-report:
         required: false
         type: boolean
@@ -381,7 +385,7 @@ jobs:
           cache-disabled: true
 
       - name: Server Build
-        if: ${{ !inputs.skip-tests }}
+        if: ${{ inputs.build_server && !inputs.skip-tests }}
         uses: gradle/gradle-build-action@v2
         with:
           arguments: properties build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
@@ -389,7 +393,7 @@ jobs:
           cache-disabled: true
 
       - name: Server Assemble
-        if: inputs.skip-tests
+        if: inputs.build_server && inputs.skip-tests
         uses: gradle/gradle-build-action@v2
         with:
           arguments: properties assemble --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
@@ -462,6 +466,7 @@ jobs:
           cache-disabled: true
 
       - name: Stage server package
+        if: inputs.build_server
         shell: bash
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
         run: |
@@ -503,8 +508,10 @@ jobs:
           rm -rf rpm
           mkdir -p rpm/downloads rpm/web-downloads rpm/extra-content
           cp workflow-repo/rpm/product.spec rpm/product.spec
-          cp build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz rpm/downloads/
           cp build-output/web/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip rpm/web-downloads/
+          if [ "${{ inputs.build_server }}" = "true" ]; then
+            cp build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz rpm/downloads/
+          fi
           if [ -n "${{ inputs.nginx-conf }}" ]; then
             cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" rpm/web-downloads/nginx.conf
           fi
@@ -568,7 +575,7 @@ jobs:
           ls -al rpm/extra-content
 
       - name: Server Package
-        if: inputs.build_rpm
+        if: inputs.build_rpm && inputs.build_server
         working-directory: rpm/downloads
         shell: bash
         run: |
@@ -634,7 +641,13 @@ jobs:
 
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
-          if [ "${{ inputs.include-xray-report }}" = "true" ]; then
+          if [ "${{ inputs.build_server }}" = "false" ]; then
+            if [ "${{ inputs.include-xray-report }}" = "true" ]; then
+              rpmbuild -bb --define "web_only 1" --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb --define "web_only 1" product.spec
+            fi
+          elif [ "${{ inputs.include-xray-report }}" = "true" ]; then
             rpmbuild -bb --define "include_xray_report 1" product.spec
           else
             rpmbuild -bb product.spec
