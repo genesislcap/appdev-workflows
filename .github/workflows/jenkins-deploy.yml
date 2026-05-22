@@ -45,6 +45,10 @@ on:
         required: false
         type: boolean
 
+      run_pre_install_hooks:
+        required: false
+        type: boolean
+
       genesis_user:
         required: false
         type: string
@@ -116,6 +120,7 @@ jobs:
             --data-urlencode "product=${{ inputs.product }}" \
             --data-urlencode "repotype=${{ inputs.repotype }}" \
             --data-urlencode "deploy_custom_nginx=${{ inputs.deploy_custom_nginx }}" \
+            --data-urlencode "run_pre_install_hooks=${{ inputs.run_pre_install_hooks }}" \
             --data-urlencode "run_post_install_hooks=${{ inputs.run_post_install_hooks }}"
 
           QUEUE_URL=$(awk 'BEGIN { IGNORECASE = 1 } /^Location:/ { print $2 }' "$RESPONSE_HEADERS" | tr -d '\r')
