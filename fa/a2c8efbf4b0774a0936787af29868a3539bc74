@@ -1,0 +1,14 @@
+.github/workflows/build-gradle-g8.yml
+  h_c9cf774047cfd7 253,262-263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "faa2c8efbf4b0774a0936787af29868a3539bc74",
+  "prompts": {},
+  "humans": {
+    "h_c9cf774047cfd7": {
+      "author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
