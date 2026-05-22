@@ -30,6 +30,9 @@ on:
       repo-name:
         required: false
         type: string
+      distribution_dir:
+        required: false
+        type: string
       working-directory:
         required: false
         type: string
@@ -57,12 +60,53 @@ on:
         required: false
         type: string
         default: ""
+      use-artifactory-cache:
+        required: false
+        type: boolean
+        default: false
+      push-to-artifactory-cache:
+        required: false
+        type: boolean
+        default: false
       spec-file-branch:
         required: false
         type: string
       nginx-conf:
         required: false
         type: string
+      site-distribution:
+        required: false
+        type: string
+      testautomation_build:
+        required: false
+        type: boolean
+        default: false
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+      web-path:
+        required: false
+        type: string
+        default: "client/web"
+      additional_file:
+        required: false
+        type: string
+        default: "main-repo/.github/workflows/serverversion.properties"
+      additional_webfile:
+        required: false
+        type: string
+        default: "main-repo/.github/workflows/webversion.properties"
+      build_docker:
+        required: false
+        type: boolean
+        default: false
+      publish-to-artifactory:
+        required: false
+        type: boolean
+        default: false
       sast:
         required: false
         type: boolean
@@ -95,7 +139,7 @@ on:
 env:
   NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
   GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
-  DISTRIBUTION_DIR: ${{ format('{0}-distribution', inputs.product_name) }}
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
 
 jobs:
   build-and-generate-rpm:
@@ -108,6 +152,20 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch || github.ref_name }}
+
+      - name: testautomation_build steps (server)
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }}
+          additional_webfile: ${{ inputs.additional_webfile }}
+          repo_type: "server"
+          GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
 
       - name: Checkout appdev-workflows repo
         uses: actions/checkout@v4
@@ -131,6 +189,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
+
+      - name: testautomation_build steps (web)
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }}
+          additional_webfile: ${{ inputs.additional_webfile }}
+          repo_type: "web"
+          GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
 
       - name: Login to Jfrog
         uses: docker/login-action@v3
@@ -190,6 +262,7 @@ jobs:
 
           echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
           echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          echo "genesis.check.permission.enabled=true" >> ~/.gradle/gradle.properties
 
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
@@ -285,7 +358,7 @@ jobs:
       - name: Server Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: properties build --no-build-cache --stacktrace ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
+          arguments: properties build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
@@ -295,6 +368,70 @@ jobs:
         with:
           arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
           build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Test and Coverage
+        uses: gradle/gradle-build-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
+        with:
+          arguments: >
+            test jacocoTestReport sonarqube --no-configuration-cache
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
+      - name: Copy Test Reports
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in "${{ inputs.working-directory }}/${{ inputs.server-path }}"/*/build/reports/tests/test/; do
+            if [ -d "$dir" ]; then
+              subfolder_name=$(echo "$dir" | sed "s#${{ inputs.working-directory }}/${{ inputs.server-path }}/##" | sed 's#/build/reports/tests/test/##')
+              echo "Subfolder Name: $subfolder_name"
+              mkdir -p "test-results/$subfolder_name"
+              cp -r "$dir"/* "test-results/$subfolder_name/"
+            fi
+          done
+        if: always()
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-reports-${{ inputs.product_name }}
+          path: "${{ inputs.working-directory }}/test-results"
+        if: always()
+
+      - name: Upload Auth Permissions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPermissions-${{ inputs.product_name }}-${{ github.run_number }}
+          path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/reports/genesis-security/auth-permissions.csv"
+        if: always()
+
+      - name: Docker Build Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Docker Push Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Artifactory Publish
+        if: inputs.publish-to-artifactory
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
       - name: Stage server package
@@ -329,6 +466,14 @@ jobs:
           if [ -n "${{ inputs.nginx-conf }}" ]; then
             cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" rpm/web-downloads/nginx.conf
           fi
+
+      - name: Optional site download
+        if: inputs.build_rpm && inputs.site-distribution
+        working-directory: rpm/downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
 
       - name: Server Package
         if: inputs.build_rpm
