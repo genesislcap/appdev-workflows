@@ -166,9 +166,13 @@ runs:
         command: |
           set -x
           cd /data/docker-compose
+          echo "Reset DB: stopping genesis_database"
           docker compose stop -t 30 genesis_database || true
+          echo "Reset DB: removing genesis_database container"
           docker compose rm -sf genesis_database || true
+          echo "Reset DB: removing docker-compose_postgres-data volume"
           docker volume rm -f docker-compose_postgres-data || true
+          echo "Reset DB: complete"
         app_name: ${{ inputs.app_name }}
         run_on_all: false
         environment: ${{ inputs.environment }}
