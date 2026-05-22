@@ -25,10 +25,12 @@ At a high level it does the following:
 5. Runs the JFrog Xray scan and SAST scan.
 6. Builds the server and web packages locally.
 7. Optionally runs tests, coverage, Docker build/push, and Artifactory publish.
-8. Stages the generated server and web packages locally for RPM creation.
-9. Optionally adds the site-specific RPM input package.
-10. Builds the RPM locally.
-11. Uploads the final RPM to S3.
+8. Optionally generates the app distribution zip path used by the older build flow.
+9. Stages the generated server and web packages locally for RPM creation.
+10. Optionally downloads the scan reports produced by the same workflow run and bundles them into the RPM.
+11. Optionally adds the site-specific RPM input package.
+12. Builds the RPM locally.
+13. Uploads the final RPM to S3.
 
 ## What Makes It Different
 
@@ -46,7 +48,7 @@ Everything else from the build and RPM flows is preserved.
 | --- | --- | --- | --- | --- |
 | `branch` | No | `string` | Current ref | Branch or ref to check out from the caller repository. |
 | `version` | Yes | `string` | None | Version string used in build and RPM naming. |
-| `client-name` | Yes | `string` | None | Client name used for client-specific build and RPM behavior. |
+| `client-name` | No | `string` | Empty | Client name used for client-specific build and RPM behavior. |
 | `product_name` | Yes | `string` | None | Product name used in build outputs and RPM naming. |
 | `artifactory_deploy_locations` | Yes | `string` | None | Comma-separated list of S3 deploy locations for the RPM output. |
 | `genesis-user` | Yes | `string` | None | Genesis user passed to the RPM package. |
@@ -59,11 +61,15 @@ Everything else from the build and RPM flows is preserved.
 | `config-path` | No | `string` | None | Optional `.env` file path to load build config. |
 | `server-build-gradle-arguments` | No | `string` | Empty | Extra Gradle args for the server build. |
 | `server-install-gradle-arguments` | No | `string` | Empty | Extra Gradle args for install tasks used when staging the server package. |
+| `app_module` | No | `string` | `${product_name}-app` | App module used when `use_app_dist_zip` is enabled. |
 | `use-artifactory-cache` | No | `boolean` | `false` | Enables remote cache usage for Gradle if supported. |
 | `push-to-artifactory-cache` | No | `boolean` | `false` | Enables pushing build outputs to the Artifactory cache if supported. |
 | `spec-file-branch` | No | `string` | `qaautomation` | Branch used to fetch the RPM spec file from `appdev-workflows`. |
 | `nginx-conf` | No | `string` | None | Optional nginx config copied into the staged web package. |
 | `site-distribution` | No | `string` | None | Optional site-specific archive downloaded before RPM packaging. |
+| `include-xray-report` | No | `boolean` | `false` | Bundles the JFrog Xray summary and full scan reports into the RPM. |
+| `use_app_dist_zip` | No | `boolean` | `false` | Builds the app distribution zip form used by the older Gradle flow. |
+| `skip-tests` | No | `boolean` | `false` | Skips the test/coverage branch and switches the server build to assemble mode. |
 | `testautomation_build` | No | `boolean` | `false` | Enables the `testautomation_action` setup path. |
 | `testautorepo` | No | `string` | None | Repo used by the testautomation setup path. |
 | `testautobranch` | No | `string` | None | Branch used by the testautomation setup path. |
@@ -108,10 +114,19 @@ The workflow:
 
 When `build_rpm` is `true`, the workflow:
 - stages the locally generated server and web packages
+- optionally rebuilds the server package using the app distribution zip flow
 - optionally downloads a site-specific package
+- optionally bundles the JFrog Xray scan reports from the same workflow run into the RPM
 - repackages the server and web archives into RPM inputs
 - builds the RPM locally
 - uploads the RPM to S3
+
+### Skip Tests
+
+When `skip-tests` is `true`, the workflow:
+- switches the server build from `build` to `assemble`
+- skips the `Test and Coverage` step
+- keeps the rest of the workflow structure intact so the combined flow still matches the shared build and RPM behavior
 
 ### Output
 
@@ -120,6 +135,7 @@ The workflow returns the generated RPM file name as a job output.
 ## Notes
 
 - The server and web packages are now passed locally between the two stages.
+- The workflow can optionally include the JFrog scan reports in the RPM when `include-xray-report` is enabled.
 - The final RPM is still uploaded to S3.
 - The workflow still uses JFrog for login, npm registry setup, Xray scanning, and the Gradle build environment.
 - The JFrog Artifactory upload/download round trip for intermediate server/web packages is intentionally removed.

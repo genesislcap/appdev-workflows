@@ -14,8 +14,9 @@ on:
         required: true
         type: string
       client-name:
-        required: true
+        required: false
         type: string
+        default: ''
       product_name:
         required: true
         type: string
@@ -60,6 +61,9 @@ on:
         required: false
         type: string
         default: ""
+      app_module:
+        required: false
+        type: string
       use-artifactory-cache:
         required: false
         type: boolean
@@ -77,6 +81,18 @@ on:
       site-distribution:
         required: false
         type: string
+      include-xray-report:
+        required: false
+        type: boolean
+        default: false
+      use_app_dist_zip:
+        required: false
+        type: boolean
+        default: false
+      skip-tests:
+        required: false
+        type: boolean
+        default: false
       testautomation_build:
         required: false
         type: boolean
@@ -140,6 +156,7 @@ env:
   NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
   GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
 
 jobs:
   build-and-generate-rpm:
@@ -355,13 +372,6 @@ jobs:
           echo "modified-location=$CLIENT_BUILD_LOCATION" >> "$GITHUB_OUTPUT"
           echo "modified-arguments-location=$(echo "$CLIENT_BUILD_LOCATION" | sed 's/\//:/g')" >> "$GITHUB_OUTPUT"
 
-      - name: Server Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: properties build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-          cache-disabled: true
-
       - name: Client Build
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         uses: gradle/gradle-build-action@v2
@@ -370,7 +380,24 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/"
           cache-disabled: true
 
+      - name: Server Build
+        if: ${{ !inputs.skip-tests }}
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: properties build --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
+      - name: Server Assemble
+        if: inputs.skip-tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: properties assemble --no-build-cache --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ env.SERVER_BUILD_ARGS }} -PuseDevRepo=true
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
       - name: Test and Coverage
+        if: ${{ !inputs.skip-tests }}
         uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
@@ -440,9 +467,24 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "${GITHUB_WORKSPACE}/build-output/server"
-          ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-install-gradle-arguments }}
-          cd .genesis-home
-          tar czvf "${GITHUB_WORKSPACE}/build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz" *
+          if [ "${{ inputs.use_app_dist_zip }}" = "true" ]; then
+            ./gradlew :${{ env.APP_MODULE }}:appDistTarGz ${{ inputs.server-build-gradle-arguments }} --no-build-cache
+            FILE=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | head -n1)
+            if [ -z "$FILE" ]; then
+              echo "Error: No .tar.gz file found in ${{ env.APP_MODULE }}/build/dist/"
+              exit 1
+            fi
+            COUNT=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | wc -l)
+            if [ "$COUNT" -gt 1 ]; then
+              echo "Error: Multiple .tar.gz files found, expected exactly one"
+              exit 1
+            fi
+            mv "$FILE" "${GITHUB_WORKSPACE}/build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz"
+          else
+            ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-install-gradle-arguments }}
+            cd .genesis-home
+            tar czvf "${GITHUB_WORKSPACE}/build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz" *
+          fi
 
       - name: Stage client package
         if: steps.web_exists.outputs.client_folder_exists == 'true'
@@ -459,7 +501,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf rpm
-          mkdir -p rpm/downloads rpm/web-downloads
+          mkdir -p rpm/downloads rpm/web-downloads rpm/extra-content
           cp workflow-repo/rpm/product.spec rpm/product.spec
           cp build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz rpm/downloads/
           cp build-output/web/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip rpm/web-downloads/
@@ -474,6 +516,56 @@ jobs:
         run: |
           set -euo pipefail
           wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
+
+      - name: Download summary JFrog scan report
+        if: inputs.build_rpm && inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-dependencies-scan--*-${{ github.run_number }}
+          path: rpm/extra-report
+          merge-multiple: true
+
+      - name: Copy summary scan report into package
+        if: inputs.build_rpm && inputs.include-xray-report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/extra-report -type f -name '*.txt' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No JFrog scan report txt file found"
+            find rpm/extra-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-table.txt
+          ls -al rpm/extra-content
+
+      - name: Download full JFrog scan report
+        if: inputs.build_rpm && inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-full-report--*-${{ github.run_number }}
+          path: rpm/full-report
+          merge-multiple: true
+
+      - name: Copy full scan report into package
+        if: inputs.build_rpm && inputs.include-xray-report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/full-report -type f -name '*.json' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No full JFrog scan json file found"
+            find rpm/full-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-full.json
+          ls -al rpm/extra-content
 
       - name: Server Package
         if: inputs.build_rpm
@@ -531,6 +623,9 @@ jobs:
           sed -i "s/genesisUser/$(echo ${{ inputs.genesis-user }})/g" product.spec
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
+          if [ "${{ inputs.include-xray-report }}" = "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
+            cp extra-content/* ~/rpmbuild/SOURCES/
+          fi
 
           echo "=== local rpm dir ==="
           find . -maxdepth 3 -type f | sort || true
@@ -539,7 +634,11 @@ jobs:
 
           mv product.spec ~/rpmbuild/SOURCES/
           cd ~/rpmbuild/SOURCES/
-          rpmbuild -bb product.spec
+          if [ "${{ inputs.include-xray-report }}" = "true" ]; then
+            rpmbuild -bb --define "include_xray_report 1" product.spec
+          else
+            rpmbuild -bb product.spec
+          fi
 
       - name: Upload RPMs to S3
         if: inputs.build_rpm
