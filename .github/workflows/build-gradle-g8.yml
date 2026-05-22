@@ -248,9 +248,8 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      # Runs after Build so appDistZip reuses compiled outputs (UP-TO-DATE) instead of a second full build.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}     
+      
       - name: Scan artifact
         if: inputs.jfrogscan
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
@@ -259,10 +258,8 @@ jobs:
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
           jfrog-password: ${{ secrets.JFROG_PASSWORD }}
           working-directory: ${{ inputs.working-directory }}
-          server-path: server
-          build-server-arguments: ${{ inputs.server-build-gradle-arguments }}
+          server-path: "${{ inputs.working-directory }}/server"
           app-name: ${{ inputs.product_name }}
-
       - name: Test and Coverage
         if: inputs.sonar_enabled
         uses: gradle/gradle-build-action@v2
