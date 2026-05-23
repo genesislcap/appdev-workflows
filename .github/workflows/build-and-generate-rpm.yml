@@ -149,7 +149,7 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: false
       GHA_TOKEN:
-        required: true
+        required: false
       JENKINSGENESIS_SONAR:
         required: false
 
