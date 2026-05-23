@@ -65,7 +65,6 @@ Everything else from the build and RPM flows is preserved.
 | `use-artifactory-cache` | No | `boolean` | `false` | Enables remote cache usage for Gradle if supported. |
 | `push-to-artifactory-cache` | No | `boolean` | `false` | Enables pushing build outputs to the Artifactory cache if supported. |
 | `spec-file-branch` | No | `string` | `qaautomation` | Branch used to fetch the RPM spec file from `appdev-workflows`. |
-| `nginx-conf` | No | `string` | None | Optional nginx config copied into the staged web package. |
 | `site-distribution` | No | `string` | None | Optional site-specific archive downloaded before RPM packaging. |
 | `build_server` | No | `boolean` | `true` | Controls whether the RPM stage includes the server package or builds a web-only RPM. |
 | `include-xray-report` | No | `boolean` | `false` | Bundles the JFrog Xray summary and full scan reports into the RPM. |

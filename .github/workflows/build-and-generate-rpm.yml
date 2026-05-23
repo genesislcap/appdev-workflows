@@ -75,9 +75,6 @@ on:
       spec-file-branch:
         required: false
         type: string
-      nginx-conf:
-        required: false
-        type: string
       site-distribution:
         required: false
         type: string
@@ -512,10 +509,6 @@ jobs:
           if [ "${{ inputs.build_server }}" = "true" ]; then
             cp build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz rpm/downloads/
           fi
-          if [ -n "${{ inputs.nginx-conf }}" ]; then
-            cp "${GITHUB_WORKSPACE}/${{ inputs.nginx-conf }}" rpm/web-downloads/nginx.conf
-          fi
-
       - name: Optional site download
         if: inputs.build_rpm && inputs.site-distribution
         working-directory: rpm/downloads
