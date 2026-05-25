@@ -24,16 +24,32 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-
     - uses: jfrog/setup-jfrog-cli@v4
       env:
         JF_URL: https://genesisglobal.jfrog.io
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
 
+    - name: Check for existing dist zip
+      id: check_dist
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        shopt -s nullglob
+        zips=( */build/dist/*.zip )
+        if [ ${#zips[@]} -gt 0 ]; then
+          echo "dist_exists=true" >> $GITHUB_OUTPUT
+          echo "Reusing existing dist zip(s): ${zips[*]}"
+        else
+          echo "dist_exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Setup Gradle
+      if: steps.check_dist.outputs.dist_exists != 'true'
+      uses: gradle/actions/setup-gradle@v4
+
     - name: Check if appDistZip exists
+      if: steps.check_dist.outputs.dist_exists != 'true'
       shell: bash
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
@@ -45,14 +61,14 @@ runs:
         fi
 
     - name: Build the dist
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_task.outputs.appDistZip == 'true' && steps.check_dist.outputs.dist_exists != 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       id: scan
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
@@ -93,20 +109,20 @@ runs:
         echo "table_report_file=$TABLE_REPORT" >> $GITHUB_OUTPUT
 
     - name: Create markdown summary
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@github_workflow_analyis
       with:
         json_path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog full scan report
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog scan table report
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}

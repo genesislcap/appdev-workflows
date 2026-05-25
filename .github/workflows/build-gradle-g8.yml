@@ -114,6 +114,9 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
+concurrency:
+  group: build-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -137,13 +140,13 @@ jobs:
 
       - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
@@ -216,6 +219,17 @@ jobs:
         with:
           config-path: ${{ inputs.config-path }}
 
+      - name: Scan artifact
+        if: inputs.jfrogscan
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: "${{ inputs.working-directory }}/server"
+          app-name: ${{ inputs.product_name }}
+
       - name: Install Bearer CLI
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
@@ -241,7 +255,7 @@ jobs:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
-      - name: Build
+      - name: Build        
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
@@ -249,19 +263,6 @@ jobs:
           cache-disabled: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      # Runs after build so appDistZip reuses compiled outputs (UP-TO-DATE) instead of rebuilding.
-      - name: Scan artifact
-        if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
-        with:
-          version: ${{ env.RELEASE_VERSION }}
-          jfrog-username: ${{ secrets.JFROG_USERNAME }}
-          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
-          working-directory: ${{ inputs.working-directory }}
-          server-path: server
-          app-name: ${{ inputs.product_name }}
-          build-server-arguments: ${{ inputs.server-build-gradle-arguments }}
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
