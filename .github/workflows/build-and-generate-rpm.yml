@@ -139,7 +139,7 @@ on:
       JFROG_USERNAME:
         required: true
       JFROG_EMAIL:
-        required: true
+        required: false
       JFROG_PASSWORD:
         required: true
       GPR_READ_TOKEN:
