@@ -408,6 +408,7 @@ jobs:
             -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
             ${{ env.SERVER_BUILD_ARGS }}
             -PuseDevRepo=true
+            -Dsonar.gradle.skipCompile=true
             -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
