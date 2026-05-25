@@ -50,6 +50,7 @@ Everything else from the build and RPM flows is preserved.
 | `version` | Yes | `string` | None | Version string used in build and RPM naming. |
 | `client-name` | No | `string` | Empty | Client name used for client-specific build and RPM behavior. |
 | `product_name` | Yes | `string` | None | Product name used in build outputs and RPM naming. |
+| `app-name` | No | `string` | None | Application name used for JFrog Xray scan artifact uploads. |
 | `artifactory_deploy_locations` | Yes | `string` | None | Comma-separated list of S3 deploy locations for the RPM output. |
 | `genesis-user` | Yes | `string` | None | Genesis user passed to the RPM package. |
 | `repo-name` | No | `string` | Derived from repo name | Optional repository prefix override. |
