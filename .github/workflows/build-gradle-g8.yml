@@ -259,8 +259,8 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}     
-      
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
