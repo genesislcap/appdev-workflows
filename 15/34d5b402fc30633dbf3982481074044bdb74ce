@@ -1,0 +1,44 @@
+.github/workflows/build-gradle-g8.yml
+  s_eb53827daddfd3::t_340ef86448594b 117-119,143,149,222-232,258,407
+build-image/jfrog-scanning/action.yaml
+  s_20319d24722bf1::t_90a946d847fbd4 33-49,52,64,71
+  s_575f8fe25bc9a0::t_020a0e6c8098ce 50
+  s_20319d24722bf1::t_8d7f238d8d8866 112,118,125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "1534d5b402fc30633dbf3982481074044bdb74ce",
+  "prompts": {},
+  "humans": {
+    "h_c9cf774047cfd7": {
+      "author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  },
+  "sessions": {
+    "s_20319d24722bf1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33b736b9-ab97-428c-a506-60016d6dd371",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    },
+    "s_575f8fe25bc9a0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "6b5d9ede-dd24-4a24-80f0-8709b3356f23",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    },
+    "s_eb53827daddfd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d74835c0-f3e4-4ced-84fe-2beaabac62ac",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
