@@ -137,13 +137,13 @@ jobs:
 
       - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
