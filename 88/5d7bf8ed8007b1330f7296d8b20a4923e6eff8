@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "885d7bf8ed8007b1330f7296d8b20a4923e6eff8",
+  "prompts": {},
+  "humans": {
+    "h_c9cf774047cfd7": {
+      "author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
