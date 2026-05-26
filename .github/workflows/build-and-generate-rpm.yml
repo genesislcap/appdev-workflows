@@ -321,7 +321,7 @@ jobs:
           config-path: ${{ inputs.config-path }}
 
       - name: Scan artifact
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        uses: ./build-image/jfrog-scanning
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
