@@ -42,6 +42,13 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
+      enable-pr-cache:
+        type: boolean
+        description: >-
+          PR builds only. When true (and use-artifactory-cache is true), enables Gradle build
+          cache and Artifactory remote cache for pull_request events. No effect on push/tag.
+        default: false
+        required: false
       working-directory:
         type: string
         default: .
@@ -114,10 +121,15 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
+# PR number is only set on pull_request; for push/tag use event + ref (see reverted PR #168).
+concurrency:
+  group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && !inputs.enable-pr-cache }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '' }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -255,9 +267,9 @@ jobs:
       - name: Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
+          arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: true
+          cache-disabled: ${{ github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
