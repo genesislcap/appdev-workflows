@@ -42,6 +42,31 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
+      cache-read-only:
+        type: boolean
+        description: Whether the GitHub cache should be read-only
+        default: true
+        required: false
+      cache-write-only:
+        type: boolean
+        description: Whether the GitHub cache should be write-only
+        default: false
+        required: false
+      enable-pr-cache:
+        type: boolean
+        description: Enable caches on pull_request only (GitHub + Gradle; Artifactory when use-artifactory-cache is true)
+        default: false
+        required: false
+      disable-cache:
+        type: boolean
+        description: Deprecated — use enable-pr-cache true instead. When false, also enables PR caches (default true keeps caches off)
+        default: true
+        required: false
+      enable-configuration-cache:
+        type: boolean
+        description: Enable Gradle configuration cache when PR cache is enabled (enable-pr-cache true); validate per repo first
+        default: false
+        required: false
       working-directory:
         type: string
         default: .
@@ -114,13 +139,17 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
+# Caller context: PR number is empty for push/tag/dispatch — never use it alone (see reverted PR #168).
+# Group by PR id when present; otherwise event + ref so tags/releases/develop do not share one group.
 concurrency:
-  group: build-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  # PR cache only when caller sets enable-pr-cache true (or disable-cache false)
+  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || (!inputs.enable-pr-cache && inputs.disable-cache)) && '--no-build-cache --no-configuration-cache' || (inputs.enable-configuration-cache && '' || '--no-configuration-cache') }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -198,6 +227,14 @@ jobs:
 
           echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-overwrite-existing: true
+          cache-read-only: ${{ github.event_name == 'pull_request' && (inputs.enable-pr-cache || !inputs.disable-cache) }}
+          cache-write-only: false
+          cache-disabled: ${{ github.event_name != 'pull_request' || (!inputs.enable-pr-cache && inputs.disable-cache) }}
+
       - name: 'Create .npmrc'
         shell: bash
         run: |
@@ -255,26 +292,18 @@ jobs:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
-      - name: Build        
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build --no-build-cache --no-configuration-cache --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: true
+      - name: Build
+        working-directory: "${{ inputs.working-directory }}"
+        run: ./gradlew build --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ github.event_name != 'pull_request' && inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ github.event_name != 'pull_request' || (!inputs.enable-pr-cache && inputs.disable-cache) || !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
+        working-directory: "${{ inputs.working-directory }}/server"
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+        run: ./gradlew test jacocoTestReport sonarqube --stacktrace -Dsonar.token=${{ env.SONAR_TOKEN }} ${{ env.CACHE_OPTS }}
 
       - name: Check Auth Permissions task
         id: auth_permissions_task
@@ -293,7 +322,7 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}/server"
         run: |
-          ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+          ./gradlew checkAuthPermissions --stacktrace ${{ env.CACHE_OPTS }}
 
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
@@ -322,26 +351,20 @@ jobs:
 
       - name: Docker Build Image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        working-directory: "${{ inputs.working-directory }}/"
+        run: ./gradlew :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage ${{ env.CACHE_OPTS }}
 
       - name: Docker Push Image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        working-directory: "${{ inputs.working-directory }}/"
+        run: ./gradlew :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage ${{ env.CACHE_OPTS }}
 
       - name: Create Giant Server Zip
         if: inputs.upload
         shell: bash
         working-directory: "${{ inputs.working-directory }}/server"
         run: |
-          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
+          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} ${{ env.CACHE_OPTS }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }} ${{ env.CACHE_OPTS }}
           cd .genesis-home
           pwd
           ls -la
@@ -365,15 +388,12 @@ jobs:
 
       - name: Artifactory Publish
         if: inputs.publish-to-artifactory
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+        working-directory: "${{ inputs.working-directory }}/server"
+        run: ./gradlew artifactoryPublish -x test -PdeployToClientRepo=false ${{ env.CACHE_OPTS }}
 
       - name: Update Jira tickets with fix version
         if: inputs.update-jira
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           repository: genesislcap/appdev-workflows
           path: ./appdev-workflows
