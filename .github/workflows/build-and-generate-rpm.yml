@@ -327,7 +327,7 @@ jobs:
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
           jfrog-password: ${{ secrets.JFROG_PASSWORD }}
           working-directory: ${{ inputs.working-directory }}
-          server-path: "${{ inputs.working-directory }}/server"
+          server-path: ${{ inputs.server-path }}
           app-name: ${{ inputs.app-name }}
 
       - name: Install Bearer CLI
