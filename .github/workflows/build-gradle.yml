@@ -49,6 +49,13 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
+      enable-pr-cache:
+        type: boolean
+        description: >-
+          PR only. Enables GitHub Gradle cache read/write and Artifactory remote build cache
+          when use-artifactory-cache is true. No effect on push/tag when false (default).
+        default: false
+        required: false
       working-directory:
         type: string
         default: .
@@ -146,11 +153,16 @@ on:
       JFROG_NPM_AUTH_TOKEN:
         required: false
 
+# PR number is only set on pull_request; for push/tag use event + ref (see reverted PR #168).
+concurrency:
+  group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && !inputs.enable-pr-cache }}
+
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
   APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
-  CACHE_OPTS: ${{ inputs.disable-cache && '--no-build-cache --no-configuration-cache' || '' }}
+  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '' }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -244,9 +256,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-overwrite-existing: true
-          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-read-only: ${{ !(github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.cache-read-only }}
           cache-write-only: ${{ inputs.cache-write-only }}
-          cache-disabled: ${{ inputs.disable-cache }}
+          cache-disabled: ${{ !(github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.disable-cache }}
 
       - name: Install Sast CLI
         if: inputs.sast
@@ -276,7 +288,7 @@ jobs:
 
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
-        run: ./gradlew build --stacktrace -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        run: ./gradlew build --stacktrace -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
       - name: Server Assemble
@@ -284,8 +296,8 @@ jobs:
         run: |
           ./gradlew assemble \
             --stacktrace \
-            -PpushToCache=${{ inputs.push-to-artifactory-cache }} \
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }} \
+            -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} \
+            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} \
             ${{ inputs.server-build-gradle-arguments }} \
             ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
@@ -302,7 +314,11 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: ${{ inputs.server-path }}
           app-name: ${{ inputs.product_name }}
-          build-server-arguments: ${{ inputs.server-build-gradle-arguments }}
+          build-server-arguments: >-
+            ${{ env.CACHE_OPTS }}
+            -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
+            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
+            ${{ inputs.server-build-gradle-arguments }}
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
