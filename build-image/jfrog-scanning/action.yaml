@@ -29,7 +29,7 @@ runs:
       uses: gradle/actions/setup-gradle@v4
       with:
         cache-overwrite-existing: true
-        cache-disabled: false
+        cache-disabled: ${{ env.PR_CACHE_SCOPE != '' }}
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
