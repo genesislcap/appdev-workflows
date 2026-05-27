@@ -251,12 +251,6 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
 
           SERVER_BUILD_ARGS="${{ inputs.server-build-gradle-arguments }}"
-          if [ -n "${{ inputs.client-name }}" ]; then
-            SERVER_BUILD_ARGS="${SERVER_BUILD_ARGS} -PclientName=tam2-${{ inputs.client-name }}"
-            if [ "${{ inputs.client-name }}" = "hsbc" ]; then
-              SERVER_BUILD_ARGS="${SERVER_BUILD_ARGS} -PexcludeJasperReports=true"
-            fi
-          fi
           echo "server_build_args=$SERVER_BUILD_ARGS" >> "$GITHUB_OUTPUT"
           echo "SERVER_BUILD_ARGS=$SERVER_BUILD_ARGS" >> "$GITHUB_ENV"
 
