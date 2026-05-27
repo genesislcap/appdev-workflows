@@ -399,7 +399,7 @@ jobs:
           cache-disabled: true
 
       - name: Test and Coverage
-        if: inputs.build_server
+        if: inputs.build_server && !inputs.skip-tests
         uses: gradle/gradle-build-action@v2
         with:
           arguments: >
