@@ -198,7 +198,6 @@ jobs:
               return
             }
             def pushToCache = System.getenv('GRADLE_PUSH_TO_REMOTE_CACHE') == 'true'
-            def disableRemote = System.getenv('GRADLE_DISABLE_REMOTE_CACHE') == 'true'
             def user = System.getenv('GENESIS_ARTIFACTORY_USER')
             def password = System.getenv('GENESIS_ARTIFACTORY_PASSWORD')
             settings.buildCache {
@@ -210,7 +209,7 @@ jobs:
                   password = password
                 }
                 push = pushToCache
-                enabled = !disableRemote
+                enabled = true
               }
             }
           }
@@ -295,8 +294,8 @@ jobs:
           app-name: ${{ inputs.product_name }}
           build-server-arguments: >-
             ${{ env.CACHE_OPTS }}
-            -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
+            -PpushToCache=${{ env.PR_CACHE_SCOPE == '' && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
+            -PdisableRemoteCache=${{ env.PR_CACHE_SCOPE != '' && true || (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }}
             ${{ inputs.server-build-gradle-arguments }}
 
       - name: Install Bearer CLI
@@ -327,9 +326,9 @@ jobs:
       - name: Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} ${{ inputs.server-build-gradle-arguments }}
+          arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.PR_CACHE_SCOPE == '' && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }} -PdisableRemoteCache=${{ env.PR_CACHE_SCOPE != '' && true || (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
+          cache-disabled: ${{ github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
