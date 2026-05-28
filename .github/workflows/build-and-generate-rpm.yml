@@ -1,0 +1,676 @@
+name: Build and Generate RPM
+
+on:
+  workflow_call:
+    outputs:
+      rpm_name:
+        description: "Generated RPM file name"
+        value: ${{ jobs.build-and-generate-rpm.outputs.rpm_name }}
+    inputs:
+      branch:
+        required: false
+        type: string
+      version:
+        required: true
+        type: string
+      client-name:
+        required: false
+        type: string
+        default: ''
+      product_name:
+        required: true
+        type: string
+      app-name:
+        required: false
+        type: string
+      artifactory_deploy_locations:
+        required: true
+        type: string
+        description: Comma separated list of folders in Artifactory to deploy the RPM
+      genesis-user:
+        required: true
+        type: string
+        description: User to login as when installed
+      repo-name:
+        required: false
+        type: string
+      distribution_dir:
+        required: false
+        type: string
+      working-directory:
+        required: false
+        type: string
+        default: "."
+      server-path:
+        required: false
+        type: string
+        default: "server/jvm"
+      node_version:
+        required: false
+        type: string
+        default: "22.x"
+      java_version:
+        required: false
+        type: string
+        default: "17"
+      config-path:
+        required: false
+        type: string
+      server-build-gradle-arguments:
+        required: false
+        type: string
+        default: ""
+      server-install-gradle-arguments:
+        required: false
+        type: string
+        default: ""
+      app_module:
+        required: false
+        type: string
+      use-artifactory-cache:
+        required: false
+        type: boolean
+        default: false
+      push-to-artifactory-cache:
+        required: false
+        type: boolean
+        default: false
+      spec-file-branch:
+        required: false
+        type: string
+      site-distribution:
+        required: false
+        type: string
+      build_server:
+        required: false
+        type: boolean
+        default: true
+      include-xray-report:
+        required: false
+        type: boolean
+        default: false
+      use_app_dist_zip:
+        required: false
+        type: boolean
+        default: false
+      skip-tests:
+        required: false
+        type: boolean
+        default: false
+      testautomation_build:
+        required: false
+        type: boolean
+        default: false
+      testautorepo:
+        required: false
+        type: string
+      testautobranch:
+        required: false
+        type: string
+      web-path:
+        required: false
+        type: string
+        default: "client/web"
+      additional_file:
+        required: false
+        type: string
+        default: "main-repo/.github/workflows/serverversion.properties"
+      additional_webfile:
+        required: false
+        type: string
+        default: "main-repo/.github/workflows/webversion.properties"
+      build_docker:
+        required: false
+        type: boolean
+        default: false
+      publish-to-artifactory:
+        required: false
+        type: boolean
+        default: false
+      sast:
+        required: false
+        type: boolean
+        default: true
+      build_rpm:
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      GRADLE_PROPERTIES:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      JFROG_EMAIL:
+        required: false
+      JFROG_PASSWORD:
+        required: true
+      GPR_READ_TOKEN:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
+      JFROG_NPM_AUTH_TOKEN:
+        required: false
+      GHA_TOKEN:
+        required: false
+      JENKINSGENESIS_SONAR:
+        required: false
+
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+  GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
+  RPM_TOPDIR: ${{ runner.temp }}/rpmbuild
+
+jobs:
+  build-and-generate-rpm:
+    runs-on: appdev-selfhosted-al2023
+    outputs:
+      rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.branch || github.ref_name }}
+
+      - name: testautomation_build steps (server)
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }}
+          additional_webfile: ${{ inputs.additional_webfile }}
+          repo_type: "server"
+          GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+
+      - name: Checkout appdev-workflows repo
+        uses: actions/checkout@v4
+        with:
+          repository: genesislcap/appdev-workflows
+          ref: ${{ inputs.spec-file-branch || 'qaautomation' }}
+          fetch-depth: 2
+          path: workflow-repo
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: adopt
+
+      - name: Install lmdb-devel
+        shell: bash
+        run: sudo dnf install -y lmdb-devel
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: testautomation_build steps (web)
+        if: inputs.testautomation_build
+        uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
+        with:
+          web-path: ${{ inputs.web-path }}
+          server-path: ${{ inputs.server-path }}
+          testautomation_build: ${{ inputs.testautomation_build }}
+          testautorepo: ${{ inputs.testautorepo }}
+          testautobranch: ${{ inputs.testautobranch }}
+          additional_file: ${{ inputs.additional_file }}
+          additional_webfile: ${{ inputs.additional_webfile }}
+          repo_type: "web"
+          GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+
+      - name: Login to Jfrog
+        uses: docker/login-action@v3
+        with:
+          registry: genesisglobal-docker-remote.jfrog.io
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
+
+      - name: Prepare build metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.repo-name }}" ]; then
+            REPO_NAME="${{ inputs.repo-name }}"
+          else
+            REPO_NAME="$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)"
+          fi
+          echo "repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          echo "REPO_NAME=$REPO_NAME" >> "$GITHUB_ENV"
+
+          RELEASE_VERSION="$(echo "${{ inputs.version }}" | sed 's/\//-/g')"
+          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+
+          SERVER_BUILD_ARGS="${{ inputs.server-build-gradle-arguments }}"
+          echo "server_build_args=$SERVER_BUILD_ARGS" >> "$GITHUB_OUTPUT"
+          echo "SERVER_BUILD_ARGS=$SERVER_BUILD_ARGS" >> "$GITHUB_ENV"
+
+      - name: Restore gradle.properties and setup
+        env:
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> "$GITHUB_ENV"
+
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          echo "genesis.check.permission.enabled=true" >> ~/.gradle/gradle.properties
+
+          sudo chmod +x ./gradlew
+          sudo chmod +x ./${{ inputs.server-path }}/gradlew
+          sudo chmod -R +rx ./${{ inputs.server-path }}/
+
+          cat ~/.gradle/gradle.properties >> ./gradle.properties
+
+      - name: Setup npm registry for @genesislcap
+        run: |
+          echo "Using npmjs.com for @genesislcap scoped packages"
+          npm config set @genesislcap:registry https://registry.npmjs.org/
+          npm config list
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+
+      - name: Create .npmrc
+        shell: bash
+        run: |
+          npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+          echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
+          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+
+      - name: Read .env file for build
+        if: ${{ inputs.config-path }}
+        uses: genesislcap/appdev-workflows/read-dot-env@develop
+        with:
+          config-path: ${{ inputs.config-path }}
+
+      - name: Scan artifact
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          jfrog-username: ${{ secrets.JFROG_USERNAME }}
+          jfrog-password: ${{ secrets.JFROG_PASSWORD }}
+          working-directory: ${{ inputs.working-directory }}
+          server-path: ${{ inputs.server-path }}
+          app-name: ${{ inputs.app-name }}
+
+      - name: Install Bearer CLI
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Run sast security scan (text report)
+        if: inputs.sast
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          set +e
+          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          set -e
+
+      - name: Upload sast Security Report
+        if: inputs.sast
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
+          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+
+      - name: Check file existence
+        id: web_exists
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLIENT_BUILD_LOCATION=""
+          if test -d client; then
+            echo "client_folder_exists=true" >> "$GITHUB_OUTPUT"
+            CLIENT_BUILD_LOCATION="client"
+          fi
+          if test -d client/web; then
+            CLIENT_BUILD_LOCATION="client/web"
+          fi
+          if [ -z "$CLIENT_BUILD_LOCATION" ]; then
+            echo "client_folder_exists=false" >> "$GITHUB_OUTPUT"
+            echo "modified-location=" >> "$GITHUB_OUTPUT"
+            echo "modified-arguments-location=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "modified-location=$CLIENT_BUILD_LOCATION" >> "$GITHUB_OUTPUT"
+          echo "modified-arguments-location=$(echo "$CLIENT_BUILD_LOCATION" | sed 's/\//:/g')" >> "$GITHUB_OUTPUT"
+
+      - name: Client Build
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist --no-build-cache -Pversion=${{ env.RELEASE_VERSION }}
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Server Assemble
+        if: inputs.build_server
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: >
+            properties assemble --no-build-cache --stacktrace
+            -PpushToCache=${{ inputs.push-to-artifactory-cache }}
+            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+            ${{ env.SERVER_BUILD_ARGS }}
+            -PuseDevRepo=true
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
+      - name: Test and Coverage
+        if: inputs.build_server && !inputs.skip-tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: >
+            test jacocoTestReport sonarqube --no-build-cache --stacktrace
+            -PpushToCache=${{ inputs.push-to-artifactory-cache }}
+            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+            ${{ env.SERVER_BUILD_ARGS }}
+            -PuseDevRepo=true
+            -Dsonar.gradle.skipCompile=true
+            -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
+      - name: Copy Test Reports
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in "${{ inputs.working-directory }}/${{ inputs.server-path }}"/*/build/reports/tests/test/; do
+            if [ -d "$dir" ]; then
+              subfolder_name=$(echo "$dir" | sed "s#${{ inputs.working-directory }}/${{ inputs.server-path }}/##" | sed 's#/build/reports/tests/test/##')
+              echo "Subfolder Name: $subfolder_name"
+              mkdir -p "test-results/$subfolder_name"
+              cp -r "$dir"/* "test-results/$subfolder_name/"
+            fi
+          done
+        if: always()
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-reports-${{ inputs.product_name }}
+          path: "${{ inputs.working-directory }}/test-results"
+        if: always()
+
+      - name: Upload Auth Permissions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPermissions-${{ inputs.product_name }}-${{ github.run_number }}
+          path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/reports/genesis-security/auth-permissions.csv"
+          if-no-files-found: ignore
+        if: always()
+
+      - name: Docker Build Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Docker Push Image
+        if: inputs.build_docker
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
+          build-root-directory: "${{ inputs.working-directory }}/"
+          cache-disabled: true
+
+      - name: Artifactory Publish
+        if: inputs.publish-to-artifactory
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: true
+
+      - name: Stage server package
+        if: inputs.build_server
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}/"
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/build-output/server"
+          if [ "${{ inputs.use_app_dist_zip }}" = "true" ]; then
+            ./gradlew :${{ env.APP_MODULE }}:appDistTarGz ${{ inputs.server-build-gradle-arguments }} --no-build-cache
+            FILE=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | head -n1)
+            if [ -z "$FILE" ]; then
+              echo "Error: No .tar.gz file found in ${{ env.APP_MODULE }}/build/dist/"
+              exit 1
+            fi
+            COUNT=$(find "${{ env.APP_MODULE }}/build/dist/" -maxdepth 1 -name "*.tar.gz" -type f | wc -l)
+            if [ "$COUNT" -gt 1 ]; then
+              echo "Error: Multiple .tar.gz files found, expected exactly one"
+              exit 1
+            fi
+            mv "$FILE" "${GITHUB_WORKSPACE}/build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz"
+          else
+            ./gradlew tasks | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew {} ${{ inputs.server-install-gradle-arguments }}
+            cd .genesis-home
+            tar czvf "${GITHUB_WORKSPACE}/build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz" *
+          fi
+
+      - name: Stage client package
+        if: steps.web_exists.outputs.client_folder_exists == 'true'
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}/${{ steps.web_exists.outputs.modified-location }}/build/distributions"
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/build-output/web"
+          mv "web-distribution-${{ env.RELEASE_VERSION }}.zip" "${GITHUB_WORKSPACE}/build-output/web/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip"
+
+      - name: Prepare RPM workspace
+        if: inputs.build_rpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf rpm
+          mkdir -p rpm/downloads rpm/web-downloads rpm/extra-content
+          cp workflow-repo/rpm/product.spec rpm/product.spec
+          cp build-output/web/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip rpm/web-downloads/
+          if [ "${{ inputs.build_server }}" = "true" ]; then
+            cp build-output/server/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz rpm/downloads/
+          fi
+      - name: Optional site download
+        if: inputs.build_rpm && inputs.site-distribution
+        working-directory: rpm/downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget --user=${{ secrets.JFROG_USERNAME }} --password="${{secrets.JFROG_PASSWORD}}" https://genesisglobal.jfrog.io/artifactory/${{ inputs.site-distribution }}
+
+      - name: Download summary JFrog scan report
+        if: inputs.build_rpm && inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-dependencies-scan--*-${{ github.run_number }}
+          path: rpm/extra-report
+          merge-multiple: true
+
+      - name: Copy summary scan report into package
+        if: inputs.build_rpm && inputs.include-xray-report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/extra-report -type f -name '*.txt' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No JFrog scan report txt file found"
+            find rpm/extra-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-table.txt
+          ls -al rpm/extra-content
+
+      - name: Download full JFrog scan report
+        if: inputs.build_rpm && inputs.include-xray-report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xray-full-report--*-${{ github.run_number }}
+          path: rpm/full-report
+          merge-multiple: true
+
+      - name: Copy full scan report into package
+        if: inputs.build_rpm && inputs.include-xray-report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rpm/extra-content
+          REPORT_FILE=$(find rpm/full-report -type f -name '*.json' | head -n 1)
+
+          if [ -z "$REPORT_FILE" ]; then
+            echo "No full JFrog scan json file found"
+            find rpm/full-report -maxdepth 5 -type f || true
+            exit 1
+          fi
+
+          cp "$REPORT_FILE" rpm/extra-content/jfrog-scan-full.json
+          ls -al rpm/extra-content
+
+      - name: Server Package
+        if: inputs.build_rpm && inputs.build_server
+        working-directory: rpm/downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
+          ls -al
+          tar xf genesis_*.tar.gz
+          rm genesis_*.tar.gz
+          if ls *site-specific*.zip 1> /dev/null 2>&1; then
+            echo "Detected site-specific override, using that one"
+            rm -rf site-specific
+            echo A | unzip -q *-site-specific-*.zip
+            echo "Removing zip files"
+            rm *.zip
+          fi
+          echo "Zipping package"
+          tar cf server-$VERSION.tar.gz *
+          ls -al
+          echo "Unzipping tar as a test"
+          tar xf server-$VERSION.tar.gz
+          mv *.tar.gz ../
+          ls -al
+
+      - name: Web Download and Package
+        if: inputs.build_rpm
+        working-directory: rpm/web-downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
+          unzip -q *web*.zip
+          rm *.zip
+          ls -al
+          echo "Zipping package"
+          tar cf web-$VERSION.tar.gz *
+          ls -al
+          echo "Unzipping tar as a test"
+          tar xf web-$VERSION.tar.gz
+          mv *.tar.gz ../
+
+      - name: Build RPM
+        if: inputs.build_rpm
+        working-directory: rpm
+        shell: bash
+        env:
+          GENESIS_USER: ${{ inputs.genesis-user }}
+        run: |
+          set -euo pipefail
+          VERSION=$(echo "${{ inputs.version }}" | tr '-' '_')
+          ls -al
+          rm -rf web-downloads downloads
+          sed -i "s/1.0.0/$VERSION/g" product.spec
+          sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
+          sed -i "s/genesisUser/${GENESIS_USER}/g" product.spec
+          mkdir -p "$RPM_TOPDIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          mv *.gz "$RPM_TOPDIR/SOURCES/"
+          if [ "${{ inputs.include-xray-report }}" = "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
+            cp extra-content/* "$RPM_TOPDIR/SOURCES/"
+          fi
+
+          echo "=== local rpm dir ==="
+          find . -maxdepth 3 -type f | sort || true
+          echo "=== rpmbuild sources before spec ==="
+          find "$RPM_TOPDIR/SOURCES" -maxdepth 2 -type f | sort || true
+
+          mv product.spec "$RPM_TOPDIR/SOURCES/"
+          cd "$RPM_TOPDIR/SOURCES/"
+          if [ "${{ inputs.build_server }}" = "false" ]; then
+            if [ "${{ inputs.include-xray-report }}" = "true" ]; then
+              rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "web_only 1" --define "include_xray_report 1" product.spec
+            else
+              rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "web_only 1" product.spec
+            fi
+          elif [ "${{ inputs.include-xray-report }}" = "true" ]; then
+            rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "include_xray_report 1" product.spec
+          else
+            rpmbuild -bb --define "_topdir $RPM_TOPDIR" product.spec
+          fi
+
+      - name: Upload RPMs to S3
+        if: inputs.build_rpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Clear AWS credentials inherited from the environment"
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          cd "$RPM_TOPDIR/SRPMS/"
+          ls -al
+          IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
+          for location in "${locations[@]}"; do
+              aws s3 sync "$RPM_TOPDIR/RPMS/noarch/" s3://product-rpms/"$location"
+          done
+
+      - name: GET RPM NAME
+        if: inputs.build_rpm
+        id: upload-rpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RPM_TOPDIR/RPMS/noarch/"
+          ls -al
+          uploaded_rpm_name=$(ls -1 *.rpm)
+          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
