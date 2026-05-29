@@ -161,7 +161,6 @@ env:
   GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
   APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
-  RPM_TOPDIR: ${{ runner.temp }}/rpmbuild
 
 jobs:
   build-and-generate-rpm:
@@ -623,29 +622,29 @@ jobs:
           sed -i "s/1.0.0/$VERSION/g" product.spec
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
           sed -i "s/genesisUser/${GENESIS_USER}/g" product.spec
-          mkdir -p "$RPM_TOPDIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
-          mv *.gz "$RPM_TOPDIR/SOURCES/"
+          mkdir -p ~/rpmbuild/SOURCES/
+          mv *.gz ~/rpmbuild/SOURCES/
           if [ "${{ inputs.include-xray-report }}" = "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
-            cp extra-content/* "$RPM_TOPDIR/SOURCES/"
+            cp extra-content/* ~/rpmbuild/SOURCES/
           fi
 
           echo "=== local rpm dir ==="
           find . -maxdepth 3 -type f | sort || true
           echo "=== rpmbuild sources before spec ==="
-          find "$RPM_TOPDIR/SOURCES" -maxdepth 2 -type f | sort || true
+          find ~/rpmbuild/SOURCES/ -maxdepth 2 -type f | sort || true
 
-          mv product.spec "$RPM_TOPDIR/SOURCES/"
-          cd "$RPM_TOPDIR/SOURCES/"
+          mv product.spec ~/rpmbuild/SOURCES/
+          cd ~/rpmbuild/SOURCES/
           if [ "${{ inputs.build_server }}" = "false" ]; then
             if [ "${{ inputs.include-xray-report }}" = "true" ]; then
-              rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "web_only 1" --define "include_xray_report 1" product.spec
+              rpmbuild -bb --define "web_only 1" --define "include_xray_report 1" product.spec
             else
-              rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "web_only 1" product.spec
+              rpmbuild -bb --define "web_only 1" product.spec
             fi
           elif [ "${{ inputs.include-xray-report }}" = "true" ]; then
-            rpmbuild -bb --define "_topdir $RPM_TOPDIR" --define "include_xray_report 1" product.spec
+            rpmbuild -bb --define "include_xray_report 1" product.spec
           else
-            rpmbuild -bb --define "_topdir $RPM_TOPDIR" product.spec
+            rpmbuild -bb product.spec
           fi
 
       - name: Upload RPMs to S3
@@ -657,11 +656,11 @@ jobs:
           unset AWS_ACCESS_KEY_ID
           unset AWS_SECRET_ACCESS_KEY
           unset AWS_SESSION_TOKEN
-          cd "$RPM_TOPDIR/SRPMS/"
+          cd ~/rpmbuild/SRPMS/
           ls -al
           IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
           for location in "${locations[@]}"; do
-              aws s3 sync "$RPM_TOPDIR/RPMS/noarch/" s3://product-rpms/"$location"
+              aws s3 sync ~/rpmbuild/RPMS/noarch/ s3://product-rpms/"$location"
           done
 
       - name: GET RPM NAME
@@ -670,7 +669,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd "$RPM_TOPDIR/RPMS/noarch/"
+          cd ~/rpmbuild/RPMS/noarch/
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
