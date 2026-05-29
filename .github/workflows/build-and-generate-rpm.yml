@@ -161,11 +161,12 @@ env:
   GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
   APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
-  RPM_TOPDIR: ${{ runner.temp }}/rpmbuild
 
 jobs:
   build-and-generate-rpm:
     runs-on: appdev-selfhosted-al2023
+    env:
+      RPM_TOPDIR: ${{ runner.temp }}/rpmbuild
     outputs:
       rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
     steps:
