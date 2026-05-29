@@ -261,6 +261,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
 
+      # Exact key on server sources only (no restore-keys) so scan reuses dist when code unchanged.
+      - name: Restore dist zip cache (PR-scoped)
+        if: env.PR_CACHE_SCOPE != ''
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/server/*/build/dist
+          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ hashFiles(format('{0}/server/**/*.kt', inputs.working-directory), format('{0}/server/**/*.java', inputs.working-directory), format('{0}/server/**/*.kts', inputs.working-directory), format('{0}/server/**/build.gradle.kts', inputs.working-directory), format('{0}/server/**/build.gradle', inputs.working-directory)) }}
+
       - name: 'Create .npmrc'
         shell: bash
         run: |
