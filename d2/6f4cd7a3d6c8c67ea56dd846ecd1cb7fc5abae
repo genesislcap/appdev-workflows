@@ -1,0 +1,22 @@
+.github/workflows/build-gradle-g8.yml
+  s_eb53827daddfd3::t_144131eac2d39e 295
+build-image/jfrog-scanning/action.yaml
+  s_eb53827daddfd3::t_04ceffdf95ef80 23-28
+  s_eb53827daddfd3::t_efd54ee488aa0c 37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d26f4cd7a3d6c8c67ea56dd846ecd1cb7fc5abae",
+  "prompts": {},
+  "sessions": {
+    "s_eb53827daddfd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d74835c0-f3e4-4ced-84fe-2beaabac62ac",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
