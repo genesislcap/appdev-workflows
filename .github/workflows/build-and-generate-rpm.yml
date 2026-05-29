@@ -165,11 +165,11 @@ env:
 jobs:
   build-and-generate-rpm:
     runs-on: appdev-selfhosted-al2023
-    env:
-      RPM_TOPDIR: ${{ runner.temp }}/rpmbuild
     outputs:
       rpm_name: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
     steps:
+      - name: Set RPM build directory
+        run: echo "RPM_TOPDIR=$RUNNER_TEMP/rpmbuild" >> $GITHUB_ENV
       - name: Checkout caller repository
         uses: actions/checkout@v4
         with:
