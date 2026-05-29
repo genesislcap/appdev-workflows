@@ -292,6 +292,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: "${{ inputs.working-directory }}/server"
           app-name: ${{ inputs.product_name }}
+          enable-pr-cache: ${{ inputs.enable-pr-cache }}
           build-server-arguments: >-
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.PR_CACHE_SCOPE == '' && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
