@@ -135,9 +135,8 @@ env:
   GRADLE_PUSH_TO_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
   GRADLE_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
   # PR scope: -PpushToCache=false disables Genesis shared remote only; Gradle HTTP remote stays on (init.d).
-  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ env.PR_CACHE_SCOPE == '' && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
-  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ env.PR_CACHE_SCOPE == '' && (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }}
-  PR_SERVER_HASH: ${{ hashFiles(format('{0}/server/**/*.kt', inputs.working-directory), format('{0}/server/**/*.java', inputs.working-directory), format('{0}/server/**/*.kts', inputs.working-directory), format('{0}/server/**/build.gradle.kts', inputs.working-directory), format('{0}/server/**/build.gradle', inputs.working-directory)) }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -148,6 +147,12 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
+
+      - name: Set PR server source hash
+        if: env.PR_CACHE_SCOPE != ''
+        env:
+          PR_SERVER_HASH: ${{ hashFiles(format('{0}/server/**/*.kt', inputs.working-directory), format('{0}/server/**/*.java', inputs.working-directory), format('{0}/server/**/*.kts', inputs.working-directory), format('{0}/server/**/build.gradle.kts', inputs.working-directory), format('{0}/server/**/build.gradle', inputs.working-directory)) }}
+        run: echo "PR_SERVER_HASH=${PR_SERVER_HASH}" >> "$GITHUB_ENV"
 
       - name: Set up JDK
         uses: actions/setup-java@v2
