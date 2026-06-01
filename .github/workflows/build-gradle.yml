@@ -52,8 +52,8 @@ on:
       enable-pr-cache:
         type: boolean
         description: >-
-          PR only. Enables Gradle build cache scoped per client repo and PR (GitHub Actions cache,
-          GRADLE_USER_HOME, Artifactory remote) when use-artifactory-cache is true.
+          PR only. Scopes Gradle and dist-zip cache per client repo and PR (GitHub Actions cache,
+          GRADLE_USER_HOME, dist restore for Scan, optional Artifactory remote when use-artifactory-cache is true).
           No effect on push/tag when false (default).
         default: false
         required: false
@@ -180,6 +180,14 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
+
+      - name: Set dist cache input hash
+        if: env.PR_CACHE_SCOPE != ''
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          HASH=$( (git ls-files -z "${{ inputs.server-path }}"; git ls-files -z server client 2>/dev/null || true) | sort -zu | git hash-object --stdin)
+          echo "DIST_INPUT_HASH=${HASH}" >> "$GITHUB_ENV"
 
       - name: Configure Node
         if: ${{ !inputs.REGISTRY_URL  }}
@@ -309,6 +317,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
 
+      - name: Restore dist zip cache (PR-scoped)
+        if: env.PR_CACHE_SCOPE != ''
+        id: pr-dist-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ inputs.working-directory }}/server/*/build/dist
+            ${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/dist
+          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.DIST_INPUT_HASH }}
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -343,24 +361,6 @@ jobs:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
 
-      - name: Server Build
-        if: ${{ !inputs.skip-tests }}
-        run: ./gradlew build --stacktrace -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-      
-      - name: Server Assemble
-        if: inputs.skip-tests
-        run: |
-          ./gradlew assemble \
-            --stacktrace \
-            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} \
-            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} \
-            ${{ inputs.server-build-gradle-arguments }} \
-            ${{ env.CACHE_OPTS }}
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-
-      # Runs after the build so Gradle's appDistZip task finds its outputs already
-      # on disk and completes as UP-TO-DATE, avoiding a second full compilation.
       - name: Scan artifact
         if: inputs.jfrogscan
         uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
@@ -378,14 +378,37 @@ jobs:
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
 
-      - name: Save Gradle cache (PR-scoped)
-        if: always() && env.PR_CACHE_SCOPE != ''
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.GRADLE_USER_HOME }}/caches
-            ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ steps.pr-gradle-cache.outputs.cache-primary-key }}
+      - name: Warm compile cache when dist zip reused (PR-scoped)
+        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        shell: bash
+        run: |
+          ./gradlew classes compileTestKotlin \
+            -Pversion=${{ env.RELEASE_VERSION }} \
+            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
+            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
+            -PpushToCache=false \
+            -PdisableRemoteCache=false \
+            ${{ env.CACHE_OPTS }} \
+            --build-cache \
+            ${{ inputs.server-build-gradle-arguments }}
+
+      - name: Server Build
+        if: ${{ !inputs.skip-tests }}
+        run: ./gradlew build --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+
+      - name: Server Assemble
+        if: inputs.skip-tests
+        run: |
+          ./gradlew assemble \
+            --stacktrace \
+            -Pversion=${{ env.RELEASE_VERSION }} \
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} \
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} \
+            ${{ inputs.server-build-gradle-arguments }} \
+            ${{ env.CACHE_OPTS }}
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
@@ -423,6 +446,24 @@ jobs:
             ./**/build/test-results/**/*.xml
           fail_on: nothing
           report_suite_logs: any
+
+      - name: Save dist zip cache (PR-scoped)
+        if: always() && env.PR_CACHE_SCOPE != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ inputs.working-directory }}/server/*/build/dist
+            ${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/dist
+          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.DIST_INPUT_HASH }}
+
+      - name: Save Gradle cache (PR-scoped)
+        if: always() && env.PR_CACHE_SCOPE != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ steps.pr-gradle-cache.outputs.cache-primary-key }}
 
       - name: Docker Build Image
         if: inputs.build_docker
@@ -507,6 +548,14 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Set dist cache input hash
+        if: env.PR_CACHE_SCOPE != ''
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          HASH=$( (git ls-files -z "${{ inputs.server-path }}"; git ls-files -z server client 2>/dev/null || true) | sort -zu | git hash-object --stdin)
+          echo "DIST_INPUT_HASH=${HASH}" >> "$GITHUB_ENV"
+
       - name: Configure Node
         if: ${{ !inputs.REGISTRY_URL  }}
         uses: actions/setup-node@v4
@@ -581,6 +630,7 @@ jobs:
             }
           }
           INIT_SCRIPT
+            echo "Using PR-isolated GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
           else
             mkdir -p "${HOME}/.gradle"
             GRADLE_HOME_DIR="${HOME}/.gradle"
@@ -607,7 +657,8 @@ jobs:
 
       - name: Restore Gradle cache (PR-scoped)
         if: env.PR_CACHE_SCOPE != ''
-        uses: actions/cache@v4
+        id: pr-gradle-cache-web
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
@@ -635,7 +686,7 @@ jobs:
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist -x preCompileScripts --no-build-cache -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ inputs.push-to-artifactory-cache }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
+          arguments: :${{ steps.web_exists.outputs.modified-arguments-location }}:assembleDist -x preCompileScripts -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ env.CACHE_OPTS }}
           build-root-directory: "${{ inputs.working-directory }}/"
           cache-disabled: true
 
@@ -645,6 +696,15 @@ jobs:
         run: |
           mv web-distribution-${{ env.RELEASE_VERSION }}.zip ${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
           curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T *.zip
+
+      - name: Save Gradle cache (PR-scoped)
+        if: always() && env.PR_CACHE_SCOPE != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ steps.pr-gradle-cache-web.outputs.cache-primary-key }}
 
       - name: Notify failure on Slack
         uses: youscan/gitactions-slack-notification@3.0.0
