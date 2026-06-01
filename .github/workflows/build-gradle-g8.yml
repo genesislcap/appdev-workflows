@@ -122,7 +122,7 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
-# PR number is only set on pull_request; for push/tag use event + ref (see reverted PR #168).
+# PR number is only set on pull_request; else for push/tag use event + ref
 concurrency:
   group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && !inputs.enable-pr-cache }}
@@ -134,11 +134,9 @@ env:
   PR_CACHE_SCOPE: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache && format('{0}-{1}-pr-{2}', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
   GRADLE_PUSH_TO_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
   GRADLE_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
-  # PR scope: -PpushToCache=false disables Genesis shared remote only; Gradle HTTP remote stays on (init.d).
   GRADLE_GENESIS_PUSH_TO_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
   GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }}
 
-# A workflow run is called from the devops appdev-workflow repos
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
@@ -153,7 +151,7 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          HASH=$(git ls-files -z server client | git hash-object --stdin)
+          HASH=$( (git ls-files -z server; git ls-files -z client 2>/dev/null || true) | sort -zu | git hash-object --stdin)
           echo "DIST_INPUT_HASH=${HASH}" >> "$GITHUB_ENV"
 
       - name: Set up JDK
@@ -319,20 +317,10 @@ jobs:
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
 
-      - name: Warm compile cache when dist zip reused (PR-scoped)
-        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
-        working-directory: "${{ inputs.working-directory }}/server"
-        shell: bash
-        run: |
-          ./gradlew classes compileTestKotlin \
-            -Pversion=${{ env.RELEASE_VERSION }} \
-            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
-            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
-            -PpushToCache=false \
-            -PdisableRemoteCache=false \
-            ${{ env.CACHE_OPTS }} \
-            --build-cache \
-            ${{ inputs.server-build-gradle-arguments }}
+      # When dist zip is restored from GHA, Scan skips appDistZip. Do not run a warm
+      # compile here — it recompiles test sources and forces a full pbi-app:test (~12m).
+      # Build should use restored GHA + Artifactory cache (pbi-app:test FROM-CACHE) like
+      # pre-dist-cache runs when server/client are unchanged.
 
       - name: Install Bearer CLI
         if: inputs.sast
