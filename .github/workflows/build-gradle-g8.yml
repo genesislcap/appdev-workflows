@@ -130,7 +130,7 @@ concurrency:
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
-  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '' }}
+  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '--build-cache' }}
   PR_CACHE_SCOPE: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache && format('{0}-{1}-pr-{2}', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
   GRADLE_PUSH_TO_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
   GRADLE_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
@@ -145,14 +145,6 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
-
-      - name: Set dist cache input hash
-        if: env.PR_CACHE_SCOPE != ''
-        working-directory: "${{ inputs.working-directory }}"
-        shell: bash
-        run: |
-          HASH=$( (git ls-files -z server; git ls-files -z client 2>/dev/null || true) | sort -zu | git hash-object --stdin)
-          echo "DIST_INPUT_HASH=${HASH}" >> "$GITHUB_ENV"
 
       - name: Set up JDK
         uses: actions/setup-java@v2
@@ -261,23 +253,14 @@ jobs:
 
       - name: Restore Gradle cache (PR-scoped)
         if: env.PR_CACHE_SCOPE != ''
-        id: pr-gradle-cache
         uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ hashFiles(format('{0}/gradle.properties', inputs.working-directory), format('{0}/**/gradle-wrapper.properties', inputs.working-directory), format('{0}/server/gradle.properties', inputs.working-directory), format('{0}/server/**/gradle-wrapper.properties', inputs.working-directory)) }}
+          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
-
-      - name: Restore dist zip cache (PR-scoped)
-        if: env.PR_CACHE_SCOPE != ''
-        id: pr-dist-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ inputs.working-directory }}/server/*/build/dist
-          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.DIST_INPUT_HASH }}
 
       - name: 'Create .npmrc'
         shell: bash
@@ -315,26 +298,6 @@ jobs:
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
-            ${{ inputs.server-build-gradle-arguments }}
-
-      # Scan skips appDistZip when the dist zip was restored from GHA. May 29 still ran
-      # appDistZip in the same job before Build, which let pbi-app:test be FROM-CACHE (~30s).
-      # Re-run appDistZip here (usually UP-TO-DATE when the zip is already on disk) so Build
-      # does not execute a full pbi-app:test (~12m). Do not use warm compileTestKotlin — it
-      # recompiles test sources and forces tests to run again.
-      - name: Prime Gradle via appDistZip when dist zip restored (PR-scoped)
-        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
-        working-directory: "${{ inputs.working-directory }}/server"
-        shell: bash
-        run: |
-          ./gradlew appDistZip \
-            -Pversion=${{ env.RELEASE_VERSION }} \
-            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
-            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
-            -PpushToCache=false \
-            -PdisableRemoteCache=false \
-            ${{ env.CACHE_OPTS }} \
-            --build-cache \
             ${{ inputs.server-build-gradle-arguments }}
 
       - name: Install Bearer CLI
@@ -401,7 +364,7 @@ jobs:
         shell: bash
         working-directory: "${{ inputs.working-directory }}/server"
         run: |
-          ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+          ./gradlew checkAuthPermissions --no-configuration-cache ${{ env.CACHE_OPTS }} --stacktrace
 
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
@@ -435,13 +398,6 @@ jobs:
           fail_on: nothing
           report_suite_logs: any
 
-      - name: Save dist zip cache (PR-scoped)
-        if: always() && env.PR_CACHE_SCOPE != ''
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ inputs.working-directory }}/server/*/build/dist
-          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.DIST_INPUT_HASH }}
-
       - name: Save Gradle cache (PR-scoped)
         if: always() && env.PR_CACHE_SCOPE != ''
         uses: actions/cache/save@v4
@@ -449,7 +405,7 @@ jobs:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ steps.pr-gradle-cache.outputs.cache-primary-key }}
+          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ github.run_id }}
 
       - name: Docker Build Image
         if: inputs.build_docker
