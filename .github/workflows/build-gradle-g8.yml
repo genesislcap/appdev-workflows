@@ -45,8 +45,8 @@ on:
       enable-pr-cache:
         type: boolean
         description: >-
-          PR builds only. When true (and use-artifactory-cache is true), enables Gradle build
-          cache scoped per client repo and PR (GitHub Actions cache, GRADLE_USER_HOME, Artifactory remote).
+          PR builds only. When true, scopes Gradle build cache per client repo and PR
+          (GitHub Actions cache, isolated GRADLE_USER_HOME, optional Artifactory remote when use-artifactory-cache is true).
           No effect on push/tag.
         default: false
         required: false
@@ -147,12 +147,6 @@ jobs:
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
-
-      - name: Set PR server source hash
-        if: env.PR_CACHE_SCOPE != ''
-        env:
-          PR_SERVER_HASH: ${{ hashFiles(format('{0}/server/**/*.kt', inputs.working-directory), format('{0}/server/**/*.java', inputs.working-directory), format('{0}/server/**/*.kts', inputs.working-directory), format('{0}/server/**/build.gradle.kts', inputs.working-directory), format('{0}/server/**/build.gradle', inputs.working-directory)) }}
-        run: echo "PR_SERVER_HASH=${PR_SERVER_HASH}" >> "$GITHUB_ENV"
 
       - name: Set up JDK
         uses: actions/setup-java@v2
@@ -267,19 +261,9 @@ jobs:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ env.PR_SERVER_HASH }}-${{ hashFiles(format('{0}/gradle.properties', inputs.working-directory), format('{0}/**/gradle-wrapper.properties', inputs.working-directory), format('{0}/server/gradle.properties', inputs.working-directory), format('{0}/server/**/gradle-wrapper.properties', inputs.working-directory)) }}
+          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ hashFiles(format('{0}/gradle.properties', inputs.working-directory), format('{0}/**/gradle-wrapper.properties', inputs.working-directory), format('{0}/server/gradle.properties', inputs.working-directory), format('{0}/server/**/gradle-wrapper.properties', inputs.working-directory)) }}
           restore-keys: |
-            ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ env.PR_SERVER_HASH }}-
             ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
-
-      # Exact key on server sources only (no restore-keys) so scan reuses dist when code unchanged.
-      - name: Restore dist zip cache (PR-scoped)
-        if: env.PR_CACHE_SCOPE != ''
-        id: pr-dist-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ inputs.working-directory }}/server/*/build/dist
-          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.PR_SERVER_HASH }}
 
       - name: 'Create .npmrc'
         shell: bash
@@ -319,21 +303,6 @@ jobs:
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
 
-      - name: Warm compile cache when dist zip reused (PR-scoped)
-        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
-        working-directory: "${{ inputs.working-directory }}/server"
-        shell: bash
-        run: |
-          ./gradlew classes compileTestKotlin \
-            -Pversion=${{ env.RELEASE_VERSION }} \
-            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
-            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
-            -PpushToCache=false \
-            -PdisableRemoteCache=false \
-            ${{ env.CACHE_OPTS }} \
-            --build-cache \
-            ${{ inputs.server-build-gradle-arguments }}
-
       - name: Install Bearer CLI
         if: inputs.sast
         working-directory: "${{ inputs.working-directory }}"
@@ -364,7 +333,7 @@ jobs:
         with:
           arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: ${{ github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
+          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
@@ -431,13 +400,6 @@ jobs:
             ./**/build/test-results/**/*.xml
           fail_on: nothing
           report_suite_logs: any
-
-      - name: Save dist zip cache (PR-scoped)
-        if: always() && env.PR_CACHE_SCOPE != ''
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ inputs.working-directory }}/server/*/build/dist
-          key: ${{ runner.os }}-dist-${{ env.PR_CACHE_SCOPE }}-${{ env.PR_SERVER_HASH }}
 
       - name: Save Gradle cache (PR-scoped)
         if: always() && env.PR_CACHE_SCOPE != ''

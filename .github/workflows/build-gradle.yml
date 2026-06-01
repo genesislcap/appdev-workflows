@@ -52,8 +52,9 @@ on:
       enable-pr-cache:
         type: boolean
         description: >-
-          PR only. Enables GitHub Gradle cache read/write and Artifactory remote build cache
-          when use-artifactory-cache is true. No effect on push/tag when false (default).
+          PR only. Enables Gradle build cache scoped per client repo and PR (GitHub Actions cache,
+          GRADLE_USER_HOME, Artifactory remote) when use-artifactory-cache is true.
+          No effect on push/tag when false (default).
         default: false
         required: false
       working-directory:
@@ -163,6 +164,11 @@ env:
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
   APP_MODULE: ${{ inputs.app_module || format('{0}-app', inputs.product_name) }}
   CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '' }}
+  PR_CACHE_SCOPE: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache && format('{0}-{1}-pr-{2}', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
+  GRADLE_PUSH_TO_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
+  GRADLE_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && ((github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache)) || false }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && (!inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache)) }}
 
 # A workflow run is called from the devops appdev-workflow repos
 jobs:
@@ -220,28 +226,67 @@ jobs:
       - name: Restore gradle.properties and setup
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+          GENESIS_ARTIFACTORY_USER: ${{ secrets.JFROG_USERNAME }}
+          GENESIS_ARTIFACTORY_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          mkdir -p ~/.gradle/
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          if [ -n "${{ env.PR_CACHE_SCOPE }}" ]; then
+            GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.PR_CACHE_SCOPE }}"
+            mkdir -p "${GRADLE_HOME_DIR}/init.d"
+            echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
+            echo "PR_CACHE_SCOPE=${{ env.PR_CACHE_SCOPE }}" >> "$GITHUB_ENV"
+            echo "GENESIS_ARTIFACTORY_USER=${GENESIS_ARTIFACTORY_USER}" >> "$GITHUB_ENV"
+            echo "GENESIS_ARTIFACTORY_PASSWORD=${GENESIS_ARTIFACTORY_PASSWORD}" >> "$GITHUB_ENV"
+            echo "GRADLE_PUSH_TO_REMOTE_CACHE=${{ env.GRADLE_PUSH_TO_REMOTE_CACHE }}" >> "$GITHUB_ENV"
+            echo "GRADLE_DISABLE_REMOTE_CACHE=${{ env.GRADLE_DISABLE_REMOTE_CACHE }}" >> "$GITHUB_ENV"
+            cat > "${GRADLE_HOME_DIR}/init.d/pr-cache-remote-scope.init.gradle" << 'INIT_SCRIPT'
+          gradle.beforeSettings { settings ->
+            def scope = System.getenv('PR_CACHE_SCOPE')
+            if (scope == null || scope.isEmpty()) {
+              return
+            }
+            def pushToCache = System.getenv('GRADLE_PUSH_TO_REMOTE_CACHE') == 'true'
+            def user = System.getenv('GENESIS_ARTIFACTORY_USER')
+            def password = System.getenv('GENESIS_ARTIFACTORY_PASSWORD')
+            settings.buildCache {
+              local { enabled = true }
+              remote(org.gradle.caching.http.HttpBuildCache) {
+                url = uri("https://genesisglobal.jfrog.io/genesisglobal/gradle-cache-repo/${scope}/")
+                credentials {
+                  username = user
+                  password = password
+                }
+                push = pushToCache
+                enabled = true
+              }
+            }
+          }
+          INIT_SCRIPT
+            echo "Using PR-isolated GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
+          else
+            mkdir -p "${HOME}/.gradle"
+            GRADLE_HOME_DIR="${HOME}/.gradle"
+            echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
+          fi
 
-          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
-          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
 
-          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
-          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
-          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
-          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> "${GRADLE_HOME_DIR}/gradle.properties"
 
-          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "dockerEmail=platformmanageteam@genesis.global" >> "${GRADLE_HOME_DIR}/gradle.properties"
+
+          echo "genesis-home=../.genesis-home" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "deploy-plugin-mode=local" >> "${GRADLE_HOME_DIR}/gradle.properties"
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
           sudo chmod -R +rx ./${{ inputs.server-path }}/
-          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          cat "${GRADLE_HOME_DIR}/gradle.properties" >> ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
             echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
           else
@@ -252,13 +297,25 @@ jobs:
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
           sed -E -i "s/^version=.+/version=${RELEASE_VERSION}/g" ${{ inputs.server-path }}/gradle.properties
 
+      - name: Restore Gradle cache (PR-scoped)
+        if: env.PR_CACHE_SCOPE != ''
+        id: pr-gradle-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ hashFiles(format('{0}/gradle.properties', inputs.working-directory), format('{0}/**/gradle-wrapper.properties', inputs.working-directory), format('{0}/{1}/gradle.properties', inputs.working-directory, inputs.server-path), format('{0}/{1}/**/gradle-wrapper.properties', inputs.working-directory, inputs.server-path)) }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-overwrite-existing: true
-          cache-read-only: ${{ !(github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.cache-read-only }}
+          cache-overwrite-existing: ${{ !inputs.enable-pr-cache }}
+          cache-read-only: ${{ env.PR_CACHE_SCOPE == '' && inputs.cache-read-only }}
           cache-write-only: ${{ inputs.cache-write-only }}
-          cache-disabled: ${{ !(github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.disable-cache }}
+          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || (!(github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.disable-cache) }}
 
       - name: Install Sast CLI
         if: inputs.sast
@@ -288,7 +345,7 @@ jobs:
 
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
-        run: ./gradlew build --stacktrace -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
+        run: ./gradlew build --stacktrace -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
       
       - name: Server Assemble
@@ -296,8 +353,8 @@ jobs:
         run: |
           ./gradlew assemble \
             --stacktrace \
-            -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }} \
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }} \
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} \
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} \
             ${{ inputs.server-build-gradle-arguments }} \
             ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
@@ -314,11 +371,21 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: ${{ inputs.server-path }}
           app-name: ${{ inputs.product_name }}
+          enable-pr-cache: ${{ inputs.enable-pr-cache }}
           build-server-arguments: >-
             ${{ env.CACHE_OPTS }}
-            -PpushToCache=${{ (github.event_name != 'pull_request' && inputs.push-to-artifactory-cache) || (github.event_name == 'pull_request' && inputs.enable-pr-cache && inputs.use-artifactory-cache) }}
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
+
+      - name: Save Gradle cache (PR-scoped)
+        if: always() && env.PR_CACHE_SCOPE != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ steps.pr-gradle-cache.outputs.cache-primary-key }}
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
@@ -339,6 +406,13 @@ jobs:
           name: test-reports
           path: "${{ inputs.working-directory }}/test-results"
         if: always()
+
+      - name: Remove oversized JUnit report before publish
+        if: always()
+        working-directory: "${{ inputs.working-directory }}"
+        shell: bash
+        run: |
+          find . -path '**/TEST-global.genesis.PbiReqRepTest.xml' -delete 2>/dev/null || true
 
       - name: Publish All Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -469,20 +543,59 @@ jobs:
           distribution: 'adopt'
 
       - name: Restore gradle.properties and setup
+        env:
+          GENESIS_ARTIFACTORY_USER: ${{ secrets.JFROG_USERNAME }}
+          GENESIS_ARTIFACTORY_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          mkdir -p ~/.gradle/
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
-          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          if [ -n "${{ env.PR_CACHE_SCOPE }}" ]; then
+            GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.PR_CACHE_SCOPE }}"
+            mkdir -p "${GRADLE_HOME_DIR}/init.d"
+            echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
+            echo "PR_CACHE_SCOPE=${{ env.PR_CACHE_SCOPE }}" >> "$GITHUB_ENV"
+            echo "GENESIS_ARTIFACTORY_USER=${GENESIS_ARTIFACTORY_USER}" >> "$GITHUB_ENV"
+            echo "GENESIS_ARTIFACTORY_PASSWORD=${GENESIS_ARTIFACTORY_PASSWORD}" >> "$GITHUB_ENV"
+            echo "GRADLE_PUSH_TO_REMOTE_CACHE=${{ env.GRADLE_PUSH_TO_REMOTE_CACHE }}" >> "$GITHUB_ENV"
+            echo "GRADLE_DISABLE_REMOTE_CACHE=${{ env.GRADLE_DISABLE_REMOTE_CACHE }}" >> "$GITHUB_ENV"
+            cat > "${GRADLE_HOME_DIR}/init.d/pr-cache-remote-scope.init.gradle" << 'INIT_SCRIPT'
+          gradle.beforeSettings { settings ->
+            def scope = System.getenv('PR_CACHE_SCOPE')
+            if (scope == null || scope.isEmpty()) {
+              return
+            }
+            def pushToCache = System.getenv('GRADLE_PUSH_TO_REMOTE_CACHE') == 'true'
+            def user = System.getenv('GENESIS_ARTIFACTORY_USER')
+            def password = System.getenv('GENESIS_ARTIFACTORY_PASSWORD')
+            settings.buildCache {
+              local { enabled = true }
+              remote(org.gradle.caching.http.HttpBuildCache) {
+                url = uri("https://genesisglobal.jfrog.io/genesisglobal/gradle-cache-repo/${scope}/")
+                credentials {
+                  username = user
+                  password = password
+                }
+                push = pushToCache
+                enabled = true
+              }
+            }
+          }
+          INIT_SCRIPT
+          else
+            mkdir -p "${HOME}/.gradle"
+            GRADLE_HOME_DIR="${HOME}/.gradle"
+            echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
+          fi
 
-          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
-          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
+
+          echo "genesis-home=../.genesis-home" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          echo "deploy-plugin-mode=local" >> "${GRADLE_HOME_DIR}/gradle.properties"
           sudo chmod +x ./gradlew
           sudo chmod +x ./${{ inputs.server-path }}/gradlew
 
-          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          cat "${GRADLE_HOME_DIR}/gradle.properties" >> ./gradle.properties
           if [ -z "${{ inputs.repo-name }}" ]; then
             echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
           else
@@ -492,6 +605,16 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
 
+      - name: Restore Gradle cache (PR-scoped)
+        if: env.PR_CACHE_SCOPE != ''
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ hashFiles(format('{0}/gradle.properties', inputs.working-directory), format('{0}/**/gradle-wrapper.properties', inputs.working-directory), format('{0}/{1}/gradle.properties', inputs.working-directory, inputs.server-path), format('{0}/{1}/**/gradle-wrapper.properties', inputs.working-directory, inputs.server-path)) }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
 
       - name: Check file existence
         id: web_exists
