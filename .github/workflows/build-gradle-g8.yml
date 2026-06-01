@@ -317,10 +317,25 @@ jobs:
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
 
-      # When dist zip is restored from GHA, Scan skips appDistZip. Do not run a warm
-      # compile here — it recompiles test sources and forces a full pbi-app:test (~12m).
-      # Build should use restored GHA + Artifactory cache (pbi-app:test FROM-CACHE) like
-      # pre-dist-cache runs when server/client are unchanged.
+      # Scan skips appDistZip when the dist zip was restored from GHA. May 29 still ran
+      # appDistZip in the same job before Build, which let pbi-app:test be FROM-CACHE (~30s).
+      # Re-run appDistZip here (usually UP-TO-DATE when the zip is already on disk) so Build
+      # does not execute a full pbi-app:test (~12m). Do not use warm compileTestKotlin — it
+      # recompiles test sources and forces tests to run again.
+      - name: Prime Gradle via appDistZip when dist zip restored (PR-scoped)
+        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
+        working-directory: "${{ inputs.working-directory }}/server"
+        shell: bash
+        run: |
+          ./gradlew appDistZip \
+            -Pversion=${{ env.RELEASE_VERSION }} \
+            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
+            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
+            -PpushToCache=false \
+            -PdisableRemoteCache=false \
+            ${{ env.CACHE_OPTS }} \
+            --build-cache \
+            ${{ inputs.server-build-gradle-arguments }}
 
       - name: Install Bearer CLI
         if: inputs.sast

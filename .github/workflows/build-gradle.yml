@@ -378,8 +378,21 @@ jobs:
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
 
-      # When dist zip is restored from GHA, Scan skips appDistZip. No warm compile step —
-      # it invalidates test UP-TO-DATE/FROM-CACHE and forces full pbi-app:test on Build.
+      # Same-job appDistZip after Scan (May 29 behaviour) when dist zip came from GHA.
+      - name: Prime Gradle via appDistZip when dist zip restored (PR-scoped)
+        if: env.PR_CACHE_SCOPE != '' && steps.pr-dist-cache.outputs.cache-hit == 'true'
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        shell: bash
+        run: |
+          ./gradlew appDistZip \
+            -Pversion=${{ env.RELEASE_VERSION }} \
+            -PgenesisArtifactoryUser="${{ secrets.JFROG_USERNAME }}" \
+            -PgenesisArtifactoryPassword="${{ secrets.JFROG_PASSWORD }}" \
+            -PpushToCache=false \
+            -PdisableRemoteCache=false \
+            ${{ env.CACHE_OPTS }} \
+            --build-cache \
+            ${{ inputs.server-build-gradle-arguments }}
 
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
