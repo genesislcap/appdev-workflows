@@ -239,6 +239,18 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Verify Python
+      shell: bash
+      run: |
+        python --version
+        python3 --version || true
+        py -3 --version || true
+
     - name: Make gradlew executable
       working-directory: "${{ inputs.test-root-path }}"
       run: chmod +x ./gradlew
