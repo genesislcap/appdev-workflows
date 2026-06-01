@@ -1,0 +1,45 @@
+.github/workflows/build-gradle.yml
+  s_eb53827daddfd3::t_88ff60c54e60bc 170-171
+  s_eb53827daddfd3::t_6a6ecfd141c672 546-548,552-578,580-588,590-594,598,608-617
+  s_a0319caf217344::t_ed6e7e99fdc4a7 311
+  s_eb53827daddfd3::t_04fd02ee467d89 410-416
+  s_eb53827daddfd3::t_393c3917770ce9 308,318
+  s_eb53827daddfd3::t_bd6cc4e6056763 302-303,315
+  s_eb53827daddfd3::t_7c058bbc6645b3 374
+  s_eb53827daddfd3::t_675232a30c01d4 229-230,234-260,262-274,276-277,279-282,284-285,289,300-301,304-307,309-310,316
+  s_eb53827daddfd3::t_864492c427423a 377-378,381-388
+  s_eb53827daddfd3::t_51570ffbf1dcb6 55-57
+  s_eb53827daddfd3::t_23824a437fb391 348
+  s_eb53827daddfd3::t_6d9b82c00a51a5 261
+  s_eb53827daddfd3::t_4c7387b7d6c87e 167-169
+  s_eb53827daddfd3::t_70172b3c5bb882 356-357
+  s_eb53827daddfd3::t_46bc7ba2f4449d 579
+.github/workflows/build-gradle-g8.yml
+  s_eb53827daddfd3::t_7d7d461c678fdb 48-49
+  s_eb53827daddfd3::t_9a66780d4a14ae 264
+  s_eb53827daddfd3::t_c14620df38bb79 336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5e74469301f15d3fed92821f8cabfbb3809f4b77",
+  "prompts": {},
+  "sessions": {
+    "s_a0319caf217344": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "878f251f-f54b-413b-8b75-89f64067e922",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    },
+    "s_eb53827daddfd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d74835c0-f3e4-4ced-84fe-2beaabac62ac",
+        "model": "composer-2.5"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
