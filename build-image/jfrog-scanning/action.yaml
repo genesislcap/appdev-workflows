@@ -34,9 +34,10 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        # PR cache: caller restores GRADLE_USER_HOME first — do not overwrite. Direct callers: unchanged.
+        # PR cache: caller owns GRADLE_USER_HOME — disable setup-gradle cache entirely so it cannot
+        # restore its own snapshot on top of the PR-scoped cache we already restored.
+        cache-disabled: ${{ inputs.enable-pr-cache }}
         cache-overwrite-existing: ${{ !inputs.enable-pr-cache }}
-        cache-disabled: false
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
