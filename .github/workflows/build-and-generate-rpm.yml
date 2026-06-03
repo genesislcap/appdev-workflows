@@ -290,7 +290,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "Stamping server version in: $(pwd)/gradle.properties"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}"
+          echo "Before stamp:"
+          grep -E '^version=' gradle.properties || echo "version entry not found"
           sed -E -i "s/^version=.*/version=${RELEASE_VERSION}/" gradle.properties
+          echo "After stamp:"
+          grep -E '^version=' gradle.properties || echo "version entry not found"
 
       - name: Setup npm registry for @genesislcap
         run: |
