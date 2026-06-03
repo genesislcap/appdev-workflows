@@ -249,7 +249,6 @@ jobs:
           RELEASE_VERSION="$(echo "${{ inputs.version }}" | sed 's/\//-/g')"
           echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" "${{ inputs.server-path }}/build.gradle.kts"
 
           SERVER_BUILD_ARGS="${{ inputs.server-build-gradle-arguments }}"
           echo "server_build_args=$SERVER_BUILD_ARGS" >> "$GITHUB_OUTPUT"
@@ -285,6 +284,13 @@ jobs:
           sudo chmod -R +rx ./${{ inputs.server-path }}/
 
           cat ~/.gradle/gradle.properties >> ./gradle.properties
+
+      - name: Stamp server version
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -E -i "s/^version=.*/version=${RELEASE_VERSION}/" gradle.properties
 
       - name: Setup npm registry for @genesislcap
         run: |
