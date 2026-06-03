@@ -399,7 +399,7 @@ jobs:
           report_suite_logs: any
 
       - name: Save Gradle cache (PR-scoped)
-        if: always() && env.PR_CACHE_SCOPE != ''
+        if: success() && env.PR_CACHE_SCOPE != ''
         uses: actions/cache/save@v4
         with:
           path: |
