@@ -125,7 +125,7 @@ on:
 # PR number is only set on pull_request; else for push/tag use event + ref
 concurrency:
   group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && !inputs.enable-pr-cache }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
@@ -285,7 +285,7 @@ jobs:
 
       - name: Scan artifact
         if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@github_workflow_analyis
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
