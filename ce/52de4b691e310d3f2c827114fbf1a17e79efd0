@@ -1,0 +1,19 @@
+build-image/jfrog-scanning/action.yaml
+  s_68d319a7ff5165::t_b87cee2132a526 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "ce52de4b691e310d3f2c827114fbf1a17e79efd0",
+  "prompts": {},
+  "sessions": {
+    "s_68d319a7ff5165": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0869886e-c3e7-4740-abe8-4ff7dc8bcdaa",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
