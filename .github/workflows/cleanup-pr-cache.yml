@@ -1,0 +1,46 @@
+name: Cleanup PR Cache
+
+on:
+  workflow_call:
+    secrets:
+      JFROG_USERNAME:
+        required: true
+      JFROG_PASSWORD:
+        required: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete GHA cache (PR-scoped)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SCOPE="${{ github.repository_owner }}-${{ github.event.repository.name }}-pr-${{ github.event.pull_request.number }}"
+          echo "Deleting GHA caches with scope: ${SCOPE}"
+          IDS=$(gh cache list --repo ${{ github.repository }} \
+            --key "Linux-gradle-${SCOPE}-" \
+            --json id --jq '.[].id')
+          if [ -z "$IDS" ]; then
+            echo "No GHA cache entries found for this PR."
+          else
+            echo "$IDS" | xargs -r -I{} gh cache delete {} --repo ${{ github.repository }}
+            echo "GHA cache deleted."
+          fi
+
+      - name: Delete Artifactory remote build cache (PR-scoped)
+        run: |
+          SCOPE="${{ github.repository_owner }}-${{ github.event.repository.name }}-pr-${{ github.event.pull_request.number }}"
+          echo "Deleting Artifactory cache for scope: ${SCOPE}"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
+            -X DELETE "https://genesisglobal.jfrog.io/artifactory/gradle-cache-repo/${SCOPE}/")
+          if [ "$HTTP_STATUS" = "204" ] || [ "$HTTP_STATUS" = "200" ]; then
+            echo "Artifactory cache deleted."
+          elif [ "$HTTP_STATUS" = "404" ]; then
+            echo "No Artifactory cache found for this PR (already clean)."
+          else
+            echo "Artifactory delete returned HTTP ${HTTP_STATUS} - may need manual cleanup."
+          fi
