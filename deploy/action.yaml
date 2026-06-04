@@ -23,6 +23,10 @@ inputs:
     description: Use Genesis DumpIt and copy to S3 (Should not be used in Prod)
     required: false
     default: "false"
+  reset_db:
+    description: Whether to reset the Postgres container volume before DB init or migration
+    required: false
+    default: "false"
   snapshot_rds:
     description: Whether to initiate the rds snapshot creation
     required: false
@@ -155,6 +159,32 @@ runs:
       run: |
         echo "- ✅ Secrets Populated" >> $GITHUB_STEP_SUMMARY
 
+    - name: Reset DB
+      if: inputs.reset_db == 'true'
+      uses: genesislcap/appdev-workflows/ssm-command@develop
+      with:
+        command: |
+          set -x
+          cd /data/docker-compose
+          echo "Reset DB: stopping genesis_database"
+          docker compose stop -t 30 genesis_database || true
+          echo "Reset DB: removing genesis_database container"
+          docker compose rm -sf genesis_database || true
+          echo "Reset DB: removing docker-compose_postgres-data volume"
+          docker volume rm -f docker-compose_postgres-data || true
+          echo "Reset DB: complete"
+        app_name: ${{ inputs.app_name }}
+        run_on_all: false
+        environment: ${{ inputs.environment }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - shell: bash
+      if: inputs.reset_db == 'true'
+      run: |
+        echo "- DB Reset Completed (postgres-data volume removed)" >> $GITHUB_STEP_SUMMARY
+
     - name: Initiate the DB
       if: inputs.initial_deploy == 'true'
       uses: genesislcap/appdev-workflows/ssm-command@develop
@@ -227,3 +257,5 @@ runs:
     - shell: bash
       run: |
         echo "- ✅ Docker Pruned" >> $GITHUB_STEP_SUMMARY
+
+
