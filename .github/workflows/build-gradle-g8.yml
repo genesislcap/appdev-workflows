@@ -139,9 +139,6 @@ env:
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
-    permissions:
-      contents: read # clone repo (actions/checkout)
-      actions: write # delete/save GHA Gradle cache when enable-pr-cache is true
     steps:
       - uses: actions/checkout@v3
         with:
