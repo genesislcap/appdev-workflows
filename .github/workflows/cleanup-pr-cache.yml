@@ -14,13 +14,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SCOPE="${{ github.repository_owner }}-${{ github.event.repository.name }}-pr-${{ github.event.pull_request.number }}"
-          echo "Deleting GHA caches with scope: ${SCOPE}"
-          IDS=$(gh cache list --repo ${{ github.repository }} \
-            --key "Linux-gradle-${SCOPE}-" \
-            --json id --jq '.[].id')
+          PREFIX="Linux-gradle-${SCOPE}-"
+          REPO="${{ github.repository }}"
+          echo "Deleting GHA caches with prefix: ${PREFIX}"
+          IDS=$(gh cache list --repo "$REPO" --key "$PREFIX" --json id --jq '.[].id')
           if [ -z "$IDS" ]; then
             echo "No GHA cache entries found for this PR."
           else
-            echo "$IDS" | xargs -r -I{} gh cache delete {} --repo ${{ github.repository }}
+            echo "$IDS" | while read -r id; do
+              [ -n "$id" ] && gh cache delete "$id" --repo "$REPO"
+            done
             echo "GHA cache deleted."
           fi

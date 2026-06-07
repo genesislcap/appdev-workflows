@@ -45,9 +45,8 @@ on:
       enable-pr-cache:
         type: boolean
         description: >-
-          PR builds only. When true, scopes Gradle cache per client repo and PR
-          (GitHub Actions cache + isolated GRADLE_USER_HOME + --build-cache).
-          No effect on push/tag.
+          PR builds only. Opt-in: true = per-PR GHA cache + isolated GRADLE_USER_HOME + --build-cache.
+          Opt-out / false / push to develop = ~/.gradle, --no-build-cache, no GHA cache steps.
         default: false
         required: false
       working-directory:
@@ -130,7 +129,9 @@ concurrency:
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
+  # Opt-out: --no-build-cache. Opt-in (PR + enable-pr-cache): --build-cache.
   CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '--build-cache' }}
+  # Empty when opt-out; set to owner-repo-pr-N when opt-in (gates all GHA cache steps).
   PR_CACHE_SCOPE: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache && format('{0}-{1}-pr-{2}', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
   GRADLE_GENESIS_PUSH_TO_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && inputs.push-to-artifactory-cache }}
   GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) || !inputs.use-artifactory-cache }}
@@ -138,6 +139,9 @@ env:
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
+    permissions:
+      contents: read # clone repo (actions/checkout)
+      actions: write # delete/save GHA Gradle cache when enable-pr-cache is true
     steps:
       - uses: actions/checkout@v3
         with:
@@ -180,12 +184,14 @@ jobs:
         shell: bash
         run: |
           if [ -n "${{ env.PR_CACHE_SCOPE }}" ]; then
+            # Cache opt-in: isolated GRADLE_USER_HOME per PR
             GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.PR_CACHE_SCOPE }}"
             mkdir -p "${GRADLE_HOME_DIR}"
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
             echo "PR_CACHE_SCOPE=${{ env.PR_CACHE_SCOPE }}" >> "$GITHUB_ENV"
             echo "Using PR-isolated GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
           else
+            # Cache opt-out: default ~/.gradle, no PR GHA cache
             mkdir -p "${HOME}/.gradle"
             GRADLE_HOME_DIR="${HOME}/.gradle"
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
@@ -220,6 +226,7 @@ jobs:
 
           echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      # Cache opt-in only (PR_CACHE_SCOPE set). Opt-out skips restore/delete/save entirely.
       - name: Restore Gradle cache (PR-scoped)
         if: env.PR_CACHE_SCOPE != ''
         uses: actions/cache/restore@v4
@@ -366,6 +373,28 @@ jobs:
             ./**/build/test-results/**/*.xml
           fail_on: nothing
           report_suite_logs: any
+
+      # Opt-in: drop prior keys for this PR, then save one entry ({scope}-{run_id}).
+      - name: Delete existing PR Gradle cache (before save)
+        if: success() && env.PR_CACHE_SCOPE != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prefix = `${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-`;
+            const { owner, repo } = context.repo;
+            const { data } = await github.rest.actions.getActionsCacheList({
+              owner,
+              repo,
+              key: prefix,
+              per_page: 100,
+            });
+            for (const cache of data.actions_caches ?? []) {
+              await github.rest.actions.deleteActionsCacheById({
+                owner,
+                repo,
+                cache_id: cache.id,
+              });
+            }
 
       - name: Save Gradle cache (PR-scoped)
         if: success() && env.PR_CACHE_SCOPE != ''
