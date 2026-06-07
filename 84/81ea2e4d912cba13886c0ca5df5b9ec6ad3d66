@@ -1,0 +1,32 @@
+.github/workflows/build-gradle-g8.yml
+  s_eb53827daddfd3::t_cca71603c41544 379-382,384,397-398
+  s_eb53827daddfd3::t_0672392b3e8a5a 132,134
+  s_eb53827daddfd3::t_35741c12575eef 377
+  s_eb53827daddfd3::t_ba2e7ba690ee6f 229
+  s_eb53827daddfd3::t_6556fd1bd04720 143-144
+  s_eb53827daddfd3::t_53f2a2e8ced815 194
+  s_eb53827daddfd3::t_68eb97febb7ec8 378
+  s_eb53827daddfd3::t_1a4046d1ef83d8 383,385-396
+  s_eb53827daddfd3::t_cf469434d3ce71 48-49
+  s_eb53827daddfd3::t_0ce3cd37e11023 187
+  s_eb53827daddfd3::t_c8a586db84689f 142
+.github/workflows/cleanup-pr-cache.yml
+  s_eb53827daddfd3::t_8dd5e2d71102b8 17,19-20,24-26
+  s_eb53827daddfd3::t_23f0d6ab6980e4 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "8481ea2e4d912cba13886c0ca5df5b9ec6ad3d66",
+  "prompts": {},
+  "sessions": {
+    "s_eb53827daddfd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d74835c0-f3e4-4ced-84fe-2beaabac62ac",
+        "model": "default"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
