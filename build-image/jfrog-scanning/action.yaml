@@ -20,9 +20,9 @@ inputs:
     required: false
   app-name:
     required: false
-  enable-pr-cache:
+  enable-repo-cache:
     description: >-
-      When true (caller has set PR-scoped GRADLE_USER_HOME and restored GHA cache), setup-gradle
+      When true (caller has set repo-scoped GRADLE_USER_HOME and restored GHA cache), setup-gradle
       must not overwrite that cache. When false or omitted, keeps legacy scan behavior unchanged.
     required: false
     default: false
@@ -35,8 +35,8 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        # Preserve existing GRADLE_USER_HOME when PR cache is active; default behavior otherwise.
-        cache-overwrite-existing: ${{ !inputs.enable-pr-cache }} # default value false
+        # Preserve existing GRADLE_USER_HOME when repo cache is active; default behavior otherwise.
+        cache-overwrite-existing: ${{ !inputs.enable-repo-cache }} # default value false
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:

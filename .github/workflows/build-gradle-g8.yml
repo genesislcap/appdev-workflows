@@ -42,7 +42,7 @@ on:
         description: Push to the Artifactory cache
         default: false
         required: false
-      enable-pr-cache:
+      enable-repo-cache:
         type: boolean
         description: >-
           Opt-in per-repo GHA cache owned by cache-base-branch (default develop).
@@ -132,17 +132,17 @@ on:
 concurrency:
   group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
   # Develop+cache: cancel stale run (last successful save wins). PR+cache: do not cancel. PR opt-out: cancel.
-  cancel-in-progress: ${{ (github.event_name == 'push' && inputs.enable-pr-cache && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
+  cancel-in-progress: ${{ (github.event_name == 'push' && inputs.enable-repo-cache && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && !inputs.enable-repo-cache) }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
   # Opt-out: --no-build-cache. Opt-in when push/PR targets cache-base-branch: --build-cache.
-  CACHE_OPTS: ${{ inputs.enable-pr-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && '--build-cache' || '--no-build-cache --no-configuration-cache' }}
+  CACHE_OPTS: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && '--build-cache' || '--no-build-cache --no-configuration-cache' }}
   # e.g. genesislcap-pbi-develop; empty when opt-out or PR not targeting cache-base-branch.
-  REPO_CACHE_SCOPE: ${{ inputs.enable-pr-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && format('{0}-{1}-{2}', github.repository_owner, github.event.repository.name, inputs.cache-base-branch) || '' }}
-  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch) && inputs.push-to-artifactory-cache }}
-  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (inputs.enable-pr-cache && github.event_name == 'pull_request') }}
+  REPO_CACHE_SCOPE: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && format('{0}-{1}-{2}', github.repository_owner, github.event.repository.name, inputs.cache-base-branch) || '' }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch) && inputs.push-to-artifactory-cache }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (inputs.enable-repo-cache && github.event_name == 'pull_request') }}
 
 jobs:
   build-server:
@@ -274,7 +274,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: "${{ inputs.working-directory }}/server"
           app-name: ${{ inputs.product_name }}
-          enable-pr-cache: ${{ env.REPO_CACHE_SCOPE != '' }}
+          enable-repo-cache: ${{ env.REPO_CACHE_SCOPE != '' }}
           build-server-arguments: >-
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
@@ -381,7 +381,7 @@ jobs:
 
       # Develop push only: delete prior repo cache entries, then save one ({scope}-{run_id}).
       - name: Delete existing repo Gradle cache (before save)
-        if: success() && inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
+        if: success() && inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
         uses: actions/github-script@v7
         with:
           script: |
@@ -402,7 +402,7 @@ jobs:
             }
 
       - name: Save Gradle cache (repo-scoped)
-        if: success() && inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
+        if: success() && inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
         uses: actions/cache/save@v4
         with:
           path: |
