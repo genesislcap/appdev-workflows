@@ -45,9 +45,16 @@ on:
       enable-pr-cache:
         type: boolean
         description: >-
-          PR builds only. Opt-in: true = per-PR GHA cache + isolated GRADLE_USER_HOME + --build-cache.
-          Opt-out / false / push to develop = ~/.gradle, --no-build-cache, no GHA cache steps.
+          Opt-in per-repo GHA cache owned by cache-base-branch (default develop).
+          Opt-in + push to cache-base-branch: restore, --build-cache, delete old entry, save new.
+          Opt-in + PR targeting cache-base-branch: restore and read only (no save).
+          Opt-out (false): ~/.gradle, --no-build-cache, no GHA restore/save/delete.
         default: false
+        required: false
+      cache-base-branch:
+        type: string
+        description: Branch that owns the per-repo cache; PRs read it when targeting this base.
+        default: develop
         required: false
       working-directory:
         type: string
@@ -121,20 +128,21 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
-# PR number is only set on pull_request; else for push/tag use event + ref
+# PR group: pr-{N}. Develop push: push-refs/heads/{cache-base-branch}. Kept separate.
 concurrency:
   group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache }}
+  # Develop+cache: cancel stale run (last successful save wins). PR+cache: do not cancel. PR opt-out: cancel.
+  cancel-in-progress: ${{ (github.event_name == 'push' && inputs.enable-pr-cache && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && !inputs.enable-pr-cache) }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
   DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
-  # Opt-out: --no-build-cache. Opt-in (PR + enable-pr-cache): --build-cache.
-  CACHE_OPTS: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && '--no-build-cache --no-configuration-cache' || '--build-cache' }}
-  # Empty when opt-out; set to owner-repo-pr-N when opt-in (gates all GHA cache steps).
-  PR_CACHE_SCOPE: ${{ github.event_name == 'pull_request' && inputs.enable-pr-cache && format('{0}-{1}-pr-{2}', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
-  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ (github.event_name != 'pull_request' || !inputs.enable-pr-cache) && inputs.push-to-artifactory-cache }}
-  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) || !inputs.use-artifactory-cache }}
+  # Opt-out: --no-build-cache. Opt-in when push/PR targets cache-base-branch: --build-cache.
+  CACHE_OPTS: ${{ inputs.enable-pr-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && '--build-cache' || '--no-build-cache --no-configuration-cache' }}
+  # e.g. genesislcap-pbi-develop; empty when opt-out or PR not targeting cache-base-branch.
+  REPO_CACHE_SCOPE: ${{ inputs.enable-pr-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && format('{0}-{1}-{2}', github.repository_owner, github.event.repository.name, inputs.cache-base-branch) || '' }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch) && inputs.push-to-artifactory-cache }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (inputs.enable-pr-cache && github.event_name == 'pull_request') }}
 
 jobs:
   build-server:
@@ -180,15 +188,15 @@ jobs:
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          if [ -n "${{ env.PR_CACHE_SCOPE }}" ]; then
-            # Cache opt-in: isolated GRADLE_USER_HOME per PR
-            GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.PR_CACHE_SCOPE }}"
+          if [ -n "${{ env.REPO_CACHE_SCOPE }}" ]; then
+            # Cache opt-in: isolated GRADLE_USER_HOME for repo develop cache
+            GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.REPO_CACHE_SCOPE }}"
             mkdir -p "${GRADLE_HOME_DIR}"
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
-            echo "PR_CACHE_SCOPE=${{ env.PR_CACHE_SCOPE }}" >> "$GITHUB_ENV"
-            echo "Using PR-isolated GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
+            echo "REPO_CACHE_SCOPE=${{ env.REPO_CACHE_SCOPE }}" >> "$GITHUB_ENV"
+            echo "Using repo-scoped GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
           else
-            # Cache opt-out: default ~/.gradle, no PR GHA cache
+            # Cache opt-out: ~/.gradle only — no GHA cache read/write
             mkdir -p "${HOME}/.gradle"
             GRADLE_HOME_DIR="${HOME}/.gradle"
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
@@ -223,17 +231,17 @@ jobs:
 
           echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      # Cache opt-in only (PR_CACHE_SCOPE set). Opt-out skips restore/delete/save entirely.
-      - name: Restore Gradle cache (PR-scoped)
-        if: env.PR_CACHE_SCOPE != ''
+      # Cache opt-in only (REPO_CACHE_SCOPE set). Opt-out skips restore/delete/save entirely.
+      - name: Restore Gradle cache (repo-scoped)
+        if: env.REPO_CACHE_SCOPE != ''
         uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ github.run_id }}
+          key: ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-
+            ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-
 
       - name: 'Create .npmrc'
         shell: bash
@@ -266,7 +274,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           server-path: "${{ inputs.working-directory }}/server"
           app-name: ${{ inputs.product_name }}
-          enable-pr-cache: ${{ inputs.enable-pr-cache }}
+          enable-pr-cache: ${{ env.REPO_CACHE_SCOPE != '' }}
           build-server-arguments: >-
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
@@ -303,7 +311,7 @@ jobs:
         with:
           arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
-          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || github.event_name != 'pull_request' || !inputs.enable-pr-cache }}
+          cache-disabled: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
@@ -371,13 +379,13 @@ jobs:
           fail_on: nothing
           report_suite_logs: any
 
-      # Opt-in: drop prior keys for this PR, then save one entry ({scope}-{run_id}).
-      - name: Delete existing PR Gradle cache (before save)
-        if: success() && env.PR_CACHE_SCOPE != ''
+      # Develop push only: delete prior repo cache entries, then save one ({scope}-{run_id}).
+      - name: Delete existing repo Gradle cache (before save)
+        if: success() && inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
         uses: actions/github-script@v7
         with:
           script: |
-            const prefix = `${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-`;
+            const prefix = `${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-`;
             const { owner, repo } = context.repo;
             const { data } = await github.rest.actions.getActionsCacheList({
               owner,
@@ -393,14 +401,14 @@ jobs:
               });
             }
 
-      - name: Save Gradle cache (PR-scoped)
-        if: success() && env.PR_CACHE_SCOPE != ''
+      - name: Save Gradle cache (repo-scoped)
+        if: success() && inputs.enable-pr-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
         uses: actions/cache/save@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.PR_CACHE_SCOPE }}-${{ github.run_id }}
+          key: ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
 
       - name: Docker Build Image
         if: inputs.build_docker
