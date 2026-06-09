@@ -20,12 +20,23 @@ inputs:
     required: false
   app-name:
     required: false
+  enable-pr-cache:
+    description: >-
+      When true (caller has set PR-scoped GRADLE_USER_HOME and restored GHA cache), setup-gradle
+      must not overwrite that cache. When false or omitted, keeps legacy scan behavior unchanged.
+    required: false
+    default: false
 
 runs:
+
   using: "composite"
   steps:
+    # Always warm Gradle cache first (regression fix: was moved after check_dist in 1534d5b).
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
+      with:
+        # Preserve existing GRADLE_USER_HOME when PR cache is active; default behavior otherwise.
+        cache-overwrite-existing: ${{ !inputs.enable-pr-cache }} # default value false
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
@@ -33,26 +44,46 @@ runs:
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
 
+    - name: Check for existing dist zip
+      id: check_dist
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      run: |
+        shopt -s nullglob
+        zips=( */build/dist/*.zip )
+        if [ ${#zips[@]} -gt 0 ]; then
+          echo "dist_exists=true" >> $GITHUB_OUTPUT
+          echo "Reusing existing dist zip(s): ${zips[*]}"
+        else
+          echo "dist_exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Check if appDistZip exists
+      if: steps.check_dist.outputs.dist_exists != 'true'
       shell: bash
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        if ./gradlew help --task appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon >/dev/null 2>&1; then
+        GRADLE_PROPS="-Pversion=${{ inputs.version }} -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
+        if ./gradlew tasks --all -q $GRADLE_PROPS 2>/dev/null | grep -q 'appDistZip'; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Build the dist
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_task.outputs.appDistZip == 'true' && steps.check_dist.outputs.dist_exists != 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew appDistZip -Pversion=${{ inputs.version }} -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" --no-daemon ${{ inputs.build-server-arguments }}
+        ./gradlew appDistZip \
+          -Pversion=${{ inputs.version }} \
+          -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
+          -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
+          ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       id: scan
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
@@ -93,20 +124,20 @@ runs:
         echo "table_report_file=$TABLE_REPORT" >> $GITHUB_OUTPUT
 
     - name: Create markdown summary
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
       with:
         json_path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog full scan report
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog scan table report
-      if: steps.check_task.outputs.appDistZip == 'true'
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}
