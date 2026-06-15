@@ -23,8 +23,7 @@ inputs:
   enable-pr-cache:
     description: >-
       When true (caller has set PR-scoped GRADLE_USER_HOME and restored GHA cache), setup-gradle
-      must not overwrite that cache and Gradle may reuse a daemon for appDistZip. When false or
-      omitted, keeps legacy scan behavior (--no-daemon, setup-gradle may overwrite cache).
+      must not overwrite that cache. When false or omitted, keeps legacy scan behavior unchanged.
     required: false
     default: false
 
@@ -36,8 +35,8 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        # Preserve existing GRADLE_USER_HOME when PR cache is active; default value false.
-        cache-overwrite-existing: ${{ inputs.enable-pr-cache != true }}
+        # Preserve existing GRADLE_USER_HOME when PR cache is active; default behavior otherwise.
+        cache-overwrite-existing: ${{ !inputs.enable-pr-cache }} # default value false
 
     - uses: jfrog/setup-jfrog-cli@v4
       env:
@@ -65,12 +64,8 @@ runs:
       id: check_task
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        GRADLE_DAEMON_FLAG="--no-daemon"
-        if [ "${{ inputs.enable-pr-cache }}" = "true" ]; then
-          GRADLE_DAEMON_FLAG=""
-        fi
         GRADLE_PROPS="-Pversion=${{ inputs.version }} -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
-        if ./gradlew tasks --all -q $GRADLE_PROPS $GRADLE_DAEMON_FLAG 2>/dev/null | grep -q 'appDistZip'; then
+        if ./gradlew tasks --all -q $GRADLE_PROPS ${{ inputs.build-server-arguments }} ${{ inputs.enable-pr-cache != 'true' && '--no-daemon' || '' }} 2>/dev/null | grep -q 'appDistZip'; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
@@ -81,15 +76,11 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        GRADLE_DAEMON_FLAG="--no-daemon"
-        if [ "${{ inputs.enable-pr-cache }}" = "true" ]; then
-          GRADLE_DAEMON_FLAG=""
-        fi
         ./gradlew appDistZip \
           -Pversion=${{ inputs.version }} \
           -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
           -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
-          $GRADLE_DAEMON_FLAG \
+          ${{ inputs.enable-pr-cache != 'true' && '--no-daemon' || '' }} \
           ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
