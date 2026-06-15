@@ -65,7 +65,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         GRADLE_PROPS="-Pversion=${{ inputs.version }} -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
-        if ./gradlew tasks --all -q $GRADLE_PROPS ${{ inputs.build-server-arguments }} 2>/dev/null | grep -q 'appDistZip'; then
+        if ./gradlew tasks --all -q $GRADLE_PROPS ${{ inputs.build-server-arguments }} ${{ inputs.enable-pr-cache != 'true' && '--no-daemon' || '' }} 2>/dev/null | grep -q 'appDistZip'; then
           echo "appDistZip=true" >> $GITHUB_OUTPUT
         else
           echo "appDistZip=false" >> $GITHUB_OUTPUT
@@ -80,6 +80,7 @@ runs:
           -Pversion=${{ inputs.version }} \
           -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
           -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
+          ${{ inputs.enable-pr-cache != 'true' && '--no-daemon' || '' }} \
           ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
