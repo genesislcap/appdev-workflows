@@ -189,14 +189,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch || github.ref_name }}
 
-      - name: Log disk usage before build/test
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "=== Disk usage before build/test ==="
-          df -h "$GITHUB_WORKSPACE" || true
-          df -h "$HOME" || true
-
       - name: testautomation_build steps (server)
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
@@ -408,14 +400,6 @@ jobs:
           echo "modified-location=$CLIENT_BUILD_LOCATION" >> "$GITHUB_OUTPUT"
           echo "modified-arguments-location=$(echo "$CLIENT_BUILD_LOCATION" | sed 's/\//:/g')" >> "$GITHUB_OUTPUT"
 
-      - name: Log disk usage before client build
-        if: steps.web_exists.outputs.client_folder_exists == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "=== Disk usage before client build ==="
-          df -h "$GITHUB_WORKSPACE" || true
-          df -h "$HOME" || true
       - name: Client Build
         if: steps.web_exists.outputs.client_folder_exists == 'true'
         uses: gradle/gradle-build-action@v2
@@ -424,14 +408,6 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/"
           cache-disabled: true
 
-      - name: Log disk usage before server assemble
-        if: inputs.build_server
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "=== Disk usage before server assemble ==="
-          df -h "$GITHUB_WORKSPACE" || true
-          df -h "$HOME" || true
       - name: Server Assemble
         if: inputs.build_server
         uses: gradle/gradle-build-action@v2
