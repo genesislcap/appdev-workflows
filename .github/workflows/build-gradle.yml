@@ -339,19 +339,27 @@ jobs:
 
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
-        run: ./gradlew build --stacktrace -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }} ${{ env.CACHE_OPTS }}
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: >-
+            build ${{ env.CACHE_OPTS }} --stacktrace
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
+            ${{ inputs.server-build-gradle-arguments }}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Server Assemble
         if: inputs.skip-tests
-        run: |
-          ./gradlew assemble \
-            --stacktrace \
-            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} \
-            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} \
-            ${{ inputs.server-build-gradle-arguments }} \
-            ${{ env.CACHE_OPTS }}
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: >-
+            assemble ${{ env.CACHE_OPTS }} --stacktrace
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
+            ${{ inputs.server-build-gradle-arguments }}
+          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
