@@ -1,0 +1,37 @@
+.github/workflows/build-gradle.yml
+  s_8e76785efcf1c1::t_311bef3526fcff 167-170
+  s_eb53827daddfd3::t_d24447ce3067da 280
+  s_eb53827daddfd3::t_08740734828d85 307-312
+  s_eb53827daddfd3::t_f0ddcf42a2b113 165-166
+  s_8e76785efcf1c1::t_97aab292026a25 342,350-351
+  s_eb53827daddfd3::t_0764c238432e53 442-472
+  s_8e76785efcf1c1::t_4eaeffe93cedba 52-58
+  s_8e76785efcf1c1::t_75f8749372329a 231-244,246-247,249-252,254-255,259
+  s_8e76785efcf1c1::t_97f41f4430689a 285-295
+  s_8e76785efcf1c1::t_496fc262392b88 283
+  s_8e76785efcf1c1::t_681c71811138b5 156-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "c1e04948d213db980bd7d487aa51442d4dcf9584",
+  "prompts": {},
+  "sessions": {
+    "s_8e76785efcf1c1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e2ebac84-98e7-48cf-b1eb-d82f8d139796",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    },
+    "s_eb53827daddfd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d74835c0-f3e4-4ced-84fe-2beaabac62ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
