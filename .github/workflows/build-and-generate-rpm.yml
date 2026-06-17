@@ -188,6 +188,15 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch || github.ref_name }}
+
+      - name: Log disk usage before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Disk usage before build/test ==="
+          df -h "$GITHUB_WORKSPACE" || true
+          df -h "$HOME" || true
+
       - name: testautomation_build steps (server)
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
