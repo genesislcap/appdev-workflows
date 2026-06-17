@@ -135,26 +135,11 @@ on:
         required: false
         type: boolean
         default: true
-      cleanup_workspace_before_build:
-        required: false
-        type: boolean
-        default: true
-        description: Run workspace cleanup before build steps on self-hosted runners.
       cleanup_workspace_after_build:
         required: false
         type: boolean
         default: true
         description: Run workspace cleanup after build and upload steps on self-hosted runners.
-      cleanup_gradle_caches:
-        required: false
-        type: boolean
-        default: false
-        description: Prune stale Gradle cache directories older than the configured retention window.
-      cleanup_gradle_cache_older_than_days:
-        required: false
-        type: string
-        default: "7"
-        description: Retention window in days for stale Gradle cache pruning.
       cleanup_additional_paths:
         required: false
         type: string
@@ -203,102 +188,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch || github.ref_name }}
-
-      - name: Pre-build workspace cleanup
-        if: inputs.cleanup_workspace_before_build && runner.environment == 'self-hosted'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          WORKSPACE_ROOT="${GITHUB_WORKSPACE}"
-          SERVER_ROOT="${WORKSPACE_ROOT}/${{ inputs.server-path }}"
-          CLIENT_ROOT="${WORKSPACE_ROOT}/client"
-          EXTRA_PATHS="${{ inputs.cleanup_additional_paths }}"
-          DRY_RUN="${{ inputs.cleanup_dry_run }}"
-          CLEAN_GRADLE="${{ inputs.cleanup_gradle_caches }}"
-          GRADLE_CACHE_DAYS="${{ inputs.cleanup_gradle_cache_older_than_days }}"
-
-          echo "=== Disk usage before pre-build cleanup ==="
-          df -h "$WORKSPACE_ROOT" || true
-          df -h "$HOME" || true
-
-          cleanup_path() {
-            local target="$1"
-            local resolved
-
-            if [ -z "$target" ]; then
-              return 0
-            fi
-
-            resolved="$(realpath -m "$target")"
-            case "$resolved" in
-              "$WORKSPACE_ROOT"/*|"$HOME"/.gradle/*)
-                ;;
-              *)
-                echo "Skipping unsafe path outside allowed roots: $resolved"
-                return 0
-                ;;
-            esac
-
-            if [ ! -e "$resolved" ]; then
-              echo "Path not found, skipping: $resolved"
-              return 0
-            fi
-
-            echo "Removing: $resolved"
-            if [ "$DRY_RUN" = "true" ]; then
-              return 0
-            fi
-
-            rm -rf -- "$resolved"
-          }
-
-          cleanup_build_dirs() {
-            local root="$1"
-
-            if [ ! -d "$root" ]; then
-              echo "Directory not found, skipping build cleanup root: $root"
-              return 0
-            fi
-
-            while IFS= read -r build_dir; do
-              [ -n "$build_dir" ] || continue
-              cleanup_path "$build_dir"
-            done < <(find "$root" -type d -name build -prune -print 2>/dev/null || true)
-          }
-
-          echo "Workspace cleanup mode: ${DRY_RUN}"
-          cleanup_path "${WORKSPACE_ROOT}/build-output"
-          cleanup_path "${WORKSPACE_ROOT}/test-results"
-          cleanup_path "${WORKSPACE_ROOT}/rpm"
-          cleanup_build_dirs "$SERVER_ROOT"
-          cleanup_build_dirs "$CLIENT_ROOT"
-
-          if [ -n "$EXTRA_PATHS" ]; then
-            echo "Additional cleanup paths requested:"
-            printf '%s\n' "$EXTRA_PATHS" | tr ',' '\n' | while IFS= read -r path; do
-              path="$(echo "$path" | xargs)"
-              [ -n "$path" ] || continue
-              cleanup_path "${WORKSPACE_ROOT}/${path}"
-            done
-          fi
-
-          if [ "$CLEAN_GRADLE" = "true" ]; then
-            echo "Gradle cache pruning enabled; removing cache directories older than ${GRADLE_CACHE_DAYS} days."
-            if [ -d "$HOME/.gradle/caches" ]; then
-              while IFS= read -r cache_dir; do
-                [ -n "$cache_dir" ] || continue
-                cleanup_path "$cache_dir"
-              done < <(find "$HOME/.gradle/caches" -mindepth 1 -maxdepth 1 -type d -mtime "+${GRADLE_CACHE_DAYS}" -print 2>/dev/null || true)
-            else
-              echo "No Gradle cache directory found at $HOME/.gradle/caches"
-            fi
-          fi
-
-          echo "=== Disk usage after pre-build cleanup ==="
-          df -h "$WORKSPACE_ROOT" || true
-          df -h "$HOME" || true
-
       - name: testautomation_build steps (server)
         if: inputs.testautomation_build
         uses: genesislcap/appdev-workflows/testautomation-action@qaautomation
@@ -824,8 +713,6 @@ jobs:
           CLIENT_ROOT="${WORKSPACE_ROOT}/client"
           EXTRA_PATHS="${{ inputs.cleanup_additional_paths }}"
           DRY_RUN="${{ inputs.cleanup_dry_run }}"
-          CLEAN_GRADLE="${{ inputs.cleanup_gradle_caches }}"
-          GRADLE_CACHE_DAYS="${{ inputs.cleanup_gradle_cache_older_than_days }}"
 
           echo "=== Disk usage before post-build cleanup ==="
           df -h "$WORKSPACE_ROOT" || true
@@ -890,18 +777,6 @@ jobs:
               [ -n "$path" ] || continue
               cleanup_path "${WORKSPACE_ROOT}/${path}"
             done
-          fi
-
-          if [ "$CLEAN_GRADLE" = "true" ]; then
-            echo "Gradle cache pruning enabled; removing cache directories older than ${GRADLE_CACHE_DAYS} days."
-            if [ -d "$HOME/.gradle/caches" ]; then
-              while IFS= read -r cache_dir; do
-                [ -n "$cache_dir" ] || continue
-                cleanup_path "$cache_dir"
-              done < <(find "$HOME/.gradle/caches" -mindepth 1 -maxdepth 1 -type d -mtime "+${GRADLE_CACHE_DAYS}" -print 2>/dev/null || true)
-            else
-              echo "No Gradle cache directory found at $HOME/.gradle/caches"
-            fi
           fi
 
           echo "=== Disk usage after post-build cleanup ==="
