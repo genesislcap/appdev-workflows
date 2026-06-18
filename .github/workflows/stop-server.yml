@@ -3,9 +3,17 @@ name: Stop EC2 by Hostname (simple)
 on:
   workflow_call:
     inputs:
+      tag_key:
+        description: "Optional EC2 tag key to match, for example Name or Client"
+        required: false
+        type: string
+      tag_value:
+        description: "Optional EC2 tag value to match for tag_key"
+        required: false
+        type: string
       hostname:
         description: "Private/public hostname or IP of EC2"
-        required: true
+        required: false
         type: string
     secrets:
       AWS_ACCESS_KEY_ID:
@@ -34,7 +42,27 @@ jobs:
       - name: Show caller (sanity check)
         run: aws sts get-caller-identity
 
+      - name: Validate target input
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.tag_key }}" ] && [ -z "${{ inputs.tag_value }}" ]; then
+            echo "tag_key requires tag_value" >&2
+            exit 1
+          fi
+
+          if [ -n "${{ inputs.tag_value }}" ] && [ -z "${{ inputs.tag_key }}" ]; then
+            echo "tag_value requires tag_key" >&2
+            exit 1
+          fi
+
+          if [ -z "${{ inputs.tag_key }}" ] && [ -z "${{ inputs.hostname }}" ]; then
+            echo "Provide hostname or tag_key/tag_value" >&2
+            exit 1
+          fi
+
       - name: Resolve Hostname or Use IP
+        if: ${{ !inputs.tag_key }}
         id: resolve-ip
         shell: bash
         run: |
@@ -60,7 +88,39 @@ jobs:
           echo "ip=$IP" >> "$GITHUB_OUTPUT"
           echo "Resolved IP: $IP"
 
+      - name: Lookup EC2 Instance by tag
+        if: ${{ inputs.tag_key }}
+        id: get-instance-by-tag
+        env:
+          REGION: ${{ env.REGION }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_KEY='${{ inputs.tag_key }}'
+          TAG_VALUE='${{ inputs.tag_value }}'
+
+          if [ -z "$TAG_KEY" ] || [ -z "$TAG_VALUE" ]; then
+            echo "Both tag_key and tag_value are required when using tag lookup" >&2
+            exit 1
+          fi
+
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:$TAG_KEY,Values=$TAG_VALUE" "Name=instance-state-name,Values=pending,running,stopping,stopped" \
+            --region "$REGION" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text | xargs)
+
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "No EC2 instance found for tag $TAG_KEY=$TAG_VALUE in $REGION" >&2
+            exit 1
+          fi
+
+          INSTANCE_ID=$(echo "$INSTANCE_IDS" | awk '{print $1}')
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+          echo "Found instance by tag $TAG_KEY=$TAG_VALUE: $INSTANCE_ID"
+
       - name: Lookup EC2 Instance by IP
+        if: ${{ !inputs.tag_key }}
         id: get-instance
         env:
           REGION: ${{ env.REGION }}
@@ -98,7 +158,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          INSTANCE_ID=${{ steps.get-instance.outputs.instance_id }}
+          INSTANCE_ID=${{ steps.get-instance-by-tag.outputs.instance_id || steps.get-instance.outputs.instance_id }}
 
           STATE=$(aws ec2 describe-instances \
             --instance-ids "$INSTANCE_ID" \
