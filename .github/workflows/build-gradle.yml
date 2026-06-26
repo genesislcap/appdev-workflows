@@ -105,6 +105,13 @@ on:
         required: false
         type: boolean
         default: false
+      skip-integration-tests:
+        description: >-
+          PR builds only. When true, passes -PskipIntegrationTests=true to skip tam-integration-test
+          (Gradle property must be handled in the product build.gradle.kts).
+        required: false
+        type: boolean
+        default: false
       build_server:
         description: "Whether to build and upload the server component"
         required: false
@@ -296,7 +303,7 @@ jobs:
 
       - name: Scan artifact
         if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@DCD-4835_build_workflow
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
@@ -309,7 +316,14 @@ jobs:
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
+            ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && '-PnoRetry' || '' }}
             ${{ inputs.server-build-gradle-arguments }}
+
+      - name: Stop Gradle daemon after scan
+        if: inputs.jfrogscan && github.event_name == 'pull_request' && inputs.enable-pr-cache
+        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        shell: bash
+        run: ./gradlew --stop || true
 
       - name: Install Sast CLI
         if: inputs.sast
@@ -345,8 +359,12 @@ jobs:
             build ${{ env.CACHE_OPTS }} --stacktrace
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
+            ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && '-PnoRetry' || '' }}
+            ${{ inputs.skip-integration-tests && '-PskipIntegrationTests=true' || '' }}
             ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          # PR cache opt-in: repo root (composite includeBuild) so test tasks restore FROM-CACHE like g8.
+          # Opt-out: legacy server-path-only build for callers without composite layout.
+          build-root-directory: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.working-directory || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
           cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Server Assemble
@@ -358,7 +376,7 @@ jobs:
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+          build-root-directory: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.working-directory || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
           cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Copy Test Reports
