@@ -91,6 +91,11 @@ jobs:
     environment: master
 
     steps:
+      - name: Fix workspace permissions
+        shell: bash
+        run: |
+          sudo chown -R "$(whoami):$(id -gn)" "$GITHUB_WORKSPACE/.." || true
+          sudo chmod -R u+rwX "$GITHUB_WORKSPACE/.." || true
 
       - uses: actions/checkout@v3
         with:
