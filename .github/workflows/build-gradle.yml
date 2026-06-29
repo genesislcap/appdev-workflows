@@ -316,7 +316,6 @@ jobs:
             ${{ env.CACHE_OPTS }}
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
-            ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && '-PnoRetry' || '' }}
             ${{ inputs.server-build-gradle-arguments }}
 
       - name: Stop Gradle daemon after scan
@@ -359,12 +358,9 @@ jobs:
             build ${{ env.CACHE_OPTS }} --stacktrace
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
-            ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && '-PnoRetry' || '' }}
             ${{ inputs.skip-integration-tests && '-PskipIntegrationTests=true' || '' }}
             ${{ inputs.server-build-gradle-arguments }}
-          # PR cache opt-in: repo root (composite includeBuild) so test tasks restore FROM-CACHE like g8.
-          # Opt-out: legacy server-path-only build for callers without composite layout.
-          build-root-directory: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.working-directory || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
+          build-root-directory: ${{ format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
           cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Server Assemble
@@ -376,7 +372,7 @@ jobs:
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
             ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: ${{ (github.event_name == 'pull_request' && inputs.enable-pr-cache) && inputs.working-directory || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
+          build-root-directory: ${{ format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
           cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
 
       - name: Copy Test Reports
