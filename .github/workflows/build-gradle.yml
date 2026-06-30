@@ -112,6 +112,22 @@ on:
         required: false
         type: boolean
         default: false
+      auto-skip-integration-tests:
+        description: >-
+          PR builds only. Opt-in. When true, integration tests are skipped automatically if the PR
+          changes no files under integration-test-paths (defaults to server-path). A manual
+          skip-integration-tests=true always wins; pushes/merges always run them. Requires the product
+          build.gradle.kts to honour -PskipIntegrationTests.
+        required: false
+        type: boolean
+        default: false
+      integration-test-paths:
+        description: >-
+          Comma- or newline-separated path prefixes that should trigger integration tests when changed.
+          Used only when auto-skip-integration-tests is true. Defaults to server-path when empty.
+        required: false
+        type: string
+        default: ''
       build_server:
         description: "Whether to build and upload the server component"
         required: false
@@ -350,6 +366,65 @@ jobs:
           name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
           path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.SARIF
 
+      # Decide whether integration tests run. Manual skip always wins; auto-skip only on PRs
+      # when no file under integration-test-paths (default: server-path) changed.
+      - name: Determine integration test gating
+        shell: bash
+        working-directory: "${{ inputs.working-directory }}"
+        run: |
+          set -euo pipefail
+
+          if [ "${{ inputs.skip-integration-tests }}" = "true" ]; then
+            echo "EFFECTIVE_SKIP_INTEGRATION=true" >> "$GITHUB_ENV"
+            echo "Integration tests: manually skipped (skip-integration-tests=true)."
+            exit 0
+          fi
+
+          if [ "${{ inputs.auto-skip-integration-tests }}" != "true" ] || [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "EFFECTIVE_SKIP_INTEGRATION=false" >> "$GITHUB_ENV"
+            echo "Integration tests: running (auto-skip off or not a pull_request)."
+            exit 0
+          fi
+
+          PATHS="${{ inputs.integration-test-paths }}"
+          if [ -z "$PATHS" ]; then
+            PATHS="${{ inputs.server-path }}"
+          fi
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null \
+            || git fetch --no-tags origin "${{ github.base_ref }}" 2>/dev/null || true
+
+          CHANGED="$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null \
+            || git diff --name-only "origin/${{ github.base_ref }}...HEAD" 2>/dev/null || echo '')"
+
+          if [ -z "$CHANGED" ]; then
+            echo "EFFECTIVE_SKIP_INTEGRATION=false" >> "$GITHUB_ENV"
+            echo "Integration tests: running (could not determine changed files; failing safe)."
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          MATCH=false
+          while IFS= read -r raw; do
+            p="$(echo "$raw" | tr -d '[:space:]')"
+            [ -z "$p" ] && continue
+            if echo "$CHANGED" | grep -qE "^${p}"; then
+              MATCH=true
+              break
+            fi
+          done < <(echo "$PATHS" | tr ',' '\n')
+
+          if [ "$MATCH" = "true" ]; then
+            echo "EFFECTIVE_SKIP_INTEGRATION=false" >> "$GITHUB_ENV"
+            echo "Integration tests: running (relevant files changed under: ${PATHS})."
+          else
+            echo "EFFECTIVE_SKIP_INTEGRATION=true" >> "$GITHUB_ENV"
+            echo "Integration tests: skipped (no files changed under: ${PATHS})."
+          fi
+
       - name: Server Build
         if: ${{ !inputs.skip-tests }}
         uses: gradle/gradle-build-action@v2
@@ -358,7 +433,7 @@ jobs:
             build ${{ env.CACHE_OPTS }} --stacktrace
             -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
             -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
-            ${{ inputs.skip-integration-tests && '-PskipIntegrationTests=true' || '' }}
+            ${{ env.EFFECTIVE_SKIP_INTEGRATION == 'true' && '-PskipIntegrationTests=true' || '' }}
             ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: ${{ format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
           cache-disabled: ${{ env.PR_CACHE_SCOPE != '' || inputs.disable-cache }}
