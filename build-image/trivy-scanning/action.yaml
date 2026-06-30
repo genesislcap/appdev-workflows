@@ -1,10 +1,24 @@
 name: Scan Docker Image with Trivy
-description: Scan a built Docker image with Trivy and publish HTML and markdown reports
+description: Scan a built Docker image with Trivy and publish HTML, markdown, and SBOM reports
 
 inputs:
   image-ref:
     description: Image reference to scan
     required: true
+  scan:
+    description: Run the vulnerability/license scan and publish HTML and markdown reports
+    required: false
+    default: true
+    type: boolean
+  sbom:
+    description: Generate and upload a CycloneDX SBOM for the image
+    required: false
+    default: false
+    type: boolean
+  sbom-format:
+    description: Trivy output format to use for the SBOM report
+    required: false
+    default: cyclonedx-json
   app-name:
     description: Application or product name used in artifact names
     required: false
@@ -35,6 +49,8 @@ outputs:
     value: ${{ steps.scan.outputs.html_path }}
   markdown_path:
     value: ${{ steps.scan.outputs.markdown_path }}
+  sbom_path:
+    value: ${{ steps.sbom.outputs.sbom_path }}
   threshold_findings:
     value: ${{ steps.gate.outputs.threshold_findings }}
 
@@ -70,17 +86,30 @@ runs:
         REPORT_DIR="${{ inputs.output-dir }}"
         mkdir -p "$REPORT_DIR"
 
-        JSON_FILE="$REPORT_DIR/trivy-scan.json"
-        HTML_FILE="$REPORT_DIR/trivy-scan.html"
-        MD_FILE="$REPORT_DIR/trivy-scan.md"
-
         echo "app_name=$SAFE_APP_NAME" >> "$GITHUB_OUTPUT"
         echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
-        echo "json_file=$JSON_FILE" >> "$GITHUB_OUTPUT"
-        echo "html_file=$HTML_FILE" >> "$GITHUB_OUTPUT"
-        echo "md_file=$MD_FILE" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.scan }}" = "true" ]; then
+          echo "json_file=$REPORT_DIR/trivy-scan.json" >> "$GITHUB_OUTPUT"
+          echo "html_file=$REPORT_DIR/trivy-scan.html" >> "$GITHUB_OUTPUT"
+          echo "md_file=$REPORT_DIR/trivy-scan.md" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Run Trivy scan
+        if [ "${{ inputs.sbom }}" = "true" ]; then
+          case "${{ inputs.sbom-format }}" in
+            cyclonedx-json)
+              echo "sbom_file=$REPORT_DIR/trivy-sbom.cdx.json" >> "$GITHUB_OUTPUT"
+              ;;
+            spdx-json)
+              echo "sbom_file=$REPORT_DIR/trivy-sbom.spdx.json" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "sbom_file=$REPORT_DIR/trivy-sbom.${{ inputs.sbom-format }}" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+        fi
+
+    - name: Run Trivy vulnerability scan
+      if: inputs.scan
       id: scan
       shell: bash
       run: |
@@ -111,7 +140,32 @@ runs:
         echo "html_path=$HTML_FILE" >> "$GITHUB_OUTPUT"
         echo "markdown_path=${{ steps.meta.outputs.md_file }}" >> "$GITHUB_OUTPUT"
 
+    - name: Generate Trivy SBOM
+      if: inputs.sbom
+      id: sbom
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
+        IMAGE_REF="${{ inputs.image-ref }}"
+        SBOM_FILE="${{ steps.meta.outputs.sbom_file }}"
+        SBOM_FORMAT="${{ inputs.sbom-format }}"
+
+        if [ -z "$SBOM_FILE" ]; then
+          echo "SBOM file path was not prepared"
+          exit 1
+        fi
+
+        "$TRIVY_BIN" image \
+          --format "$SBOM_FORMAT" \
+          --output "$SBOM_FILE" \
+          "$IMAGE_REF"
+
+        echo "sbom_path=$SBOM_FILE" >> "$GITHUB_OUTPUT"
+
     - name: Create markdown summary
+      if: inputs.scan
       shell: bash
       run: |
         set -euo pipefail
@@ -180,21 +234,29 @@ runs:
         fi
 
     - name: Upload Trivy HTML report
-      if: always()
+      if: always() && inputs.scan
       uses: actions/upload-artifact@v4
       with:
         name: trivy-scan-html--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.html_path }}
 
     - name: Upload Trivy markdown report
-      if: always()
+      if: always() && inputs.scan
       uses: actions/upload-artifact@v4
       with:
         name: trivy-scan-md--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.markdown_path }}
 
+    - name: Upload Trivy SBOM report
+      if: always() && inputs.sbom
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-sbom--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.sbom.outputs.sbom_path }}
+
     - name: Evaluate threshold
       id: gate
+      if: inputs.scan
       shell: bash
       run: |
         set -euo pipefail

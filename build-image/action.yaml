@@ -63,6 +63,14 @@ inputs:
     required: false
     type: boolean
     default: false
+  trivy-sbom:
+    required: false
+    type: boolean
+    default: false
+  trivy-sbom-format:
+    required: false
+    type: string
+    default: cyclonedx-json
   trivy-fail-build:
     required: false
     type: boolean
@@ -217,11 +225,14 @@ runs:
       run: |
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
 
-    - name: Trivy Scan
-      if: ${{ inputs.push-image == 'true' && inputs.trivy-scan == 'true' }}
+    - name: Trivy Scan and SBOM
+      if: ${{ inputs.push-image == 'true' && (inputs.trivy-scan == 'true' || inputs.trivy-sbom == 'true') }}
       uses: genesislcap/appdev-workflows/build-image/trivy-scanning@develop
       with:
         image-ref: genesis/${{ env.PRODUCT_NAME }}:${{ inputs.version }}
+        scan: ${{ inputs.trivy-scan }}
+        sbom: ${{ inputs.trivy-sbom }}
+        sbom-format: ${{ inputs.trivy-sbom-format }}
         app-name: ${{ inputs.app-name }}
         severity-threshold: ${{ inputs.trivy-severity-threshold }}
         fail-build: ${{ inputs.trivy-fail-build }}
