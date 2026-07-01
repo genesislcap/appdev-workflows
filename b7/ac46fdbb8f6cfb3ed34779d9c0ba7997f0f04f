@@ -1,0 +1,22 @@
+build-image/jfrog-scanning/action.yaml
+  s_cd37c43521bcc5::t_758d187ba4351c 23,25
+  s_cd37c43521bcc5::t_6c1c3e0a163e09 38-39
+  s_cd37c43521bcc5::t_c90a149c91d385 83
+  s_cd37c43521bcc5::t_e3f4b7c4b694ba 68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "b7ac46fdbb8f6cfb3ed34779d9c0ba7997f0f04f",
+  "prompts": {},
+  "sessions": {
+    "s_cd37c43521bcc5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "62e3bc8f-7b61-4780-a750-afc8257b32e9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
