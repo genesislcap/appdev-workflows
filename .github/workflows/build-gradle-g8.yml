@@ -131,8 +131,8 @@ on:
 # PR group: pr-{N}. Develop push: push-refs/heads/{cache-base-branch}. Kept separate.
 concurrency:
   group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
-  # Develop+cache: cancel stale run (last successful save wins). PR+cache: do not cancel. PR opt-out: cancel.
-  cancel-in-progress: ${{ (github.event_name == 'push' && inputs.enable-repo-cache && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && !inputs.enable-repo-cache) }}
+  # PR build: cancel ongoing (new commits supersede). Trunk/develop push: wait (don't cancel, preserves cache save).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
