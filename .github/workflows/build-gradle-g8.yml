@@ -141,8 +141,8 @@ env:
   CACHE_OPTS: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && '--build-cache' || '--no-build-cache --no-configuration-cache' }}
   # e.g. genesislcap-pbi-develop; empty when opt-out or PR not targeting cache-base-branch.
   REPO_CACHE_SCOPE: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && format('{0}-{1}-{2}', github.repository_owner, github.event.repository.name, inputs.cache-base-branch) || '' }}
-  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch) && inputs.push-to-artifactory-cache }}
-  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ !inputs.use-artifactory-cache || (inputs.enable-repo-cache && github.event_name == 'pull_request') }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ !(inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch))) && inputs.push-to-artifactory-cache }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch))) || !inputs.use-artifactory-cache }}
 
 jobs:
   build-server:
