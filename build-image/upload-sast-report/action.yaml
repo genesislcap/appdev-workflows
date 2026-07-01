@@ -16,7 +16,7 @@ runs:
       working-directory: "${{ inputs.working-directory }}"
       shell: bash
       run: |
-          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
+          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh -s -- latest
           echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
     - name: Run sast security scan (text report)   
