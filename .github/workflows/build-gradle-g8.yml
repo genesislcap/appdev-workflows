@@ -260,13 +260,13 @@ jobs:
 
       - name: Read .env file for build
         if: ${{ inputs.config-path }}
-        uses: genesislcap/appdev-workflows/read-dot-env@DCD-4835_trunkBranch_cache
+        uses: genesislcap/appdev-workflows/read-dot-env@develop
         with:
           config-path: ${{ inputs.config-path }}
 
       - name: Scan artifact
         if: inputs.jfrogscan
-        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@DCD-4835_trunkBranch_cache
+        uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
         with:
           version: ${{ env.RELEASE_VERSION }}
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
