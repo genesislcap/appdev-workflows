@@ -1,0 +1,21 @@
+.github/workflows/build-gradle-g8.yml
+  s_cd37c43521bcc5::t_30da166501997f 230-236
+  s_cd37c43521bcc5::t_4fd611226c548a 277
+  s_cd37c43521bcc5::t_5218678347fe67 318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e104d40abe630b7f3b299990a7c907f3959c8f8d",
+  "prompts": {},
+  "sessions": {
+    "s_cd37c43521bcc5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "62e3bc8f-7b61-4780-a750-afc8257b32e9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "aadarshgupta <aadarsh.gupta@genesis.global>"
+    }
+  }
+}
