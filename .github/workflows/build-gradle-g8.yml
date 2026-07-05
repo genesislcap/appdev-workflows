@@ -228,7 +228,8 @@ jobs:
           RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           if [ -n "${{ env.REPO_CACHE_SCOPE }}" ]; then
-            BUILD_VERSION="${{ inputs.cache-base-branch }}"
+            CACHE_BRANCH="${{ inputs.cache-base-branch }}"
+            BUILD_VERSION="${CACHE_BRANCH//\//-}"
           else
             BUILD_VERSION="$RELEASE_VERSION"
           fi
