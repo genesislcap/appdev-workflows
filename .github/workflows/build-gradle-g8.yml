@@ -309,7 +309,7 @@ jobs:
       - name: Build
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build ${{ inputs.sonar_enabled && '-x test' || '' }} ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
+          arguments: ${{ inputs.sonar_enabled && 'assemble' || 'build' }} ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.RELEASE_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
           build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
         env:
