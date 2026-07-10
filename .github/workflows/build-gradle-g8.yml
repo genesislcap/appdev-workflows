@@ -321,7 +321,13 @@ jobs:
           cache-disabled: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
+    
+      - name: Set up JDK for Sonar
+        if: inputs.sonar_enabled
+        uses: actions/setup-java@v4
+        with:
+           java-version: '21'
+           distribution: 'temurin'
 
       - name: Test and Coverage
         if: inputs.sonar_enabled
