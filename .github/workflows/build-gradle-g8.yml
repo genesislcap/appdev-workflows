@@ -154,10 +154,10 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'
+          distribution: 'temurin'
 
       - name: Configure Node  ${{ inputs.node_version }}
         if: ${{ !inputs.REGISTRY_URL  }}
@@ -343,7 +343,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'adopt'
+          distribution: 'temurin'
       
       - name: Run Sonar analysis
         if: inputs.sonar_enabled
@@ -359,10 +359,10 @@ jobs:
 
       - name: Revert back to JDK ${{ inputs.java_version }}
         if: inputs.sonar_enabled
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'
+          distribution: 'temurin'
 
 
       - name: Check Auth Permissions task
