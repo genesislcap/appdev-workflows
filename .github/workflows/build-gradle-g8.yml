@@ -1,4 +1,4 @@
-# This is a workflow calling the steps-jobs from appdev-devops repo which has the main file
+```yaml
 name: Gradle Build
 
 on:
@@ -34,7 +34,7 @@ on:
         type: string
       use-artifactory-cache:
         type: boolean
-        description: Use to the Artifactory cache
+        description: Use the Artifactory cache
         default: false
         required: false
       push-to-artifactory-cache:
@@ -46,14 +46,17 @@ on:
         type: boolean
         description: >-
           Opt-in per-repo GHA cache owned by cache-base-branch (default develop).
-          Opt-in + push to cache-base-branch: restore, --build-cache, delete old entry, save new.
-          Opt-in + PR targeting cache-base-branch: restore and read only (no save).
-          Opt-out (false): ~/.gradle, --no-build-cache, no GHA restore/save/delete.
+          Opt-in + push to cache-base-branch: restore, --build-cache, delete old
+          entry, save new.
+          Opt-in + PR targeting cache-base-branch: restore and read only.
+          Opt-out: ~/.gradle, --no-build-cache, no GHA restore/save/delete.
         default: false
         required: false
       cache-base-branch:
         type: string
-        description: Branch that owns the per-repo cache; PRs read it when targeting this base.
+        description: >-
+          Branch that owns the per-repo cache. PRs read it when targeting this
+          base branch.
         default: develop
         required: false
       working-directory:
@@ -62,32 +65,42 @@ on:
         required: false
       server-build-gradle-arguments:
         type: string
-        description: Additional arguments/properties to be passed to the server gradle build command
+        description: >-
+          Additional arguments or properties passed to the server Gradle build
+          command.
         required: false
       server-install-gradle-arguments:
         type: string
-        description: Additional arguments/properties to be passed to the server gradle instal-* commands
+        description: >-
+          Additional arguments or properties passed to the server Gradle
+          install-* commands.
         required: false
       publish-to-artifactory:
         type: boolean
-        description: Publish to artifactory libs-release-local or lib-release-client
+        description: Publish to Artifactory libs-release-local or lib-release-client
         default: false
         required: false
       REGISTRY_URL:
         type: string
-        description: Only used by the older version of genesisframework
+        description: Only used by older Genesis Framework versions
         required: false
       SCOPE:
         type: string
-        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
+        description: >-
+          Only used by older Genesis Framework versions. If SCOPE is supplied,
+          REGISTRY_URL must also be supplied.
         required: false
       config-path:
         type: string
-        description: Environment file used to set the action context before building the artifacts, useful when the same project is built for different profiles/customers
+        description: >-
+          Environment file used to set the action context before building the
+          artifacts.
         required: false
       test-reports-suffix:
         type: string
-        description: The suffix to be added to test reports uploaded artifact to be used in case of matrix builds to avoid clashes.
+        description: >-
+          Suffix added to uploaded test report artifacts, for example for matrix
+          builds.
         required: false
       update-jira:
         type: boolean
@@ -128,142 +141,241 @@ on:
       SENTRY_AUTH_TOKEN:
         required: false
 
-# PR group: pr-{N}. Develop push: push-refs/heads/{cache-base-branch}. Kept separate.
 concurrency:
-  group: build-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
-  # PR build: cancel ongoing (new commits supersede). Trunk/develop push: wait (don't cancel, preserves cache save).
+  group: >-
+    build-${{ github.repository }}-${{
+      github.event_name == 'pull_request'
+      && format('pr-{0}', github.event.pull_request.number)
+      || format('{0}-{1}', github.event_name, github.ref)
+    }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
-  DISTRIBUTION_DIR: ${{ inputs.distribution_dir || format('{0}-distribution', inputs.product_name) }}
-  # Opt-out: --no-build-cache. Opt-in when push/PR targets cache-base-branch: --build-cache.
-  CACHE_OPTS: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && '--build-cache' || '--no-build-cache --no-configuration-cache' }}
-  # e.g. genesislcap-pbi-develop; empty when opt-out or PR not targeting cache-base-branch.
-  REPO_CACHE_SCOPE: ${{ inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch)) && format('{0}-{1}-{2}', github.repository_owner, github.event.repository.name, inputs.cache-base-branch) || '' }}
-  GRADLE_GENESIS_PUSH_TO_CACHE: ${{ !(inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch))) && inputs.push-to-artifactory-cache }}
-  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: ${{ (inputs.enable-repo-cache && ((github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)) || (github.event_name == 'pull_request' && github.base_ref == inputs.cache-base-branch))) || !inputs.use-artifactory-cache }}
+  NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+  DISTRIBUTION_DIR: >-
+    ${{ inputs.distribution_dir ||
+    format('{0}-distribution', inputs.product_name) }}
+  CACHE_OPTS: >-
+    ${{ inputs.enable-repo-cache
+    && (
+      (
+        github.event_name == 'push'
+        && github.ref == format(
+          'refs/heads/{0}',
+          inputs.cache-base-branch
+        )
+      )
+      || (
+        github.event_name == 'pull_request'
+        && github.base_ref == inputs.cache-base-branch
+      )
+    )
+    && '--build-cache'
+    || '--no-build-cache --no-configuration-cache' }}
+  REPO_CACHE_SCOPE: >-
+    ${{ inputs.enable-repo-cache
+    && (
+      (
+        github.event_name == 'push'
+        && github.ref == format(
+          'refs/heads/{0}',
+          inputs.cache-base-branch
+        )
+      )
+      || (
+        github.event_name == 'pull_request'
+        && github.base_ref == inputs.cache-base-branch
+      )
+    )
+    && format(
+      '{0}-{1}-{2}',
+      github.repository_owner,
+      github.event.repository.name,
+      inputs.cache-base-branch
+    )
+    || '' }}
+  GRADLE_GENESIS_PUSH_TO_CACHE: >-
+    ${{ !(
+      inputs.enable-repo-cache
+      && (
+        (
+          github.event_name == 'push'
+          && github.ref == format(
+            'refs/heads/{0}',
+            inputs.cache-base-branch
+          )
+        )
+        || (
+          github.event_name == 'pull_request'
+          && github.base_ref == inputs.cache-base-branch
+        )
+      )
+    )
+    && inputs.push-to-artifactory-cache }}
+  GRADLE_GENESIS_DISABLE_REMOTE_CACHE: >-
+    ${{ (
+      inputs.enable-repo-cache
+      && (
+        (
+          github.event_name == 'push'
+          && github.ref == format(
+            'refs/heads/{0}',
+            inputs.cache-base-branch
+          )
+        )
+        || (
+          github.event_name == 'pull_request'
+          && github.base_ref == inputs.cache-base-branch
+        )
+      )
+    )
+    || !inputs.use-artifactory-cache }}
 
 jobs:
   build-server:
-    runs-on: [ appdev-selfhosted-al2023 ]
+    runs-on: [appdev-selfhosted-al2023]
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: Set up JDK
-        uses: actions/setup-java@v2
+      - name: Set up application JDK
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java_version }}
-          distribution: 'adopt'
+          distribution: temurin
 
-      - name: Configure Node  ${{ inputs.node_version }}
-        if: ${{ !inputs.REGISTRY_URL  }}
-        uses: actions/setup-node@v2
+      - name: Show application Java version
+        shell: bash
+        run: |
+          java -version
+          ./gradlew --version
+
+      - name: Configure Node ${{ inputs.node_version }}
+        if: ${{ !inputs.REGISTRY_URL }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Configure Node  ${{ inputs.node_version }} if using JFROG npm packages
+      - name: Configure Node ${{ inputs.node_version }} with registry
         if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
 
-      - name: Login to Jfrog
+      - name: Login to JFrog
         uses: docker/login-action@v3
         with:
           registry: genesisglobal-docker-remote.jfrog.io
           username: ${{ secrets.JFROG_USERNAME }}
           password: ${{ secrets.JFROG_PASSWORD }}
 
-      - name: Restore gradle.properties and setup
+      - name: Restore gradle.properties and set up build
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: ${{ inputs.working-directory }}
         shell: bash
         run: |
           if [ -n "${{ env.REPO_CACHE_SCOPE }}" ]; then
-            # Cache opt-in: isolated GRADLE_USER_HOME for repo develop cache
             GRADLE_HOME_DIR="${RUNNER_TEMP}/gradle-${{ env.REPO_CACHE_SCOPE }}"
             mkdir -p "${GRADLE_HOME_DIR}"
+
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
             echo "REPO_CACHE_SCOPE=${{ env.REPO_CACHE_SCOPE }}" >> "$GITHUB_ENV"
+
             echo "Using repo-scoped GRADLE_USER_HOME: ${GRADLE_HOME_DIR}"
           else
-            # Cache opt-out: ~/.gradle only — no GHA cache read/write
             mkdir -p "${HOME}/.gradle"
             GRADLE_HOME_DIR="${HOME}/.gradle"
+
             echo "GRADLE_USER_HOME=${GRADLE_HOME_DIR}" >> "$GITHUB_ENV"
           fi
 
-          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
+          {
+            echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}"
+            echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}"
+            echo "systemProp.org.gradle.internal.http.connectionTimeout=180000"
+            echo "systemProp.org.gradle.internal.http.socketTimeout=180000"
+            echo "dockerUrl=genesisglobal-docker-internal.jfrog.io"
+            echo "dockerUsername=${{ secrets.JFROG_USERNAME }}"
+            echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}"
+            echo "dockerEmail=platformmanageteam@genesis.global"
+            echo "genesis-home=../.genesis-home"
+            echo "deploy-plugin-mode=local"
+            echo "genesis.check.permission.enabled=true"
+          } > "${GRADLE_HOME_DIR}/gradle.properties"
 
-          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> "${GRADLE_HOME_DIR}/gradle.properties"
-
-          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "dockerEmail=platformmanageteam@genesis.global" >> "${GRADLE_HOME_DIR}/gradle.properties"
-
-          echo "genesis-home=../.genesis-home" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "deploy-plugin-mode=local" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          echo "genesis.check.permission.enabled=true" >> "${GRADLE_HOME_DIR}/gradle.properties"
-          sudo chmod +x ./gradlew
-          sudo chmod +x ./server/gradlew
+          chmod +x ./gradlew
+          chmod +x ./server/gradlew
 
           cat "${GRADLE_HOME_DIR}/gradle.properties" >> ./gradle.properties
+
           if [ -z "${{ inputs.repo-name }}" ]; then
-            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+            REPO_NAME="$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)"
           else
-            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+            REPO_NAME="${{ inputs.repo-name }}"
           fi
-          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+          echo "REPO_NAME=${REPO_NAME}" >> "$GITHUB_ENV"
+
+          RELEASE_VERSION="$(echo "${{ inputs.version }}" | sed 's/\//-/g')"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> "$GITHUB_ENV"
+
           if [ -n "${{ env.REPO_CACHE_SCOPE }}" ]; then
             CACHE_BRANCH="${{ inputs.cache-base-branch }}"
             BUILD_VERSION="${CACHE_BRANCH//\//-}"
           else
-            BUILD_VERSION="$RELEASE_VERSION"
+            BUILD_VERSION="${RELEASE_VERSION}"
           fi
-          echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_ENV
-          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${BUILD_VERSION}\"/g" server/build.gradle.kts
 
-          echo "GENX_BUILD_INFO=${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_ENV"
 
-      # Cache opt-in only (REPO_CACHE_SCOPE set). Opt-out skips restore/delete/save entirely.
-      - name: Restore Gradle cache (repo-scoped)
+          sed -E -i \
+            "s/^\s{4}version = \".+\"/    version = \"${BUILD_VERSION}\"/g" \
+            server/build.gradle.kts
+
+          GENX_BUILD_INFO="${{ github.ref_name }} / $(date -u +'%Y-%m-%d-%H%M%S') / $(git rev-parse --short HEAD)"
+          echo "GENX_BUILD_INFO=${GENX_BUILD_INFO}" >> "$GITHUB_ENV"
+
+      - name: Restore Gradle cache
         if: env.REPO_CACHE_SCOPE != ''
         uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
+          key: >-
+            ${{ runner.os }}-gradle-${{
+            env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-
 
-      - name: 'Create .npmrc'
+      - name: Create .npmrc
         shell: bash
         run: |
-          npm config set @genesisglobal:registry https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
-          echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{secrets.JFROG_NPM_AUTH_TOKEN}}" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global" >> $RUNNER_TEMP/.npmrc
-          echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true" >> $RUNNER_TEMP/.npmrc
+          npm config set \
+            @genesisglobal:registry \
+            https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/
+
+          {
+            echo "@genesisglobal:registry=https://genesisglobal.jfrog.io/artifactory/api/npm/npm-local/"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:_auth=${{ secrets.JFROG_NPM_AUTH_TOKEN }}"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:email=jenkins@genesis.global"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm-local/:always-auth=true"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:_auth=${{ secrets.JFROG_NPM_AUTH_TOKEN }}"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:email=jenkins@genesis.global"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/npm/:always-auth=true"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:_auth=${{ secrets.JFROG_NPM_AUTH_TOKEN }}"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:email=jenkins@genesis.global"
+            echo "//genesisglobal.jfrog.io/artifactory/api/npm/github-packages/:always-auth=true"
+          } >> "$RUNNER_TEMP/.npmrc"
 
       - name: Read .env file for build
         if: ${{ inputs.config-path }}
@@ -279,7 +391,7 @@ jobs:
           jfrog-username: ${{ secrets.JFROG_USERNAME }}
           jfrog-password: ${{ secrets.JFROG_PASSWORD }}
           working-directory: ${{ inputs.working-directory }}
-          server-path: "${{ inputs.working-directory }}/server"
+          server-path: ${{ inputs.working-directory }}/server
           app-name: ${{ inputs.product_name }}
           enable-repo-cache: ${{ env.REPO_CACHE_SCOPE != '' }}
           build-server-arguments: >-
@@ -290,57 +402,134 @@ jobs:
 
       - name: Install Bearer CLI
         if: inputs.sast
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
         run: |
-          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh
-          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+          curl -sfL \
+            https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh \
+            | sh
 
-      - name: Run sast security scan (text report)
+          echo "PATH=$PWD/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Run SAST security scan
         if: inputs.sast
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
         run: |
           set +e
-          # --report=security is default, but added for clarity
-          # --exit-code 0 => never fail the job even if findings exist
-          bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+
+          bearer scan . \
+            --report=security \
+            --exit-code 0 \
+            | tee "sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif"
+
           set -e
 
-      # Upload the txt report as an artifact
-      - name: Upload sast Security Report
+      - name: Upload SAST security report
         if: inputs.sast
         uses: actions/upload-artifact@v4
         with:
-          name: sast-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
+          name: >-
+            sast-report-${{ inputs.product_name }}-${{ github.run_number }}
+          path: >-
+            sast-report-${{ inputs.product_name }}-${{ github.run_number }}.sarif
 
-      - name: Build
-        uses: gradle/gradle-build-action@v2
+      - name: Build application with Java ${{ inputs.java_version }}
+        uses: gradle/actions/setup-gradle@v4
         with:
-          arguments: build ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.BUILD_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}"
           cache-disabled: true
+
+      - name: Run application build
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          ./gradlew \
+            build \
+            ${{ env.CACHE_OPTS }} \
+            --stacktrace \
+            -Pversion="${{ env.BUILD_VERSION }}" \
+            -PpushToCache="${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}" \
+            -PdisableRemoteCache="${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}" \
+            ${{ inputs.server-build-gradle-arguments }}
 
-
-      - name: Test and Coverage
+      - name: Run tests and generate coverage with Java ${{ inputs.java_version }}
         if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: |
+          ./gradlew \
+            test \
+            jacocoTestReport \
+            --no-configuration-cache
+
+      - name: Stop application Java Gradle daemons
+        if: inputs.sonar_enabled
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: ./gradlew --stop
+
+      - name: Set up JDK 21 for Sonar
+        if: inputs.sonar_enabled
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Show Sonar Java version
+        if: inputs.sonar_enabled
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: |
+          java -version
+          ./gradlew --version
+
+      - name: Run Sonar analysis with Java 21
+        if: inputs.sonar_enabled
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+        run: |
+          ./gradlew \
+            sonar \
+            --no-configuration-cache \
+            -Dsonar.token="${SONAR_TOKEN}"
 
-      - name: Check Auth Permissions task
+      - name: Stop Sonar Java 21 Gradle daemons
+        if: inputs.sonar_enabled && always()
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: ./gradlew --stop
+
+      - name: Restore application JDK
+        if: inputs.sonar_enabled && always()
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: temurin
+
+      - name: Confirm restored application Java version
+        if: inputs.sonar_enabled && always()
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: |
+          java -version
+          ./gradlew --version
+
+      - name: Check whether Auth Permissions task exists
         id: auth_permissions_task
         shell: bash
-        working-directory: "${{ inputs.working-directory }}/server"
+        working-directory: ${{ inputs.working-directory }}/server
         run: |
-          if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+          if ./gradlew \
+            help \
+            --task checkAuthPermissions \
+            --no-configuration-cache \
+            --quiet \
+            >/dev/null 2>&1
+          then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -350,33 +539,46 @@ jobs:
         id: check_auth_permissions
         if: steps.auth_permissions_task.outputs.exists == 'true'
         shell: bash
-        working-directory: "${{ inputs.working-directory }}/server"
+        working-directory: ${{ inputs.working-directory }}/server
         run: |
-          ./gradlew checkAuthPermissions --no-configuration-cache ${{ env.CACHE_OPTS }} --stacktrace
+          ./gradlew \
+            checkAuthPermissions \
+            --no-configuration-cache \
+            ${{ env.CACHE_OPTS }} \
+            --stacktrace
 
       - name: Upload Genesis security permissions report
         uses: actions/upload-artifact@v4
         if: always() && steps.check_auth_permissions.outcome == 'success'
         with:
-          name: genesis-security-permissions-report-${{ inputs.product_name }}-${{ github.run_number }}
-          path: "${{ inputs.working-directory }}/server/*/build/reports/genesis-security/auth-permissions.csv"
+          name: >-
+            genesis-security-permissions-report-${{
+            inputs.product_name }}-${{ github.run_number }}
+          path: >-
+            ${{ inputs.working-directory
+            }}/server/*/build/reports/genesis-security/auth-permissions.csv
           if-no-files-found: ignore
 
-      - name: Upload Test Reports
+      - name: Upload test reports
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-reports${{ inputs.test-reports-suffix }}
-          path: "${{ inputs.working-directory }}/server/*/build/reports/**/*"
-        if: always()
+          path: >-
+            ${{ inputs.working-directory }}/server/*/build/reports/**/*
 
       - name: Remove oversized JUnit report before publish
         if: always()
-        working-directory: "${{ inputs.working-directory }}"
+        working-directory: ${{ inputs.working-directory }}
         shell: bash
         run: |
-          find . -path '**/TEST-global.genesis.PbiReqRepTest.xml' -delete 2>/dev/null || true
+          find . \
+            -path '**/TEST-global.genesis.PbiReqRepTest.xml' \
+            -delete \
+            2>/dev/null \
+            || true
 
-      - name: Publish All Test Results
+      - name: Publish all test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
@@ -386,20 +588,31 @@ jobs:
           fail_on: nothing
           report_suite_logs: any
 
-      # Develop push only: delete prior repo cache entries, then save one ({scope}-{run_id}).
-      - name: Delete existing repo Gradle cache (before save)
-        if: success() && inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
+      - name: Delete existing repository Gradle cache
+        if: >-
+          success()
+          && inputs.enable-repo-cache
+          && github.event_name == 'push'
+          && github.ref == format(
+            'refs/heads/{0}',
+            inputs.cache-base-branch
+          )
         uses: actions/github-script@v7
         with:
           script: |
-            const prefix = `${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-`;
+            const prefix =
+              `${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-`;
+
             const { owner, repo } = context.repo;
-            const { data } = await github.rest.actions.getActionsCacheList({
-              owner,
-              repo,
-              key: prefix,
-              per_page: 100,
-            });
+
+            const { data } =
+              await github.rest.actions.getActionsCacheList({
+                owner,
+                repo,
+                key: prefix,
+                per_page: 100,
+              });
+
             for (const cache of data.actions_caches ?? []) {
               await github.rest.actions.deleteActionsCacheById({
                 owner,
@@ -408,67 +621,116 @@ jobs:
               });
             }
 
-      - name: Save Gradle cache (repo-scoped)
-        if: success() && inputs.enable-repo-cache && github.event_name == 'push' && github.ref == format('refs/heads/{0}', inputs.cache-base-branch)
+      - name: Save repository Gradle cache
+        if: >-
+          success()
+          && inputs.enable-repo-cache
+          && github.event_name == 'push'
+          && github.ref == format(
+            'refs/heads/{0}',
+            inputs.cache-base-branch
+          )
         uses: actions/cache/save@v4
         with:
           path: |
             ${{ env.GRADLE_USER_HOME }}/caches
             ${{ env.GRADLE_USER_HOME }}/wrapper
-          key: ${{ runner.os }}-gradle-${{ env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
+          key: >-
+            ${{ runner.os }}-gradle-${{
+            env.REPO_CACHE_SCOPE }}-${{ github.run_id }}
 
-      - name: Docker Build Image
+      - name: Build Docker image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          ./gradlew \
+            :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:buildImage
 
-      - name: Docker Push Image
+      - name: Push Docker image
         if: inputs.build_docker
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
-          build-root-directory: "${{ inputs.working-directory }}/"
-          cache-disabled: true
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          ./gradlew \
+            :genesisproduct-${{ inputs.product_name }}:${{ inputs.product_name }}-deploy:pushImage
 
-      - name: Create Giant Server Zip
+      - name: Create giant server archive
         if: inputs.upload
         shell: bash
-        working-directory: "${{ inputs.working-directory }}/server"
+        working-directory: ${{ inputs.working-directory }}/server
         run: |
-          ./gradlew tasks -Pversion=${{ env.RELEASE_VERSION }} | grep install- | cut -d " " -f1 | xargs -I{} ./gradlew -Pversion=${{ env.RELEASE_VERSION }} {} ${{ inputs.server-install-gradle-arguments }}
+          ./gradlew tasks \
+            -Pversion="${{ env.RELEASE_VERSION }}" \
+            | grep install- \
+            | cut -d " " -f1 \
+            | xargs -I{} \
+              ./gradlew \
+                -Pversion="${{ env.RELEASE_VERSION }}" \
+                {} \
+                ${{ inputs.server-install-gradle-arguments }}
+
           cd .genesis-home
+
           pwd
           ls -la
-          tar czvf ../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz *
 
-      - name: Upload Server Package
+          tar \
+            czvf \
+            "../build/distributions/genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz" \
+            *
+
+      - name: Upload server package
         if: inputs.upload
-        working-directory: "${{ inputs.working-directory }}/server/build/distributions/"
+        working-directory: >-
+          ${{ inputs.working-directory }}/server/build/distributions/
+        shell: bash
         run: |
           echo "${{ env.REPO_NAME }}"
-          curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" -T genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz
 
-      - name: Upload Web Package
+          curl \
+            --fail \
+            --show-error \
+            --user "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
+            --request PUT \
+            "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/server/" \
+            --upload-file \
+            "genesis_${{ inputs.product_name }}_package-${{ env.RELEASE_VERSION }}.tar.gz"
+
+      - name: Upload web package
         if: inputs.upload
         working-directory: ${{ inputs.working-directory }}
+        shell: bash
         run: |
-          if test -f client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip; then
-            mv client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip
-            curl -u ${{ secrets.JFROG_USERNAME }}:"${{secrets.JFROG_PASSWORD}}" -X PUT "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" -T client/build/distributions/*.zip
+          WEB_PACKAGE="client/build/distributions/web-distribution-${{ env.RELEASE_VERSION }}.zip"
+
+          if [ -f "${WEB_PACKAGE}" ]; then
+            OUTPUT_PACKAGE="client/build/distributions/${{ env.REPO_NAME }}-web-${{ env.RELEASE_VERSION }}.zip"
+
+            mv "${WEB_PACKAGE}" "${OUTPUT_PACKAGE}"
+
+            curl \
+              --fail \
+              --show-error \
+              --user "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_PASSWORD }}" \
+              --request PUT \
+              "https://genesisglobal.jfrog.io/artifactory/product/${{ env.REPO_NAME }}/web/" \
+              --upload-file "${OUTPUT_PACKAGE}"
           fi
 
-      - name: Artifactory Publish
+      - name: Publish to Artifactory
         if: inputs.publish-to-artifactory
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: artifactoryPublish -x test --no-build-cache --no-configuration-cache -PdeployToClientRepo=false
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
+        working-directory: ${{ inputs.working-directory }}/server
+        shell: bash
+        run: |
+          ./gradlew \
+            artifactoryPublish \
+            -x test \
+            --no-build-cache \
+            --no-configuration-cache \
+            -PdeployToClientRepo=false
 
-      - name: Update Jira tickets with fix version
+      - name: Checkout workflows for Jira update
         if: inputs.update-jira
         uses: actions/checkout@v4
         with:
@@ -480,8 +742,12 @@ jobs:
         if: failure() && env.SLACK_INCOMING_WEBHOOK
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ❌ Server build for ${{ inputs.product_name }} failed
-          SLACK_MESSAGE: The server build for ${{ github.workflow }} failed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_TITLE: >-
+            ❌ Server build for ${{ inputs.product_name }} failed
+          SLACK_MESSAGE: >-
+            The server build for ${{ github.workflow }} failed:
+            https://github.com/${{ github.repository_owner }}/${{
+            github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
       - name: Notify success on Slack
@@ -489,8 +755,12 @@ jobs:
         if: success() && env.SLACK_INCOMING_WEBHOOK
         env:
           SLACK_INCOMING_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
-          SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
+          SLACK_TITLE: >-
+            ✅ Server build for ${{ inputs.product_name }} passed
+          SLACK_MESSAGE: >-
+            The server build for ${{ github.workflow }} passed:
+            https://github.com/${{ github.repository_owner }}/${{
+            github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
 
   tag-jiras:
@@ -502,3 +772,4 @@ jobs:
       release-version: ${{ inputs.version }}
     secrets:
       JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+```
