@@ -326,14 +326,44 @@ jobs:
       - name: Test and Coverage
         if: inputs.sonar_enabled
         uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test jacocoTestReport --no-configuration-cache
+          build-root-directory: "${{ inputs.working-directory }}/server"
+          cache-disabled: true
+
+      # Sonar stopped supporting JDK 17 to run scans so this is a temporary workaround to run the scan on java 21
+      # We should look at pulling this out of the pipeline or using the other sonarcloud workflow
+      - name: Stop Java 17 Gradle daemons
+        if: inputs.sonar_enabled
+        working-directory: "${{ inputs.working-directory }}/server"
+        run: ./gradlew --stop
+      
+      - name: Set up JDK 21 for Sonar
+        if: inputs.sonar_enabled
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'adopt'
+      
+      - name: Run Sonar analysis
+        if: inputs.sonar_enabled
+        uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
         with:
           arguments: >
-            test jacocoTestReport sonarqube --no-configuration-cache
+            sonar --no-configuration-cache
             -Dsonar.token=${{ env.SONAR_TOKEN }}
           build-root-directory: "${{ inputs.working-directory }}/server"
           cache-disabled: true
+
+      - name: Revert back to JDK ${{ inputs.java_version }}
+        if: inputs.sonar_enabled
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: 'adopt'
+
 
       - name: Check Auth Permissions task
         id: auth_permissions_task
