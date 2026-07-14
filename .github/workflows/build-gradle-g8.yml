@@ -323,48 +323,6 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 
-      - name: Test and Coverage
-        if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: test jacocoTestReport --no-configuration-cache
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
-
-      # Sonar stopped supporting JDK 17 to run scans so this is a temporary workaround to run the scan on java 21
-      # We should look at pulling this out of the pipeline or using the other sonarcloud workflow
-      - name: Stop Java 17 Gradle daemons
-        if: inputs.sonar_enabled
-        working-directory: "${{ inputs.working-directory }}/server"
-        run: ./gradlew --stop
-      
-      - name: Set up JDK 21 for Sonar
-        if: inputs.sonar_enabled
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      
-      - name: Run Sonar analysis
-        if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-        with:
-          arguments: >
-            sonar --no-configuration-cache
-            -Dsonar.token=${{ env.SONAR_TOKEN }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
-
-      - name: Revert back to JDK ${{ inputs.java_version }}
-        if: inputs.sonar_enabled
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.java_version }}
-          distribution: 'temurin'
-
-
       - name: Check Auth Permissions task
         id: auth_permissions_task
         shell: bash
@@ -522,6 +480,25 @@ jobs:
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+  sonar:
+    name: SonarCloud Analysis
+    if: ${{ inputs.sonar_enabled }}
+    uses: ./.github/workflows/sonarcloud.yml
+    with:
+      branch: ${{ inputs.branch }}
+      version: ${{ inputs.version }}
+      server-path: 'server'
+      node_version: ${{ inputs.node_version }}
+      REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+      SCOPE: ${{ inputs.SCOPE }}
+    secrets:
+      GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+      GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+      JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+      JFROG_EMAIL: ${{ secrets.JFROG_EMAIL }}
+      JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+      JENKINSGENESIS_SONAR: ${{ secrets.JENKINSGENESIS_SONAR }}
 
   tag-jiras:
     needs: build-server
