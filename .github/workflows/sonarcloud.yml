@@ -192,9 +192,15 @@ jobs:
           if [ -n "${GRADLE_PROPERTIES:-}" ]; then
             printf '%s\n' "${GRADLE_PROPERTIES}" >> "${HOME}/.gradle/gradle.properties"
           fi
-          chmod +x ./gradlew
-          chmod +x "./${{ inputs.server-path }}/gradlew"
-          chmod -R +rx "./${{ inputs.server-path }}"
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+          fi
+          if [ -f "./${{ inputs.server-path }}/gradlew" ]; then
+            chmod +x "./${{ inputs.server-path }}/gradlew"
+          fi
+          if [ -d "./${{ inputs.server-path }}" ]; then
+            chmod -R +rx "./${{ inputs.server-path }}"
+          fi
           cat "${HOME}/.gradle/gradle.properties" >> ./gradle.properties
           RELEASE_VERSION="$(echo '${{ inputs.version }}' | sed 's/\//-/g')"
           BUILD_FILE="${{ inputs.server-path }}/build.gradle.kts"
