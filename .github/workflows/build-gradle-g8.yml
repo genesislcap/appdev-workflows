@@ -488,7 +488,7 @@ jobs:
     with:
       branch: ${{ inputs.branch }}
       version: ${{ inputs.version }}
-      server-path: 'server'
+      server-path: '${{ inputs.working-directory }}/server'
       node_version: ${{ inputs.node_version }}
       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
       SCOPE: ${{ inputs.SCOPE }}
