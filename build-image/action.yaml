@@ -211,14 +211,14 @@ runs:
         ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
 
     - name: Build Image
-      if: inputs.push-image == 'true'
+      if: inputs.push-image == 'true' || inputs.trivy-scan == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
 
     - name: Trivy Scan
-      if: ${{ inputs.push-image == 'true' && inputs.trivy-scan == 'true' }}
+      if: inputs.trivy-scan == 'true'
       uses: genesislcap/appdev-workflows/build-image/trivy-scanning@develop
       with:
         image-ref: genesis/${{ env.PRODUCT_NAME }}:${{ inputs.version }}
