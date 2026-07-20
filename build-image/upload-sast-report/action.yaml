@@ -1,39 +1,83 @@
-name: Run SAST 
-description: Run SAST and upload results as GH artifact
+name: Run SAST
+description: Run SAST, upload the SARIF report, and fail for High or Critical findings
 
-inputs:  
+inputs:
   working-directory:
     default: .
     required: false
+
   app-name:
     required: true
 
 runs:
   using: "composite"
+
   steps:
-
-    - name: Install SAST CLI      
-      working-directory: "${{ inputs.working-directory }}"
+    - name: Install SAST CLI
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-          curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh -s -- latest
-          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+        set -euo pipefail
 
-    - name: Run sast security scan (text report)   
-      working-directory: "${{ inputs.working-directory }}"
+        curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh \
+          | sh -s -- latest
+
+        echo "$PWD/bin" >> "$GITHUB_PATH"
+
+    - name: Run SAST security scan
+      id: sast_scan
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
+        set -u
+
+        REPORT_FILE="sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif"
+
         set +e
-        # --report=security is default, but added for clarity
-        # --exit-code 0 => never fail the job even if findings exist
-        bearer scan . --report=security --exit-code 0 | tee sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif
+
+        bearer scan . \
+          --scanner sast \
+          --report security \
+          --format sarif \
+          --output "$REPORT_FILE" \
+          --severity critical,high,medium,low,warning \
+          --fail-on-severity critical,high \
+          --exit-code 1
+
+        SCAN_EXIT_CODE=$?
+
         set -e
 
+        echo "report_file=$REPORT_FILE" >> "$GITHUB_OUTPUT"
+        echo "scan_exit_code=$SCAN_EXIT_CODE" >> "$GITHUB_OUTPUT"
 
-    - name: Upload sast Security Report     
-      uses: actions/upload-artifact@v4        
+        # Allow report upload before failing the gate.
+        exit 0
+
+    - name: Upload SAST security report
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: sast-report-${{ inputs.app-name }}-${{ github.run_number }}
-        path: sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif
+        path: ${{ steps.sast_scan.outputs.report_file }}
+        if-no-files-found: error
 
-    
+    - name: Evaluate SAST vulnerability threshold
+      if: always()
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        SCAN_EXIT_CODE="${{ steps.sast_scan.outputs.scan_exit_code }}"
+
+        if [ -z "$SCAN_EXIT_CODE" ]; then
+          echo "::error::SAST scan did not complete successfully."
+          exit 1
+        fi
+
+        if [ "$SCAN_EXIT_CODE" -ne 0 ]; then
+          echo "::error::SAST found High or Critical security findings."
+          exit 1
+        fi
+
+        echo "No High or Critical SAST findings detected."

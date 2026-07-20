@@ -5,24 +5,29 @@ inputs:
   image-ref:
     description: Image reference to scan
     required: true
+
   app-name:
     description: Application or product name used in artifact names
     required: false
     default: ""
+
   severity-threshold:
-    description: Comma-separated severities that should fail the build when fail-build is true
+    description: Comma-separated vulnerability severities that should fail the build when fail-build is true
     required: false
     default: "HIGH,CRITICAL"
+
   fail-build:
-    description: Fail the build when findings meet the severity threshold
+    description: Fail the build when vulnerabilities meet the severity threshold
     required: false
     default: false
     type: boolean
+
   license-full:
     description: Enable full license scanning
     required: false
     default: false
     type: boolean
+
   output-dir:
     description: Directory where reports will be written
     required: false
@@ -31,15 +36,19 @@ inputs:
 outputs:
   json_path:
     value: ${{ steps.scan.outputs.json_path }}
+
   html_path:
     value: ${{ steps.scan.outputs.html_path }}
+
   markdown_path:
     value: ${{ steps.scan.outputs.markdown_path }}
+
   threshold_findings:
     value: ${{ steps.gate.outputs.threshold_findings }}
 
 runs:
   using: "composite"
+
   steps:
     - name: Install Trivy
       shell: bash
@@ -62,12 +71,14 @@ runs:
         set -euo pipefail
 
         APP_NAME="${{ inputs.app-name }}"
+
         if [ -z "$APP_NAME" ]; then
           APP_NAME="scan"
         fi
 
         SAFE_APP_NAME="$(printf '%s' "$APP_NAME" | tr ' /' '--' | tr -cd '[:alnum:]._:-')"
         REPORT_DIR="${{ inputs.output-dir }}"
+
         mkdir -p "$REPORT_DIR"
 
         JSON_FILE="$REPORT_DIR/trivy-scan.json"
@@ -92,6 +103,7 @@ runs:
         IMAGE_REF="${{ inputs.image-ref }}"
 
         LICENSE_FULL_FLAG=""
+
         if [ "${{ inputs.license-full }}" = "true" ]; then
           LICENSE_FULL_FLAG="--license-full"
         fi
@@ -122,12 +134,12 @@ runs:
         SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
 
         if [ ! -f "$JSON_FILE" ]; then
-          echo "Trivy JSON report not found: $JSON_FILE"
+          echo "::error::Trivy JSON report not found: $JSON_FILE"
           exit 1
         fi
 
         jq_count() {
-          jq -r "$1 | length" "$JSON_FILE" 2>/dev/null || echo 0
+          jq -r "$1 | length" "$JSON_FILE"
         }
 
         CRIT_VULN=$(jq_count '[.Results[]? | .Vulnerabilities[]? | select((.Severity // "" | ascii_upcase) == "CRITICAL")]')
@@ -147,7 +159,7 @@ runs:
         printf '%s\n' "# Trivy Scan Summary" >> "$MD_FILE"
         printf '\n' >> "$MD_FILE"
         printf 'Image: `%s`\n\n' "$IMAGE_REF" >> "$MD_FILE"
-        printf 'Threshold: `%s`\n\n' "$SEVERITY_THRESHOLD" >> "$MD_FILE"
+        printf 'Blocking vulnerability severities: `%s`\n\n' "$SEVERITY_THRESHOLD" >> "$MD_FILE"
         printf '%s\n\n' "---" >> "$MD_FILE"
 
         printf '%s\n\n' "## Vulnerabilities" >> "$MD_FILE"
@@ -193,7 +205,7 @@ runs:
         name: trivy-scan-md--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.markdown_path }}
 
-    - name: Evaluate threshold
+    - name: Evaluate Trivy vulnerability threshold
       id: gate
       shell: bash
       run: |
@@ -201,25 +213,50 @@ runs:
 
         if [ "${{ inputs.fail-build }}" != "true" ]; then
           echo "threshold_findings=0" >> "$GITHUB_OUTPUT"
+          echo "Trivy vulnerability gate is disabled."
           exit 0
         fi
 
         JSON_FILE="${{ steps.scan.outputs.json_path }}"
         SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
 
-        THRESHOLD_FINDINGS=$(jq -r --arg severities "$SEVERITY_THRESHOLD" '
-          def allowed:
-            ($severities | split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_upcase));
-          def matches_threshold:
-            ((.Severity // .severity // "" | ascii_upcase) as $sev
-             | (allowed | index($sev)) != null);
-          ([.Results[]? | .Vulnerabilities[]? | select(matches_threshold)] | length)
-          + ([.Results[]? | .Licenses[]? | select(matches_threshold)] | length)
-        ' "$JSON_FILE" 2>/dev/null || echo 0)
-
-        echo "threshold_findings=$THRESHOLD_FINDINGS" >> "$GITHUB_OUTPUT"
-
-        if [ "$THRESHOLD_FINDINGS" -gt 0 ]; then
-          echo "Trivy found $THRESHOLD_FINDINGS findings at or above severity threshold '$SEVERITY_THRESHOLD'."
+        if [ -z "$JSON_FILE" ] || [ ! -f "$JSON_FILE" ]; then
+          echo "::error::Trivy JSON report was not generated."
           exit 1
         fi
+
+        THRESHOLD_FINDINGS=$(jq -r \
+          --arg severities "$SEVERITY_THRESHOLD" '
+            def allowed:
+              (
+                $severities
+                | split(",")
+                | map(
+                    gsub("^\\s+|\\s+$"; "")
+                    | ascii_upcase
+                  )
+              );
+
+            def matches_threshold:
+              (
+                (.Severity // .severity // "" | ascii_upcase) as $severity
+                | (allowed | index($severity)) != null
+              );
+
+            [
+              .Results[]?
+              | .Vulnerabilities[]?
+              | select(matches_threshold)
+            ]
+            | length
+          ' "$JSON_FILE")
+
+        echo "threshold_findings=$THRESHOLD_FINDINGS" >> "$GITHUB_OUTPUT"
+        echo "Trivy High/Critical vulnerability count: $THRESHOLD_FINDINGS"
+
+        if [ "$THRESHOLD_FINDINGS" -gt 0 ]; then
+          echo "::error::Trivy found $THRESHOLD_FINDINGS vulnerabilities matching threshold '$SEVERITY_THRESHOLD'."
+          exit 1
+        fi
+
+        echo "No vulnerabilities matched Trivy threshold '$SEVERITY_THRESHOLD'."
