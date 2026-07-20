@@ -4,93 +4,121 @@ description: Builds a Genesis Docker image
 inputs:
   ecr-registry:
     required: true
+
   version:
     required: true
+
   region:
     required: true
+
   working-directory:
     required: false
     default: "."
+
   aws-access-key-id:
     required: true
+
   aws-secret-access-key:
     required: true
+
   jfrog-username:
     required: true
+
   jfrog-password:
     required: true
+
   app-name:
     required: true
+
   config-path:
     required: false
+
   node-version:
     required: false
     default: "20"
+
   server-path:
     required: false
     default: "server"
+
   test-reports-suffix:
     required: false
     default: ""
+
   push-image:
     required: false
     default: "true"
+
   sast:
+    description: Run the Bearer SAST scan
     required: false
-    default: true
-    type: boolean
+    default: "true"
+
+  jfrogscan:
+    description: Run the JFrog Xray dependency scan
+    required: false
+    default: "true"
+
+  trivy-scan:
+    description: Run the Trivy container image scan
+    required: false
+    default: "false"
+
+  security-fail-build:
+    description: Fail the workflow when security scans find High or Critical vulnerabilities
+    required: false
+    default: "false"
+
+  # Retained for backward compatibility.
+  # Prefer using security-fail-build for new callers.
+  trivy-fail-build:
+    description: Fail specifically for Trivy findings
+    required: false
+    default: "false"
+
+  trivy-license-full:
+    description: Enable full Trivy license scanning
+    required: false
+    default: "false"
+
+  trivy-severity-threshold:
+    description: Comma-separated Trivy severities that should fail the workflow
+    required: false
+    default: "HIGH,CRITICAL"
+
   build-image-arguments:
-    type: string
-    description: Additional arguments/properties to be passed to the buildImage gradle command
+    description: Additional arguments/properties passed to the buildImage Gradle command
     required: false
+    default: ""
+
   skip-tests:
     required: false
-    type: boolean
-    default: false
+    default: "false"
+
   sonar-token:
     required: false
 
-  jfrogscan:
-        required: false
-        default: true
-        type: boolean
-
   sonar-enabled:
     required: false
-    type: boolean
-    default: false
-  trivy-scan:
-    required: false
-    type: boolean
-    default: false
-  trivy-fail-build:
-    required: false
-    type: boolean
-    default: false
-  trivy-license-full:
-    required: false
-    type: boolean
-    default: false
-  trivy-severity-threshold:
-    required: false
-    type: string
-    default: "HIGH,CRITICAL"
+    default: "false"
+
   JENKINSGENESIS_SONAR:
     required: false
 
-
 runs:
-  using: "composite"
+  using: composite
+
   steps:
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: 17
-        distribution: 'adopt'
+        java-version: "17"
+        distribution: adopt
 
     - name: Install lmdb-devel
       shell: bash
       run: |
+        set -euo pipefail
         sudo dnf install -y lmdb-devel
 
     - name: Configure Node
@@ -103,61 +131,88 @@ runs:
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-region: eu-west-2
+        aws-region: ${{ inputs.region }}
 
     - name: Log into ECR
       if: inputs.push-image == 'true'
       shell: bash
       run: |
-        aws ecr get-login-password --region ${{ inputs.region }} | docker login --username AWS --password-stdin ${{ inputs.ecr-registry }}
+        set -euo pipefail
 
-    - name: Login to Jfrog
+        aws ecr get-login-password \
+          --region "${{ inputs.region }}" |
+          docker login \
+            --username AWS \
+            --password-stdin "${{ inputs.ecr-registry }}"
+
+    - name: Login to JFrog
       uses: docker/login-action@v3
       with:
         registry: genesisglobal-docker-remote.jfrog.io
         username: ${{ inputs.jfrog-username }}
         password: ${{ inputs.jfrog-password }}
 
-    - name: Docker iamge preload
+    - name: Docker image preload
       shell: bash
       run: |
+        set -euo pipefail
+
         docker pull genesisglobal-docker-remote.jfrog.io/rockylinux:8-minimal
-        docker tag genesisglobal-docker-remote.jfrog.io/rockylinux:8-minimal rockylinux:8-minimal
+
+        docker tag \
+          genesisglobal-docker-remote.jfrog.io/rockylinux:8-minimal \
+          rockylinux:8-minimal
 
     - name: Set the version
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        sed -E -i "s/^\s{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+        set -euo pipefail
+
+        sed -E -i \
+          "s/^[[:space:]]{4}version = \".+\"/    version = \"${{ inputs.version }}\"/g" \
+          "${{ inputs.server-path }}/build.gradle.kts"
 
     - name: Find product name
       id: find-app-build-type
       shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
-        # sensible to customization
-        project_name=$(egrep "(rootProject|productName)" settings.gradle.kts | sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p' | head -n 1)
+        set -euo pipefail
 
-        echo "PRODUCT_NAME=${project_name}" >> $GITHUB_ENV
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+        project_name="$(
+          grep -E "(rootProject|productName)" settings.gradle.kts |
+          sed -n -E 's/.*(genesisproduct-|productName *= *")([^"]+)".*/\2/p' |
+          head -n 1
+        )"
+
+        if [ -z "$project_name" ]; then
+          echo "::error::Unable to determine PRODUCT_NAME from settings.gradle.kts"
+          exit 1
+        fi
+
+        echo "PRODUCT_NAME=$project_name" >> "$GITHUB_ENV"
+        echo "Detected product name: $project_name"
 
     - name: Read .env file for build
-      if: ${{ inputs.config-path }}
+      if: inputs.config-path != ''
       uses: genesislcap/appdev-workflows/read-dot-env@develop
       with:
         config-path: ${{ inputs.config-path }}
 
-    - name: Run sast report
-      if: inputs.sast
+    - name: Run SAST report
+      if: inputs.sast == 'true'
       uses: genesislcap/appdev-workflows/build-image/upload-sast-report@develop
       with:
         working-directory: ${{ inputs.working-directory }}
         app-name: ${{ inputs.app-name }}
+        fail-build: ${{ inputs.security-fail-build }}
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Scan artifact
-      if: ${{ inputs.jfrogscan == 'true' }}
+    - name: Scan artifact with JFrog
+      if: inputs.jfrogscan == 'true'
       uses: genesislcap/appdev-workflows/build-image/jfrog-scanning@develop
       with:
         version: ${{ inputs.version }}
@@ -167,9 +222,10 @@ runs:
         server-path: ${{ inputs.server-path }}
         build-server-arguments: ${{ inputs.build-image-arguments }}
         app-name: ${{ inputs.app-name }}
+        fail-build: ${{ inputs.security-fail-build }}
 
     - name: Run Tests
-      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled != 'true' }}
+      if: inputs.skip-tests != 'true' && inputs.sonar-enabled != 'true'
       uses: genesislcap/appdev-workflows/build-image/run-tests@develop
       with:
         version: ${{ inputs.version }}
@@ -180,7 +236,7 @@ runs:
         server-path: ${{ inputs.server-path }}
 
     - name: Run Sonar and Upload Coverage
-      if: ${{ inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true' }}
+      if: inputs.skip-tests != 'true' && inputs.sonar-enabled == 'true'
       uses: genesislcap/appdev-workflows/build-image/upload-test-coverage@develop
       with:
         version: ${{ inputs.version }}
@@ -194,9 +250,14 @@ runs:
     - name: Check Auth Permissions task
       id: auth_permissions_task
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
-        if ./gradlew help --task checkAuthPermissions --no-configuration-cache --quiet >/dev/null 2>&1; then
+        set -euo pipefail
+
+        if ./gradlew help \
+          --task checkAuthPermissions \
+          --no-configuration-cache \
+          --quiet >/dev/null 2>&1; then
           echo "exists=true" >> "$GITHUB_OUTPUT"
         else
           echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -206,16 +267,30 @@ runs:
       id: check_auth_permissions
       if: steps.auth_permissions_task.outputs.exists == 'true'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
-        ./gradlew checkAuthPermissions --no-configuration-cache --build-cache --stacktrace
+        set -euo pipefail
+
+        ./gradlew checkAuthPermissions \
+          --no-configuration-cache \
+          --build-cache \
+          --stacktrace
 
     - name: Build Image
       if: inputs.push-image == 'true' || inputs.trivy-scan == 'true'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
-        ./gradlew buildImage -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" ${{ inputs.build-image-arguments }}
+        set -euo pipefail
+
+        ./gradlew buildImage \
+          -Pversion="${{ inputs.version }}" \
+          --no-configuration-cache \
+          --no-build-cache \
+          --stacktrace \
+          -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
+          -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
+          ${{ inputs.build-image-arguments }}
 
     - name: Trivy Scan
       if: inputs.trivy-scan == 'true'
@@ -224,19 +299,19 @@ runs:
         image-ref: genesis/${{ env.PRODUCT_NAME }}:${{ inputs.version }}
         app-name: ${{ inputs.app-name }}
         severity-threshold: ${{ inputs.trivy-severity-threshold }}
-        fail-build: ${{ inputs.trivy-fail-build }}
+        fail-build: ${{ inputs.security-fail-build == 'true' || inputs.trivy-fail-build == 'true' }}
         license-full: ${{ inputs.trivy-license-full }}
         output-dir: ${{ inputs.working-directory }}/trivy-reports
 
     - name: Upload Genesis security permissions report
-      uses: actions/upload-artifact@v4
       if: always() && steps.check_auth_permissions.outcome == 'success'
+      uses: actions/upload-artifact@v4
       with:
         name: genesis-security-permissions-report-${{ inputs.app-name }}-${{ github.run_number }}
-        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv"
+        path: ${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/genesis-security/auth-permissions.csv
         if-no-files-found: ignore
 
-    - name: Push Image using bash
+    - name: Push Image
       if: inputs.push-image == 'true'
       shell: bash
       env:
@@ -244,5 +319,10 @@ runs:
         IMAGE_VERSION: ${{ inputs.version }}
         APP_NAME: ${{ inputs.app-name }}
       run: |
-        docker tag genesis/${PRODUCT_NAME}:${IMAGE_VERSION} ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
-        docker push ${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}
+        set -euo pipefail
+
+        docker tag \
+          "genesis/${PRODUCT_NAME}:${IMAGE_VERSION}" \
+          "${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}"
+
+        docker push "${ECR_REGISTRY}/${APP_NAME}:${IMAGE_VERSION}"
