@@ -12,38 +12,40 @@ inputs:
     required: true
 
   working-directory:
-    default: .
     required: false
+    default: "."
 
   server-path:
-    default: server
     required: false
+    default: "server"
 
   build-server-arguments:
-    type: string
-    description: Additional arguments/properties to be passed to the appDistZip gradle task
+    description: Additional arguments/properties passed to the appDistZip Gradle task
     required: false
+    default: ""
 
   app-name:
     required: false
+    default: ""
 
   enable-repo-cache:
-    description: >-
-      When true (caller has set repo-scoped GRADLE_USER_HOME and restored GHA cache),
-      setup-gradle must not overwrite that cache. When false or omitted, keeps
-      legacy scan behavior unchanged.
+    description: Preserve a repository-scoped Gradle cache when enabled
     required: false
-    default: false
+    default: "false"
+
+  fail-build:
+    description: Fail the workflow when JFrog finds High or Critical vulnerabilities
+    required: false
+    default: "false"
 
 runs:
-  using: "composite"
+  using: composite
 
   steps:
-    # Always warm Gradle cache first.
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        cache-overwrite-existing: ${{ !inputs.enable-repo-cache }}
+        cache-overwrite-existing: ${{ inputs.enable-repo-cache != 'true' }}
 
     - name: Setup JFrog CLI
       uses: jfrog/setup-jfrog-cli@v4
@@ -55,105 +57,130 @@ runs:
     - name: Check for existing dist zip
       id: check_dist
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
         set -euo pipefail
 
         shopt -s nullglob
-        zips=( */build/dist/*.zip )
+        zips=(*/build/dist/*.zip)
 
-        if [ ${#zips[@]} -gt 0 ]; then
+        if [ "${#zips[@]}" -gt 0 ]; then
           echo "dist_exists=true" >> "$GITHUB_OUTPUT"
-          echo "Reusing existing dist zip(s): ${zips[*]}"
+          echo "Reusing existing dist ZIP files:"
+          printf ' - %s\n' "${zips[@]}"
         else
           echo "dist_exists=false" >> "$GITHUB_OUTPUT"
+          echo "No existing dist ZIP found."
         fi
 
     - name: Check if appDistZip exists
       if: steps.check_dist.outputs.dist_exists != 'true'
       id: check_task
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
         set -euo pipefail
 
-        GRADLE_PROPS="-Pversion=${{ inputs.version }} -PgenesisArtifactoryUser=${{ inputs.jfrog-username }} -PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
+        gradle_args=(
+          "-Pversion=${{ inputs.version }}"
+          "-PgenesisArtifactoryUser=${{ inputs.jfrog-username }}"
+          "-PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
+        )
+
+        if [ "${{ inputs.enable-repo-cache }}" != "true" ]; then
+          gradle_args+=("--no-daemon")
+        fi
 
         if ./gradlew tasks --all -q \
-          $GRADLE_PROPS \
+          "${gradle_args[@]}" \
           ${{ inputs.build-server-arguments }} \
-          ${{ inputs.enable-repo-cache != 'true' && '--no-daemon' || '' }} \
-          2>/dev/null | grep -q 'appDistZip'; then
+          2>/dev/null |
+          grep -qE '(^|[[:space:]])appDistZip([[:space:]]|$)'; then
           echo "appDistZip=true" >> "$GITHUB_OUTPUT"
+          echo "appDistZip task is available."
         else
           echo "appDistZip=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::appDistZip task is not available."
         fi
 
     - name: Build the dist
       if: steps.check_task.outputs.appDistZip == 'true' && steps.check_dist.outputs.dist_exists != 'true'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
         set -euo pipefail
 
-        ./gradlew appDistZip \
-          -Pversion=${{ inputs.version }} \
-          -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" \
-          -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" \
-          ${{ inputs.enable-repo-cache != 'true' && '--no-daemon' || '' }} \
+        gradle_args=(
+          "appDistZip"
+          "-Pversion=${{ inputs.version }}"
+          "-PgenesisArtifactoryUser=${{ inputs.jfrog-username }}"
+          "-PgenesisArtifactoryPassword=${{ inputs.jfrog-password }}"
+        )
+
+        if [ "${{ inputs.enable-repo-cache }}" != "true" ]; then
+          gradle_args+=("--no-daemon")
+        fi
+
+        ./gradlew \
+          "${gradle_args[@]}" \
           ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
       if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       id: scan
       shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
         set -euo pipefail
 
-        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+        TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
         FULL_REPORT="$GITHUB_WORKSPACE/jfrog-scan-full.json"
         TABLE_REPORT="$GITHUB_WORKSPACE/jfrog-scan-table-${TIMESTAMP}.txt"
+
+        shopt -s nullglob
+        zips=(*/build/dist/*.zip)
+
+        if [ "${#zips[@]}" -eq 0 ]; then
+          echo "::error::No distribution ZIP files were found for JFrog scanning."
+          exit 1
+        fi
 
         jf s \
           --licenses \
           --vuln \
           --format=json \
-          */build/dist/*.zip > "$FULL_REPORT"
+          "${zips[@]}" > "$FULL_REPORT"
 
         if ! jq -r '
-          def root:
+          def roots:
             if type == "array" then
-              (map(select(type == "object"))[0] // {})
-            else
+              .[]
+              | select(type == "object")
+            elif type == "object" then
               .
+            else
+              empty
             end;
 
-          root as $root
-          | (
-              if ($root | type) == "object"
-              then ($root.vulnerabilities // [])
-              else []
-              end
-            ) as $vulns
-          | (
-              ["CVE", "Severity", "Component", "Fixed Versions"],
-              ["---", "---", "---", "---"]
-            ),
-            (
-              $vulns[]?
-              | [
-                  .cves[0]?.cve // "N/A",
-                  .severity // "N/A",
-                  ((.components | to_entries[0].key) // "N/A"),
-                  ((.fixed_versions // []) | join(", "))
-                ]
-            )
+          (
+            ["CVE", "Severity", "Component", "Fixed Versions"],
+            ["---", "---", "---", "---"]
+          ),
+          (
+            roots
+            | (.vulnerabilities // [])[]?
+            | [
+                (.cves[0]?.cve // "N/A"),
+                (.severity // "N/A"),
+                ((.components // {}) | to_entries[0]?.key // "N/A"),
+                ((.fixed_versions // []) | join(", "))
+              ]
+          )
           | @tsv
         ' "$FULL_REPORT" > "$TABLE_REPORT"; then
           {
-            echo -e "CVE\tSeverity\tComponent\tFixed Versions"
-            echo -e "---\t---\t---\t---"
+            printf 'CVE\tSeverity\tComponent\tFixed Versions\n'
+            printf '%s\n' '---	---	---	---'
           } > "$TABLE_REPORT"
         fi
 
@@ -161,69 +188,76 @@ runs:
         echo "table_report_file=$TABLE_REPORT" >> "$GITHUB_OUTPUT"
 
     - name: Create markdown summary
-      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
+      if: steps.scan.outcome == 'success'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
       with:
         json_path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog full scan report
-      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
+      if: always() && steps.scan.outputs.full_report_file != ''
       uses: actions/upload-artifact@v4
       with:
         name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.full_report_file }}
+        if-no-files-found: error
 
     - name: Upload JFrog scan table report
-      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
+      if: always() && steps.scan.outputs.table_report_file != ''
       uses: actions/upload-artifact@v4
       with:
         name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}
         path: ${{ steps.scan.outputs.table_report_file }}
+        if-no-files-found: error
 
     - name: Evaluate JFrog vulnerability threshold
-      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
+      if: steps.scan.outcome == 'success'
       shell: bash
       run: |
         set -euo pipefail
 
         FULL_REPORT="${{ steps.scan.outputs.full_report_file }}"
+        FAIL_BUILD="${{ inputs.fail-build }}"
 
         if [ -z "$FULL_REPORT" ] || [ ! -f "$FULL_REPORT" ]; then
           echo "::error::JFrog scan report was not generated."
           exit 1
         fi
 
-        HIGH_CRITICAL_FINDINGS=$(jq -r '
-          def root:
-            if type == "array" then
-              (map(select(type == "object"))[0] // {})
-            else
-              .
-            end;
+        HIGH_CRITICAL_FINDINGS="$(
+          jq -r '
+            def roots:
+              if type == "array" then
+                .[]
+                | select(type == "object")
+              elif type == "object" then
+                .
+              else
+                empty
+              end;
 
-          root
-          | [
-              (.vulnerabilities // [])[]?
+            [
+              roots
+              | (.vulnerabilities // [])[]?
               | select(
-                  (
-                    (.severity // "")
-                    | ascii_upcase
-                  ) == "HIGH"
+                  ((.severity // "") | ascii_upcase) == "HIGH"
                   or
-                  (
-                    (.severity // "")
-                    | ascii_upcase
-                  ) == "CRITICAL"
+                  ((.severity // "") | ascii_upcase) == "CRITICAL"
                 )
             ]
-          | length
-        ' "$FULL_REPORT")
+            | length
+          ' "$FULL_REPORT"
+        )"
 
         echo "JFrog High/Critical vulnerability count: $HIGH_CRITICAL_FINDINGS"
 
         if [ "$HIGH_CRITICAL_FINDINGS" -gt 0 ]; then
-          echo "::error::JFrog Xray found $HIGH_CRITICAL_FINDINGS High or Critical vulnerabilities."
-          exit 1
+          if [ "$FAIL_BUILD" = "true" ]; then
+            echo "::error::JFrog Xray found $HIGH_CRITICAL_FINDINGS High or Critical vulnerabilities."
+            exit 1
+          fi
+
+          echo "::warning::JFrog Xray found $HIGH_CRITICAL_FINDINGS High or Critical vulnerabilities. Blocking is disabled for this application."
+          exit 0
         fi
 
         echo "No High or Critical vulnerabilities detected by JFrog Xray."

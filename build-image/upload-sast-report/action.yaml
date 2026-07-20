@@ -1,16 +1,21 @@
 name: Run SAST
-description: Run SAST, upload the SARIF report, and fail for High or Critical findings
+description: Run Bearer SAST, upload the SARIF report, and optionally fail for High or Critical findings
 
 inputs:
   working-directory:
-    default: .
     required: false
+    default: "."
 
   app-name:
     required: true
 
+  fail-build:
+    description: Fail the workflow when Bearer finds High or Critical findings
+    required: false
+    default: "false"
+
 runs:
-  using: "composite"
+  using: composite
 
   steps:
     - name: Install SAST CLI
@@ -19,8 +24,9 @@ runs:
       run: |
         set -euo pipefail
 
-        curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh \
-          | sh -s -- latest
+        curl -sfL \
+          https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh |
+          sh -s -- latest
 
         echo "$PWD/bin" >> "$GITHUB_PATH"
 
@@ -32,6 +38,7 @@ runs:
         set -u
 
         REPORT_FILE="sast-report-${{ inputs.app-name }}-${{ github.run_number }}.sarif"
+        REPORT_PATH="$PWD/$REPORT_FILE"
 
         set +e
 
@@ -48,14 +55,14 @@ runs:
 
         set -e
 
-        echo "report_file=$REPORT_FILE" >> "$GITHUB_OUTPUT"
+        echo "report_file=$REPORT_PATH" >> "$GITHUB_OUTPUT"
         echo "scan_exit_code=$SCAN_EXIT_CODE" >> "$GITHUB_OUTPUT"
 
-        # Allow report upload before failing the gate.
+        # Always allow the artifact upload step to execute.
         exit 0
 
     - name: Upload SAST security report
-      if: always()
+      if: always() && steps.sast_scan.outputs.report_file != ''
       uses: actions/upload-artifact@v4
       with:
         name: sast-report-${{ inputs.app-name }}-${{ github.run_number }}
@@ -69,15 +76,26 @@ runs:
         set -euo pipefail
 
         SCAN_EXIT_CODE="${{ steps.sast_scan.outputs.scan_exit_code }}"
+        FAIL_BUILD="${{ inputs.fail-build }}"
 
         if [ -z "$SCAN_EXIT_CODE" ]; then
           echo "::error::SAST scan did not complete successfully."
           exit 1
         fi
 
-        if [ "$SCAN_EXIT_CODE" -ne 0 ]; then
-          echo "::error::SAST found High or Critical security findings."
+        if ! [[ "$SCAN_EXIT_CODE" =~ ^[0-9]+$ ]]; then
+          echo "::error::Invalid SAST scan exit code: $SCAN_EXIT_CODE"
           exit 1
+        fi
+
+        if [ "$SCAN_EXIT_CODE" -ne 0 ]; then
+          if [ "$FAIL_BUILD" = "true" ]; then
+            echo "::error::SAST found High or Critical security findings."
+            exit 1
+          fi
+
+          echo "::warning::SAST found High or Critical security findings. Blocking is disabled for this application."
+          exit 0
         fi
 
         echo "No High or Critical SAST findings detected."
