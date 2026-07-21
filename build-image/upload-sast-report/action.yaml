@@ -44,14 +44,7 @@ runs:
 
     - name: Run SAST security scan
       id: sast_scan
-    - name: Run SAST security scan
-      id: sast_scan
       working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        REPORT_PATH="${{ steps.report.outputs.report_file }}"
       shell: bash
       run: |
         set -uo pipefail
@@ -77,13 +70,15 @@ runs:
 
         if [ ! -s "$REPORT_PATH" ]; then
           cat > "$REPORT_PATH" <<EOF
-{
-  "\$schema": "https://json.schemastore.org/sarif-2.1.0.json",
-  "version": "2.1.0",
-  "runs": []
-}
-EOF
+        {
+          "\$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+          "version": "2.1.0",
+          "runs": []
+        }
+        EOF
         fi
+
+        exit 0
 
     - name: Upload SAST security report
       if: always()

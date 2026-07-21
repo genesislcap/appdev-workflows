@@ -104,13 +104,7 @@ runs:
       shell: bash
       run: |
         set -uo pipefail
-    - name: Run Trivy scan
-      id: scan
-      shell: bash
-      run: |
-        set -euo pipefail
 
-        TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         JSON_FILE="${{ steps.meta.outputs.json_file }}"
         HTML_FILE="${{ steps.meta.outputs.html_file }}"
@@ -138,14 +132,14 @@ runs:
 
         if [ ! -s "$JSON_FILE" ]; then
           cat > "$JSON_FILE" <<EOF
-{
-  "SchemaVersion": 2,
-  "ArtifactName": "$IMAGE_REF",
-  "ArtifactType": "container_image",
-  "Results": [],
-  "ScanError": "Trivy scan failed with exit code $TRIVY_EXIT_CODE"
-}
-EOF
+        {
+          "SchemaVersion": 2,
+          "ArtifactName": "$IMAGE_REF",
+          "ArtifactType": "container_image",
+          "Results": [],
+          "ScanError": "Trivy scan failed with exit code $TRIVY_EXIT_CODE"
+        }
+        EOF
         fi
 
         set +e
@@ -154,23 +148,25 @@ EOF
           "$HTML_FILE"
         HTML_EXIT_CODE=$?
         set -e
+
         if [ "$HTML_EXIT_CODE" -ne 0 ] || [ ! -s "$HTML_FILE" ]; then
           cat > "$HTML_FILE" <<EOF
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Trivy scan report</title>
-  </head>
-  <body>
-    <h1>Trivy scan report</h1>
-    <p>Image: $IMAGE_REF</p>
-    <p>HTML report generation failed.</p>
-    <p>See the JSON artifact for complete scan output.</p>
-  </body>
-</html>
-EOF
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Trivy scan report</title>
+          </head>
+          <body>
+            <h1>Trivy scan report</h1>
+            <p>Image: $IMAGE_REF</p>
+            <p>HTML report generation failed.</p>
+            <p>See the JSON artifact for complete scan output.</p>
+          </body>
+        </html>
+        EOF
         fi
+
         exit 0
 
     - name: Create markdown summary
