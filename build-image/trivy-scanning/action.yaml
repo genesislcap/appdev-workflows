@@ -104,7 +104,13 @@ runs:
       shell: bash
       run: |
         set -uo pipefail
+    - name: Run Trivy scan
+      id: scan
+      shell: bash
+      run: |
+        set -euo pipefail
 
+        TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         JSON_FILE="${{ steps.meta.outputs.json_file }}"
         HTML_FILE="${{ steps.meta.outputs.html_file }}"
