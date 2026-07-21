@@ -34,15 +34,15 @@ inputs:
 outputs:
   json_path:
     description: Path to the Trivy JSON report
-    value: ${{ steps.scan.outputs.json_path }}
+    value: ${{ steps.meta.outputs.json_file }}
 
   html_path:
     description: Path to the Trivy HTML report
-    value: ${{ steps.scan.outputs.html_path }}
+    value: ${{ steps.meta.outputs.html_file }}
 
   markdown_path:
     description: Path to the Trivy Markdown report
-    value: ${{ steps.scan.outputs.markdown_path }}
+    value: ${{ steps.meta.outputs.md_file }}
 
   threshold_findings:
     description: Number of vulnerabilities matching the configured threshold
@@ -65,7 +65,6 @@ runs:
           sh -s -- -b "$TRIVY_BIN_DIR"
 
         echo "$TRIVY_BIN_DIR" >> "$GITHUB_PATH"
-
         "$TRIVY_BIN_DIR/trivy" --version
 
     - name: Prepare report paths
@@ -104,12 +103,17 @@ runs:
       id: scan
       shell: bash
       run: |
+        set -uo pipefail
+    - name: Run Trivy scan
+      id: scan
+      shell: bash
+      run: |
         set -euo pipefail
 
         TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
+        TRIVY_BIN="$RUNNER_TEMP/trivy-bin/trivy"
         JSON_FILE="${{ steps.meta.outputs.json_file }}"
         HTML_FILE="${{ steps.meta.outputs.html_file }}"
-        MD_FILE="${{ steps.meta.outputs.md_file }}"
         IMAGE_REF="${{ inputs.image-ref }}"
 
         trivy_args=(
@@ -125,29 +129,69 @@ runs:
 
         trivy_args+=("$IMAGE_REF")
 
+        set +e
         "$TRIVY_BIN" "${trivy_args[@]}"
+        TRIVY_EXIT_CODE=$?
+        set -e
 
+        echo "scan_exit_code=$TRIVY_EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+        if [ ! -s "$JSON_FILE" ]; then
+          cat > "$JSON_FILE" <<EOF
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "$IMAGE_REF",
+  "ArtifactType": "container_image",
+  "Results": [],
+  "ScanError": "Trivy scan failed with exit code $TRIVY_EXIT_CODE"
+}
+EOF
+        fi
+
+        set +e
         node "${{ github.action_path }}/render-trivy-html.mjs" \
           "$JSON_FILE" \
           "$HTML_FILE"
-
-        echo "json_path=$JSON_FILE" >> "$GITHUB_OUTPUT"
-        echo "html_path=$HTML_FILE" >> "$GITHUB_OUTPUT"
-        echo "markdown_path=$MD_FILE" >> "$GITHUB_OUTPUT"
+        HTML_EXIT_CODE=$?
+        set -e
+        if [ "$HTML_EXIT_CODE" -ne 0 ] || [ ! -s "$HTML_FILE" ]; then
+          cat > "$HTML_FILE" <<EOF
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Trivy scan report</title>
+  </head>
+  <body>
+    <h1>Trivy scan report</h1>
+    <p>Image: $IMAGE_REF</p>
+    <p>HTML report generation failed.</p>
+    <p>See the JSON artifact for complete scan output.</p>
+  </body>
+</html>
+EOF
+        fi
+        exit 0
 
     - name: Create markdown summary
+      if: always()
       shell: bash
       run: |
         set -euo pipefail
 
-        JSON_FILE="${{ steps.scan.outputs.json_path }}"
-        MD_FILE="${{ steps.scan.outputs.markdown_path }}"
+        JSON_FILE="${{ steps.meta.outputs.json_file }}"
+        MD_FILE="${{ steps.meta.outputs.md_file }}"
         IMAGE_REF="${{ inputs.image-ref }}"
         SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
 
-        if [ ! -f "$JSON_FILE" ]; then
-          echo "::error::Trivy JSON report not found: $JSON_FILE"
-          exit 1
+        if [ ! -s "$JSON_FILE" ]; then
+          {
+            printf '# Trivy Scan Summary\n\n'
+            printf 'Image: `%s`\n\n' "$IMAGE_REF"
+            printf 'Trivy did not generate a JSON report.\n'
+          } > "$MD_FILE"
+
+          exit 0
         fi
 
         jq_count() {
@@ -195,47 +239,57 @@ runs:
 
         printf '%s\n' '---' >> "$MD_FILE"
 
-        echo "Wrote markdown report to $MD_FILE"
-
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
           cat "$MD_FILE" >> "$GITHUB_STEP_SUMMARY"
         fi
 
     - name: Upload Trivy JSON report
-      if: always() && steps.scan.outputs.json_path != ''
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: trivy-scan-json--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
-        path: ${{ steps.scan.outputs.json_path }}
-        if-no-files-found: error
+        name: trivy-scan-json-${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.meta.outputs.json_file }}
+        if-no-files-found: warn
 
     - name: Upload Trivy HTML report
-      if: always() && steps.scan.outputs.html_path != ''
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: trivy-scan-html--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
-        path: ${{ steps.scan.outputs.html_path }}
-        if-no-files-found: error
+        name: trivy-scan-html-${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.meta.outputs.html_file }}
+        if-no-files-found: warn
 
     - name: Upload Trivy markdown report
-      if: always() && steps.scan.outputs.markdown_path != ''
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: trivy-scan-md--${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
-        path: ${{ steps.scan.outputs.markdown_path }}
-        if-no-files-found: error
+        name: trivy-scan-md-${{ steps.meta.outputs.app_name }}-${{ github.run_number }}
+        path: ${{ steps.meta.outputs.md_file }}
+        if-no-files-found: warn
 
     - name: Evaluate Trivy vulnerability threshold
       id: gate
+      if: always()
       shell: bash
       run: |
         set -euo pipefail
 
-        JSON_FILE="${{ steps.scan.outputs.json_path }}"
+        JSON_FILE="${{ steps.meta.outputs.json_file }}"
+        SCAN_EXIT_CODE="${{ steps.scan.outputs.scan_exit_code }}"
         SEVERITY_THRESHOLD="${{ inputs.severity-threshold }}"
         FAIL_BUILD="${{ inputs.fail-build }}"
 
-        if [ -z "$JSON_FILE" ] || [ ! -f "$JSON_FILE" ]; then
+        if [ -z "$SCAN_EXIT_CODE" ]; then
+          echo "::error::Trivy scan did not execute."
+          exit 1
+        fi
+
+        if [ "$SCAN_EXIT_CODE" -ne 0 ]; then
+          echo "::error::Trivy scan failed with exit code $SCAN_EXIT_CODE."
+          exit 1
+        fi
+
+        if [ ! -s "$JSON_FILE" ]; then
           echo "::error::Trivy JSON report was not generated."
           exit 1
         fi
@@ -277,7 +331,7 @@ runs:
             exit 1
           fi
 
-          echo "::warning::Trivy found $THRESHOLD_FINDINGS vulnerabilities matching threshold '$SEVERITY_THRESHOLD'. Blocking is disabled for this application."
+          echo "::warning::Trivy found $THRESHOLD_FINDINGS vulnerabilities matching threshold '$SEVERITY_THRESHOLD'. Blocking is disabled."
           exit 0
         fi
 
