@@ -44,7 +44,14 @@ runs:
 
     - name: Run SAST security scan
       id: sast_scan
+    - name: Run SAST security scan
+      id: sast_scan
       working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        REPORT_PATH="${{ steps.report.outputs.report_file }}"
       shell: bash
       run: |
         set -uo pipefail
