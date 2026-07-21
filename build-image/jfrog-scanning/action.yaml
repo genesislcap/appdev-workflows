@@ -144,7 +144,15 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
-        set -uo pipefail
+    - name: Run the JFrog scan
+      id: scan
+      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
+      run: |
+        set -euo pipefail
+
+        FULL_REPORT="${{ steps.report_paths.outputs.full_report_file }}"
 
         FULL_REPORT="${{ steps.report_paths.outputs.full_report_file }}"
         TABLE_REPORT="${{ steps.report_paths.outputs.table_report_file }}"
