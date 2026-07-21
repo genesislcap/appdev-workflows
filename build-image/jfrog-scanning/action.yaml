@@ -227,7 +227,8 @@ runs:
     - name: Create markdown summary
       if: always() && steps.scan.outputs.scan_exit_code == '0'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
-      with:
+    - name: Upload JFrog full scan report
+      if: always() && steps.scan.outcome != 'skipped'
         json_path: ${{ steps.report_paths.outputs.full_report_file }}
 
     - name: Upload JFrog full scan report
