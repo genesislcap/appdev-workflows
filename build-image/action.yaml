@@ -131,7 +131,7 @@ runs:
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-region: eu-west-2
+        aws-region: ${{ inputs.region }}
 
     - name: Log into ECR
       if: inputs.push-image == 'true'

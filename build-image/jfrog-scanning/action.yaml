@@ -54,19 +54,6 @@ runs:
         JF_USER: ${{ inputs.jfrog-username }}
         JF_PASSWORD: ${{ inputs.jfrog-password }}
 
-    - name: Prepare JFrog report paths
-      id: report_paths
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
-        FULL_REPORT="$GITHUB_WORKSPACE/jfrog-scan-full.json"
-        TABLE_REPORT="$GITHUB_WORKSPACE/jfrog-scan-table-${TIMESTAMP}.txt"
-
-        echo "full_report_file=$FULL_REPORT" >> "$GITHUB_OUTPUT"
-        echo "table_report_file=$TABLE_REPORT" >> "$GITHUB_OUTPUT"
-
     - name: Check for existing dist zip
       id: check_dist
       shell: bash
@@ -139,62 +126,30 @@ runs:
           ${{ inputs.build-server-arguments }}
 
     - name: Run the JFrog scan
-      id: scan
       if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
-      run: |
-    - name: Run the JFrog scan
       id: scan
-      if: steps.check_dist.outputs.dist_exists == 'true' || steps.check_task.outputs.appDistZip == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
       run: |
         set -euo pipefail
 
-        FULL_REPORT="${{ steps.report_paths.outputs.full_report_file }}"
-
-        FULL_REPORT="${{ steps.report_paths.outputs.full_report_file }}"
-        TABLE_REPORT="${{ steps.report_paths.outputs.table_report_file }}"
+        TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
+        FULL_REPORT="$GITHUB_WORKSPACE/jfrog-scan-full.json"
+        TABLE_REPORT="$GITHUB_WORKSPACE/jfrog-scan-table-${TIMESTAMP}.txt"
 
         shopt -s nullglob
         zips=(*/build/dist/*.zip)
 
         if [ "${#zips[@]}" -eq 0 ]; then
           echo "::error::No distribution ZIP files were found for JFrog scanning."
-
-          printf '%s\n' \
-            '{"error":"No distribution ZIP files were found","vulnerabilities":[]}' \
-            > "$FULL_REPORT"
-
-          {
-            printf 'CVE\tSeverity\tComponent\tFixed Versions\n'
-            printf '%s\n' '---	---	---	---'
-          } > "$TABLE_REPORT"
-
-          echo "scan_exit_code=1" >> "$GITHUB_OUTPUT"
-          exit 0
+          exit 1
         fi
-
-        set +e
 
         jf s \
           --licenses \
           --vuln \
           --format=json \
           "${zips[@]}" > "$FULL_REPORT"
-
-        JFROG_EXIT_CODE=$?
-
-        set -e
-
-        echo "scan_exit_code=$JFROG_EXIT_CODE" >> "$GITHUB_OUTPUT"
-
-        if [ ! -s "$FULL_REPORT" ]; then
-          printf '%s\n' \
-            "{\"error\":\"JFrog scan failed\",\"exit_code\":$JFROG_EXIT_CODE,\"vulnerabilities\":[]}" \
-            > "$FULL_REPORT"
-        fi
 
         if ! jq -r '
           def roots:
@@ -226,58 +181,44 @@ runs:
           {
             printf 'CVE\tSeverity\tComponent\tFixed Versions\n'
             printf '%s\n' '---	---	---	---'
-            printf 'N/A\tERROR\tJFrog scan failed\tN/A\n'
           } > "$TABLE_REPORT"
         fi
 
-        exit 0
+        echo "full_report_file=$FULL_REPORT" >> "$GITHUB_OUTPUT"
+        echo "table_report_file=$TABLE_REPORT" >> "$GITHUB_OUTPUT"
 
     - name: Create markdown summary
-      if: always() && steps.scan.outputs.scan_exit_code == '0'
+      if: steps.scan.outcome == 'success'
       uses: genesislcap/appdev-workflows/build-image/json-to-md@develop
-    - name: Upload JFrog full scan report
-      if: always() && steps.scan.outcome != 'skipped'
-        json_path: ${{ steps.report_paths.outputs.full_report_file }}
+      with:
+        json_path: ${{ steps.scan.outputs.full_report_file }}
 
     - name: Upload JFrog full scan report
-      if: always()
+      if: always() && steps.scan.outputs.full_report_file != ''
       uses: actions/upload-artifact@v4
       with:
-        name: xray-full-report-${{ inputs.app-name }}-${{ github.run_number }}
-    - name: Upload JFrog scan table report
-      if: always() && steps.scan.outcome != 'skipped'
-        if-no-files-found: warn
+        name: xray-full-report--${{ inputs.app-name }}-${{ github.run_number }}
+        path: ${{ steps.scan.outputs.full_report_file }}
+        if-no-files-found: error
 
     - name: Upload JFrog scan table report
-      if: always()
+      if: always() && steps.scan.outputs.table_report_file != ''
       uses: actions/upload-artifact@v4
       with:
-        name: xray-dependencies-scan-${{ inputs.app-name }}-${{ github.run_number }}
-    - name: Evaluate JFrog vulnerability threshold
-      if: always() && steps.scan.outcome != 'skipped'
-        if-no-files-found: warn
+        name: xray-dependencies-scan--${{ inputs.app-name }}-${{ github.run_number }}
+        path: ${{ steps.scan.outputs.table_report_file }}
+        if-no-files-found: error
 
     - name: Evaluate JFrog vulnerability threshold
-      if: always()
+      if: steps.scan.outcome == 'success'
       shell: bash
       run: |
         set -euo pipefail
 
-        FULL_REPORT="${{ steps.report_paths.outputs.full_report_file }}"
-        SCAN_EXIT_CODE="${{ steps.scan.outputs.scan_exit_code }}"
+        FULL_REPORT="${{ steps.scan.outputs.full_report_file }}"
         FAIL_BUILD="${{ inputs.fail-build }}"
 
-        if [ -z "$SCAN_EXIT_CODE" ]; then
-          echo "::error::JFrog scan did not execute."
-          exit 1
-        fi
-
-        if [ "$SCAN_EXIT_CODE" -ne 0 ]; then
-          echo "::error::JFrog scan failed with exit code $SCAN_EXIT_CODE."
-          exit 1
-        fi
-
-        if [ ! -s "$FULL_REPORT" ]; then
+        if [ -z "$FULL_REPORT" ] || [ ! -f "$FULL_REPORT" ]; then
           echo "::error::JFrog scan report was not generated."
           exit 1
         fi
@@ -315,7 +256,7 @@ runs:
             exit 1
           fi
 
-          echo "::warning::JFrog Xray found $HIGH_CRITICAL_FINDINGS High or Critical vulnerabilities. Blocking is disabled."
+          echo "::warning::JFrog Xray found $HIGH_CRITICAL_FINDINGS High or Critical vulnerabilities. Blocking is disabled for this application."
           exit 0
         fi
 
