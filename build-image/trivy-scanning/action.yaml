@@ -132,14 +132,14 @@ runs:
 
         if [ ! -s "$JSON_FILE" ]; then
           cat > "$JSON_FILE" <<EOF
-        {
-          "SchemaVersion": 2,
-          "ArtifactName": "$IMAGE_REF",
-          "ArtifactType": "container_image",
-          "Results": [],
-          "ScanError": "Trivy scan failed with exit code $TRIVY_EXIT_CODE"
-        }
-        EOF
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "$IMAGE_REF",
+  "ArtifactType": "container_image",
+  "Results": [],
+  "ScanError": "Trivy scan failed with exit code $TRIVY_EXIT_CODE"
+}
+EOF
         fi
 
         set +e
