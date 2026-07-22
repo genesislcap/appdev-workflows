@@ -36,11 +36,24 @@ runs:
           exit 1
         fi
 
+    - name: Set up Java 21 for Sonar
+      uses: actions/setup-java@v4
+      with:
+        java-version: "21"
+        distribution: adopt
+
     - name: Upload test coverage
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
         ./gradlew jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token="${{ inputs.sonar-token }}"
+
+    - name: Restore Java 17
+      if: always()
+      uses: actions/setup-java@v4
+      with:
+        java-version: "17"
+        distribution: adopt
 
     - name: Upload Test Reports
       uses: actions/upload-artifact@v4
