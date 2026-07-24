@@ -147,6 +147,8 @@ env:
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
+    outputs:
+      sonar-inputs-artifact: ${{ steps.set_sonar_artifact.outputs.name }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -322,6 +324,32 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+      - name: Generate JaCoCo reports for Sonar
+        if: inputs.sonar_enabled
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: jacocoTestReport ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.BUILD_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
+          build-root-directory: "${{ inputs.working-directory }}"
+          cache-disabled: true
+
+      - name: Upload Sonar inputs
+        if: inputs.sonar_enabled
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-inputs-${{ github.run_id }}
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            ${{ inputs.working-directory }}/server/**/build/classes/**
+            ${{ inputs.working-directory }}/server/**/build/generated/**
+            ${{ inputs.working-directory }}/server/**/build/reports/**
+            ${{ inputs.working-directory }}/server/**/build/test-results/**
+            ${{ inputs.working-directory }}/server/**/build/jacoco/**
+
+      - name: Record Sonar inputs artifact name
+        if: inputs.sonar_enabled
+        id: set_sonar_artifact
+        run: echo "name=sonar-inputs-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
 
       - name: Check Auth Permissions task
         id: auth_permissions_task
@@ -483,6 +511,7 @@ jobs:
 
   sonar:
     name: SonarCloud Analysis
+    needs: build-server
     if: ${{ inputs.sonar_enabled }}
     uses: ./.github/workflows/sonarcloud.yml
     with:
@@ -493,6 +522,7 @@ jobs:
       node_version: ${{ inputs.node_version }}
       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
       SCOPE: ${{ inputs.SCOPE }}
+      sonar-inputs-artifact: ${{ needs.build-server.outputs.sonar-inputs-artifact }}
     secrets:
       GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
       GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}

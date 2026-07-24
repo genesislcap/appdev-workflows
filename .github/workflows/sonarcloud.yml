@@ -39,6 +39,13 @@ on:
         description: NPM scope used with REGISTRY_URL
         required: false
         type: string
+      sonar-inputs-artifact:
+        description: >-
+          Optional artifact name containing classes/coverage/test results from a prior build.
+          When set, prepare-analysis skips re-running tests and reuses this artifact.
+        required: false
+        type: string
+        default: ''
     secrets:
       GPR_READ_TOKEN:
         required: true
@@ -55,12 +62,13 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-  SONAR_ARTIFACT_NAME: sonar-inputs-${{ github.run_id }}
+  SONAR_ARTIFACT_NAME: ${{ inputs.sonar-inputs-artifact != '' && inputs.sonar-inputs-artifact || format('sonar-inputs-{0}', github.run_id) }}
   SERVER_DIR: ${{ inputs.working-directory == '.' && inputs.server-path || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
 
 jobs:
   prepare-analysis:
     name: Prepare Sonar inputs
+    if: ${{ inputs.sonar-inputs-artifact == '' }}
     runs-on: [appdev-selfhosted-al2023]
     steps:
       - name: Checkout repository
@@ -145,6 +153,8 @@ jobs:
   sonar-analysis:
     name: SonarCloud analysis
     needs: prepare-analysis
+    # Prepare is skipped when the caller already uploaded Sonar inputs; still run analysis.
+    if: ${{ !cancelled() && (needs.prepare-analysis.result == 'success' || (needs.prepare-analysis.result == 'skipped' && inputs.sonar-inputs-artifact != '')) }}
     runs-on: [appdev-selfhosted-al2023]
     steps:
       - name: Checkout repository
