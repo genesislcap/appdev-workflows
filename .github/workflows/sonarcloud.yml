@@ -149,7 +149,8 @@ jobs:
             ${{ env.SERVER_DIR }}/**/build/reports/**
             ${{ env.SERVER_DIR }}/**/build/test-results/**
             ${{ env.SERVER_DIR }}/**/build/jacoco/**
-            ${{ env.SERVER_DIR }}/build/**
+            ${{ env.SERVER_DIR }}/build/**/reports/**
+            ${{ env.SERVER_DIR }}/build/**/jacoco/**
 
   sonar-analysis:
     name: SonarCloud analysis
@@ -163,6 +164,13 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch }}
+      # Project toolchain JDK must be present even with skipCompile — Gradle still
+      # configures compileJava and resolves dependencies against languageVersion.
+      - name: Set up project JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.project_java_version }}
+          distribution: temurin
       - name: Set up JDK 21 for Sonar
         uses: actions/setup-java@v4
         with:
