@@ -17,7 +17,7 @@ on:
         type: string
         default: '.'
       server-path:
-        description: Path containing the server Gradle wrapper
+        description: Path containing the server Gradle wrapper (relative to working-directory)
         required: false
         type: string
         default: 'server'
@@ -56,6 +56,7 @@ on:
 env:
   NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
   SONAR_ARTIFACT_NAME: sonar-inputs-${{ github.run_id }}
+  SERVER_DIR: ${{ inputs.working-directory == '.' && inputs.server-path || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
 
 jobs:
   prepare-analysis:
@@ -123,7 +124,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Run tests and generate coverage
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        working-directory: ${{ env.SERVER_DIR }}
         shell: bash
         run: |
           set -euo pipefail
@@ -135,11 +136,11 @@ jobs:
           retention-days: 1
           if-no-files-found: error
           path: |
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/classes/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/generated/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/reports/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/test-results/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/jacoco/**
+            ${{ env.SERVER_DIR }}/**/build/classes/**
+            ${{ env.SERVER_DIR }}/**/build/generated/**
+            ${{ env.SERVER_DIR }}/**/build/reports/**
+            ${{ env.SERVER_DIR }}/**/build/test-results/**
+            ${{ env.SERVER_DIR }}/**/build/jacoco/**
 
   sonar-analysis:
     name: SonarCloud analysis
@@ -217,7 +218,7 @@ jobs:
           name: ${{ env.SONAR_ARTIFACT_NAME }}
           path: ${{ github.workspace }}
       - name: Run SonarCloud analysis
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        working-directory: ${{ env.SERVER_DIR }}
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
