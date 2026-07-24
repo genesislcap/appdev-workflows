@@ -149,6 +149,7 @@ jobs:
             ${{ env.SERVER_DIR }}/**/build/reports/**
             ${{ env.SERVER_DIR }}/**/build/test-results/**
             ${{ env.SERVER_DIR }}/**/build/jacoco/**
+            ${{ env.SERVER_DIR }}/build/**
 
   sonar-analysis:
     name: SonarCloud analysis
@@ -235,4 +236,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          ./gradlew sonar --no-configuration-cache --stacktrace -Dsonar.token="${SONAR_TOKEN}"
+          ./gradlew sonar --no-configuration-cache --stacktrace \
+            -Dsonar.gradle.skipCompile=true \
+            -Dsonar.token="${SONAR_TOKEN}"

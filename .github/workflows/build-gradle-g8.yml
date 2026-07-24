@@ -345,6 +345,7 @@ jobs:
             ${{ inputs.working-directory }}/server/**/build/reports/**
             ${{ inputs.working-directory }}/server/**/build/test-results/**
             ${{ inputs.working-directory }}/server/**/build/jacoco/**
+            ${{ inputs.working-directory }}/server/build/**
 
       - name: Record Sonar inputs artifact name
         if: inputs.sonar_enabled
