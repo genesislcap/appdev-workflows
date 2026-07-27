@@ -126,7 +126,7 @@ jobs:
           prompt: '${{ inputs.gemini_cli_prompt }}'
 
       - name: 'Compress and cleanup artifacts'
-        if: always()
+        if: always() && vars.UPLOAD_ARTIFACTS != 'false'
         run: |
           # Remove large telemetry logs to reduce artifact size
           if [ -f .gemini/telemetry.log ]; then
@@ -136,7 +136,9 @@ jobs:
           fi
           
           # Remove any large temp files
-          find .gemini -type f -size +5M -delete
+          if [ -d .gemini ]; then
+            find .gemini -type f -size +5M -delete
+          fi
           
           # Compress the entire .gemini directory
           if [ -d .gemini ]; then
@@ -147,7 +149,7 @@ jobs:
           fi
 
       - name: 'Upload Gemini Review Artifacts'
-        if: always()
+        if: always() && vars.UPLOAD_ARTIFACTS != 'false'
         uses: 'actions/upload-artifact@v4'
         with:
           name: 'gemini-review-artifacts'
