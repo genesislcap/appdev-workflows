@@ -95,7 +95,7 @@ runs:
           "${gradle_args[@]}" \
           ${{ inputs.build-server-arguments }} \
           2>/dev/null |
-          grep -qE '(^|[[:space:]])appDistZip([[:space:]]|$)'; then
+          grep -qE '(^|[[:space:]:])appDistZip([[:space:]]|$)'; then
           echo "appDistZip=true" >> "$GITHUB_OUTPUT"
           echo "appDistZip task is available."
         else
