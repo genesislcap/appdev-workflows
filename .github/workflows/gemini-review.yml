@@ -84,7 +84,7 @@ jobs:
           google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
           use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
-          upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
+          upload_artifacts: 'false'
           workflow_name: 'gemini-review'
           github_pr_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
           settings: |-
@@ -95,7 +95,9 @@ jobs:
               "telemetry": {
                 "enabled": true,
                 "target": "local",
-                "outfile": ".gemini/telemetry.log"
+                "outfile": ".gemini/telemetry.log",
+                "maxLogSize": 52428800,
+                "maxLogLines": 10000
               },
               "mcpServers": {
                 "github": {
