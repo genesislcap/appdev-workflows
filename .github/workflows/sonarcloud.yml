@@ -17,7 +17,7 @@ on:
         type: string
         default: '.'
       server-path:
-        description: Path containing the server Gradle wrapper
+        description: Path containing the server Gradle wrapper (relative to working-directory)
         required: false
         type: string
         default: 'server'
@@ -39,6 +39,13 @@ on:
         description: NPM scope used with REGISTRY_URL
         required: false
         type: string
+      sonar-inputs-artifact:
+        description: >-
+          Optional artifact name containing classes/coverage/test results from a prior build.
+          When set, prepare-analysis skips re-running tests and reuses this artifact.
+        required: false
+        type: string
+        default: ''
     secrets:
       GPR_READ_TOKEN:
         required: true
@@ -55,11 +62,13 @@ on:
 
 env:
   NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-  SONAR_ARTIFACT_NAME: sonar-inputs-${{ github.run_id }}
+  SONAR_ARTIFACT_NAME: ${{ inputs.sonar-inputs-artifact != '' && inputs.sonar-inputs-artifact || format('sonar-inputs-{0}', github.run_id) }}
+  SERVER_DIR: ${{ inputs.working-directory == '.' && inputs.server-path || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
 
 jobs:
   prepare-analysis:
     name: Prepare Sonar inputs
+    if: ${{ inputs.sonar-inputs-artifact == '' }}
     runs-on: [appdev-selfhosted-al2023]
     steps:
       - name: Checkout repository
@@ -123,7 +132,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Run tests and generate coverage
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        working-directory: ${{ env.SERVER_DIR }}
         shell: bash
         run: |
           set -euo pipefail
@@ -135,15 +144,19 @@ jobs:
           retention-days: 1
           if-no-files-found: error
           path: |
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/classes/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/generated/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/reports/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/test-results/**
-            ${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/jacoco/**
+            ${{ env.SERVER_DIR }}/**/build/classes/**
+            ${{ env.SERVER_DIR }}/**/build/generated/**
+            ${{ env.SERVER_DIR }}/**/build/reports/**
+            ${{ env.SERVER_DIR }}/**/build/test-results/**
+            ${{ env.SERVER_DIR }}/**/build/jacoco/**
+            ${{ env.SERVER_DIR }}/build/**/reports/**
+            ${{ env.SERVER_DIR }}/build/**/jacoco/**
 
   sonar-analysis:
     name: SonarCloud analysis
     needs: prepare-analysis
+    # Prepare is skipped when the caller already uploaded Sonar inputs; still run analysis.
+    if: ${{ !cancelled() && (needs.prepare-analysis.result == 'success' || (needs.prepare-analysis.result == 'skipped' && inputs.sonar-inputs-artifact != '')) }}
     runs-on: [appdev-selfhosted-al2023]
     steps:
       - name: Checkout repository
@@ -151,6 +164,13 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch }}
+      # Project toolchain JDK must be present even with skipCompile — Gradle still
+      # configures compileJava and resolves dependencies against languageVersion.
+      - name: Set up project JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.project_java_version }}
+          distribution: temurin
       - name: Set up JDK 21 for Sonar
         uses: actions/setup-java@v4
         with:
@@ -217,11 +237,13 @@ jobs:
           name: ${{ env.SONAR_ARTIFACT_NAME }}
           path: ${{ github.workspace }}
       - name: Run SonarCloud analysis
-        working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+        working-directory: ${{ env.SERVER_DIR }}
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          ./gradlew sonar --no-configuration-cache --stacktrace -Dsonar.token="${SONAR_TOKEN}"
+          ./gradlew sonar --no-configuration-cache --stacktrace \
+            -Dsonar.gradle.skipCompile=true \
+            -Dsonar.token="${SONAR_TOKEN}"
