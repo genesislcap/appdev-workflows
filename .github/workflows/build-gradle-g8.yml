@@ -327,7 +327,7 @@ jobs:
       # Retarget @develop when merging this branch.
       - name: SonarCloud analysis
         if: inputs.sonar_enabled
-        uses: genesislcap/appdev-workflows/sonarcloud@lukask/DCD-5103
+        uses: genesislcap/appdev-workflows/sonarcloud@lukask/DCD-5103-sonar-in-job
         with:
           working-directory: ${{ inputs.working-directory }}
           server-path: server
