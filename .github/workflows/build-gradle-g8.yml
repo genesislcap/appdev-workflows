@@ -147,8 +147,6 @@ env:
 jobs:
   build-server:
     runs-on: [ appdev-selfhosted-al2023 ]
-    outputs:
-      sonar-inputs-artifact: ${{ steps.set_sonar_artifact.outputs.name }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -324,34 +322,25 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
-      - name: Generate JaCoCo reports for Sonar
+      # Same job/workspace as Build — reuses classes, coverage inputs, and Gradle state.
+      # Fully-qualified ref required: local ./ paths resolve to the caller repo, not this one.
+      # Retarget @develop when merging this branch.
+      - name: SonarCloud analysis
         if: inputs.sonar_enabled
-        uses: gradle/gradle-build-action@v2
+        uses: genesislcap/appdev-workflows/sonarcloud@lukask/DCD-5103
         with:
-          arguments: jacocoTestReport ${{ env.CACHE_OPTS }} --stacktrace -Pversion=${{ env.BUILD_VERSION }} -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }} -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }} ${{ inputs.server-build-gradle-arguments }}
-          build-root-directory: "${{ inputs.working-directory }}/server"
-          cache-disabled: true
-
-      - name: Upload Sonar inputs
-        if: inputs.sonar_enabled
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonar-inputs-${{ github.run_id }}
-          retention-days: 1
-          if-no-files-found: error
-          path: |
-            ${{ inputs.working-directory }}/server/**/build/classes/**
-            ${{ inputs.working-directory }}/server/**/build/generated/**
-            ${{ inputs.working-directory }}/server/**/build/reports/**
-            ${{ inputs.working-directory }}/server/**/build/test-results/**
-            ${{ inputs.working-directory }}/server/**/build/jacoco/**
-            ${{ inputs.working-directory }}/server/build/**/reports/**
-            ${{ inputs.working-directory }}/server/build/**/jacoco/**
-
-      - name: Record Sonar inputs artifact name
-        if: inputs.sonar_enabled
-        id: set_sonar_artifact
-        run: echo "name=sonar-inputs-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          working-directory: ${{ inputs.working-directory }}
+          server-path: server
+          java_version: ${{ inputs.java_version }}
+          gradle-arguments: >-
+            ${{ env.CACHE_OPTS }}
+            --stacktrace
+            -Pversion=${{ env.BUILD_VERSION }}
+            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
+            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
+            ${{ inputs.server-build-gradle-arguments }}
+          sonar-token: ${{ secrets.JENKINSGENESIS_SONAR }}
+          github-token: ${{ github.token }}
 
       - name: Check Auth Permissions task
         id: auth_permissions_task
@@ -510,28 +499,6 @@ jobs:
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
-
-  sonar:
-    name: SonarCloud Analysis
-    needs: build-server
-    if: ${{ inputs.sonar_enabled }}
-    uses: ./.github/workflows/sonarcloud.yml
-    with:
-      branch: ${{ inputs.branch }}
-      version: ${{ inputs.version }}
-      working-directory: ${{ inputs.working-directory }}
-      server-path: server
-      node_version: ${{ inputs.node_version }}
-      REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
-      SCOPE: ${{ inputs.SCOPE }}
-      sonar-inputs-artifact: ${{ needs.build-server.outputs.sonar-inputs-artifact }}
-    secrets:
-      GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-      GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-      JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
-      JFROG_EMAIL: ${{ secrets.JFROG_EMAIL }}
-      JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
-      JENKINSGENESIS_SONAR: ${{ secrets.JENKINSGENESIS_SONAR }}
 
   tag-jiras:
     needs: build-server
