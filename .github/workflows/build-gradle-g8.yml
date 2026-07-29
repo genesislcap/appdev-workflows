@@ -324,7 +324,7 @@ jobs:
 
       # Same job/workspace as Build — reuses classes, coverage inputs, and Gradle state.
       # Fully-qualified ref required: local ./ paths resolve to the caller repo, not this one.
-      # Retarget @develop when merging this branch.
+        uses: genesislcap/appdev-workflows/sonarcloud@develop
       - name: SonarCloud analysis
         if: inputs.sonar_enabled
         uses: genesislcap/appdev-workflows/sonarcloud@lukask/DCD-5103-sonar-in-job
