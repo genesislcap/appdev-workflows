@@ -1,51 +1,35 @@
 name: SonarCloud
-
 on:
   workflow_call:
     inputs:
       branch:
-        description: Branch or ref to analyse
         required: false
         type: string
       version:
-        description: Application version
         required: false
         type: string
-      working-directory:
-        description: Project working directory
-        required: false
-        type: string
-        default: '.'
       server-path:
-        description: Path containing the server Gradle wrapper (relative to working-directory)
         required: false
         type: string
-        default: 'server'
-      project_java_version:
-        description: Java version used to compile and test the application
+        default: 'server/jvm'
+      java_version:
         required: false
-        type: string
         default: '17'
+        type: string
       node_version:
-        description: Node.js version required by the project
         required: false
+        default: '16.x'
         type: string
-        default: '20.x'
       REGISTRY_URL:
-        description: Only used by older versions of Genesis Framework
-        required: false
         type: string
+        description: Only used by the older version of genesisframework
+        required: false
       SCOPE:
-        description: NPM scope used with REGISTRY_URL
-        required: false
         type: string
-      sonar-inputs-artifact:
-        description: >-
-          Optional artifact name containing classes/coverage/test results from a prior build.
-          When set, prepare-analysis skips re-running tests and reuses this artifact.
+        description: Only used by the older version of genesisframework if SCOPE is used then REGISTRY_URL has to be passed
         required: false
-        type: string
-        default: ''
+
+
     secrets:
       GPR_READ_TOKEN:
         required: true
@@ -59,191 +43,92 @@ on:
         required: true
       JENKINSGENESIS_SONAR:
         required: true
-
 env:
-  NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-  SONAR_ARTIFACT_NAME: ${{ inputs.sonar-inputs-artifact != '' && inputs.sonar-inputs-artifact || format('sonar-inputs-{0}', github.run_id) }}
-  SERVER_DIR: ${{ inputs.working-directory == '.' && inputs.server-path || format('{0}/{1}', inputs.working-directory, inputs.server-path) }}
+  NODE_AUTH_TOKEN: ${{secrets.GPR_READ_TOKEN}}
 
+# A workflow run is called from the devops appdev-workflow repos
 jobs:
-  prepare-analysis:
-    name: Prepare Sonar inputs
-    if: ${{ inputs.sonar-inputs-artifact == '' }}
-    runs-on: [appdev-selfhosted-al2023]
+  build:
+    runs-on: [ appdev-selfhosted-al2023 ]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: '0'
           ref: ${{ inputs.branch }}
-      - name: Set up project JDK
+
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ inputs.project_java_version }}
-          distribution: temurin
+          java-version: ${{ inputs.java_version }}
+          distribution: 'temurin'
+
       - name: Configure Node
-        if: ${{ !inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v4
+        if: ${{ !inputs.REGISTRY_URL  }}
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
-      - name: Configure Node if using JFrog npm packages
+
+      - name: Configure Node if using JFROG npm packages
         if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.node_version }}
           registry-url: ${{ inputs.REGISTRY_URL }}
           scope: ${{ inputs.SCOPE }}
+      
       - name: Restore gradle.properties and setup
-        working-directory: ${{ inputs.working-directory }}
-        shell: bash
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        run: |
-          set -euo pipefail
-          mkdir -p "${HOME}/.gradle"
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> "${GITHUB_ENV}"
-          {
-            echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}"
-            echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "systemProp.org.gradle.internal.http.connectionTimeout=180000"
-            echo "systemProp.org.gradle.internal.http.socketTimeout=180000"
-            echo "dockerUrl=genesisglobal-docker-internal.jfrog.io"
-            echo "dockerUsername=${{ secrets.JFROG_USERNAME }}"
-            echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "dockerEmail=${{ secrets.JFROG_EMAIL }}"
-            echo "genesis-home=../.genesis-home"
-            echo "deploy-plugin-mode=local"
-          } > "${HOME}/.gradle/gradle.properties"
-          if [ -n "${GRADLE_PROPERTIES:-}" ]; then
-            printf '%s\n' "${GRADLE_PROPERTIES}" >> "${HOME}/.gradle/gradle.properties"
-          fi
-          chmod +x ./gradlew
-          chmod +x "./${{ inputs.server-path }}/gradlew"
-          chmod -R +rx "./${{ inputs.server-path }}"
-          cat "${HOME}/.gradle/gradle.properties" >> ./gradle.properties
-          RELEASE_VERSION="$(echo '${{ inputs.version }}' | sed 's/\//-/g')"
-          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> "${GITHUB_ENV}"
-          BUILD_FILE="${{ inputs.server-path }}/build.gradle.kts"
-          if [ -n "${RELEASE_VERSION}" ] && [ -f "${BUILD_FILE}" ]; then
-            sed -E -i "s/^[[:space:]]{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" "${BUILD_FILE}"
-          fi
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: true
-      - name: Run tests and generate coverage
-        working-directory: ${{ env.SERVER_DIR }}
+        working-directory: "${{ inputs.working-directory }}"
         shell: bash
         run: |
-          set -euo pipefail
-          ./gradlew test jacocoTestReport --no-configuration-cache --stacktrace
-      - name: Upload Sonar inputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.SONAR_ARTIFACT_NAME }}
-          retention-days: 1
-          if-no-files-found: error
-          path: |
-            ${{ env.SERVER_DIR }}/**/build/classes/**
-            ${{ env.SERVER_DIR }}/**/build/generated/**
-            ${{ env.SERVER_DIR }}/**/build/reports/**
-            ${{ env.SERVER_DIR }}/**/build/test-results/**
-            ${{ env.SERVER_DIR }}/**/build/jacoco/**
-            ${{ env.SERVER_DIR }}/build/**/reports/**
-            ${{ env.SERVER_DIR }}/build/**/jacoco/**
+          mkdir -p ~/.gradle/
+          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+          echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}" > ~/.gradle/gradle.properties
+          echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
-  sonar-analysis:
-    name: SonarCloud analysis
-    needs: prepare-analysis
-    # Prepare is skipped when the caller already uploaded Sonar inputs; still run analysis.
-    if: ${{ !cancelled() && (needs.prepare-analysis.result == 'success' || (needs.prepare-analysis.result == 'skipped' && inputs.sonar-inputs-artifact != '')) }}
-    runs-on: [appdev-selfhosted-al2023]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          echo "systemProp.org.gradle.internal.http.connectionTimeout=180000" >> ~/.gradle/gradle.properties
+          echo "systemProp.org.gradle.internal.http.socketTimeout=180000" >> ~/.gradle/gradle.properties
+
+          echo "dockerUrl=genesisglobal-docker-internal.jfrog.io" >> ~/.gradle/gradle.properties
+          echo "dockerUsername=${{ secrets.JFROG_USERNAME }}" >> ~/.gradle/gradle.properties
+          echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}" >> ~/.gradle/gradle.properties
+          echo "dockerEmail=platformmanageteam@genesis.global" >> ~/.gradle/gradle.properties
+
+          echo "genesis-home=../.genesis-home" >> ~/.gradle/gradle.properties
+          echo "deploy-plugin-mode=local" >> ~/.gradle/gradle.properties
+          sudo chmod +x ./gradlew
+          sudo chmod +x ./${{ inputs.server-path }}/gradlew
+          sudo chmod -R +rx ./${{ inputs.server-path }}/
+          cat ~/.gradle/gradle.properties >>  ./gradle.properties
+          if [ -z "${{ inputs.repo-name }}" ]; then
+            echo "REPO_NAME=$(echo '${{ github.event.repository.name }}' | cut -d'-' -f1)" >> $GITHUB_ENV
+          else
+            echo "REPO_NAME=${{ inputs.repo-name }}" >> $GITHUB_ENV
+          fi
+          RELEASE_VERSION=$(echo "${{ inputs.version }}" | sed 's/\//-/g')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          sed -E -i "s/^\s{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" ${{ inputs.server-path }}/build.gradle.kts
+
+      - name: Server Build
+        uses: gradle/gradle-build-action@v2
         with:
-          fetch-depth: 0
-          ref: ${{ inputs.branch }}
-      # Project toolchain JDK must be present even with skipCompile — Gradle still
-      # configures compileJava and resolves dependencies against languageVersion.
-      - name: Set up project JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.project_java_version }}
-          distribution: temurin
+          arguments: test jacocoTestReport --no-configuration-cache
+          build-root-directory: ./${{ inputs.server-path }}
+          cache-disabled: true
+
+      # SonarCloud no longer supports running the scanner on Java 17.
       - name: Set up JDK 21 for Sonar
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: temurin
-      - name: Configure Node
-        if: ${{ !inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node_version }}
-      - name: Configure Node if using JFrog npm packages
-        if: ${{ inputs.REGISTRY_URL }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node_version }}
-          registry-url: ${{ inputs.REGISTRY_URL }}
-          scope: ${{ inputs.SCOPE }}
-      - name: Restore gradle.properties and setup
-        working-directory: ${{ inputs.working-directory }}
-        shell: bash
-        env:
-          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
-        run: |
-          set -euo pipefail
-          mkdir -p "${HOME}/.gradle"
-          echo "GRADLE_USER_HOME=${HOME}/.gradle" >> "${GITHUB_ENV}"
-          {
-            echo "genesisArtifactoryUser=${{ secrets.JFROG_USERNAME }}"
-            echo "genesisArtifactoryPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "systemProp.org.gradle.internal.http.connectionTimeout=180000"
-            echo "systemProp.org.gradle.internal.http.socketTimeout=180000"
-            echo "dockerUrl=genesisglobal-docker-internal.jfrog.io"
-            echo "dockerUsername=${{ secrets.JFROG_USERNAME }}"
-            echo "dockerPassword=${{ secrets.JFROG_PASSWORD }}"
-            echo "dockerEmail=${{ secrets.JFROG_EMAIL }}"
-            echo "genesis-home=../.genesis-home"
-            echo "deploy-plugin-mode=local"
-          } > "${HOME}/.gradle/gradle.properties"
-          if [ -n "${GRADLE_PROPERTIES:-}" ]; then
-            printf '%s\n' "${GRADLE_PROPERTIES}" >> "${HOME}/.gradle/gradle.properties"
-          fi
-          if [ -f ./gradlew ]; then
-            chmod +x ./gradlew
-          fi
-          if [ -f "./${{ inputs.server-path }}/gradlew" ]; then
-            chmod +x "./${{ inputs.server-path }}/gradlew"
-          fi
-          if [ -d "./${{ inputs.server-path }}" ]; then
-            chmod -R +rx "./${{ inputs.server-path }}"
-          fi
-          cat "${HOME}/.gradle/gradle.properties" >> ./gradle.properties
-          RELEASE_VERSION="$(echo '${{ inputs.version }}' | sed 's/\//-/g')"
-          BUILD_FILE="${{ inputs.server-path }}/build.gradle.kts"
-          if [ -n "${RELEASE_VERSION}" ] && [ -f "${BUILD_FILE}" ]; then
-            sed -E -i "s/^[[:space:]]{4}version = \".+\"/    version = \"${RELEASE_VERSION}\"/g" "${BUILD_FILE}"
-          fi
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: true
-      - name: Download Sonar inputs
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.SONAR_ARTIFACT_NAME }}
-          path: ${{ github.workspace }}
-      - name: Run SonarCloud analysis
-        working-directory: ${{ env.SERVER_DIR }}
-        shell: bash
+          distribution: 'temurin'
+
+      - name: SonarCloud analysis
+        uses: gradle/gradle-build-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.JENKINSGENESIS_SONAR }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          ./gradlew sonar --no-configuration-cache --stacktrace \
-            -Dsonar.gradle.skipCompile=true \
-            -Dsonar.token="${SONAR_TOKEN}"
+        with:
+          arguments: sonarqube --no-configuration-cache -Dsonar.token=${{env.SONAR_TOKEN}}
+          build-root-directory: ./${{ inputs.server-path }}
+          cache-disabled: true
