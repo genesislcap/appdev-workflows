@@ -60,7 +60,7 @@ runs:
       if: always()
       with:
         name: test-reports${{ inputs.test-reports-suffix }}
-        path: "${{ format('{0}/*/build/reports/**/*', inputs.working-directory == '.' && format('{0}/{1}', github.workspace, inputs.server-path) || format('{0}/{1}/{2}', github.workspace, replace(inputs.working-directory, './', ''), inputs.server-path)) }}"
+        path: "${{ format('{0}/*/build/reports/**/*', inputs.working-directory == '.' && format('{0}/{1}', github.workspace, inputs.server-path) || format('{0}/{1}/{2}', github.workspace, inputs.working-directory, inputs.server-path)) }}"
         if-no-files-found: ignore
 
     - name: Publish All Test Results

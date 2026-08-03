@@ -308,7 +308,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: genesis-security-permissions-report-${{ inputs.app-name }}-${{ github.run_number }}
-        path: "${{ format('{0}/*/build/reports/genesis-security/auth-permissions.csv', inputs.working-directory == '.' && format('{0}/{1}', github.workspace, inputs.server-path) || format('{0}/{1}/{2}', github.workspace, replace(inputs.working-directory, './', ''), inputs.server-path)) }}"
+        path: "${{ format('{0}/*/build/reports/genesis-security/auth-permissions.csv', inputs.working-directory == '.' && format('{0}/{1}', github.workspace, inputs.server-path) || format('{0}/{1}/{2}', github.workspace, inputs.working-directory, inputs.server-path)) }}"
         if-no-files-found: ignore
 
     - name: Push Image
