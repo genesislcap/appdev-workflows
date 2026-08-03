@@ -24,7 +24,7 @@ defaults:
 jobs:
   review:
     runs-on: 'ubuntu-latest'
-    timeout-minutes: 7
+    timeout-minutes: 15
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -84,7 +84,7 @@ jobs:
           google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
           use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
-          upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
+          upload_artifacts: 'false'
           workflow_name: 'gemini-review'
           github_pr_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
           settings: |-
@@ -95,7 +95,9 @@ jobs:
               "telemetry": {
                 "enabled": true,
                 "target": "local",
-                "outfile": ".gemini/telemetry.log"
+                "outfile": ".gemini/telemetry.log",
+                "maxLogSize": 52428800,
+                "maxLogLines": 10000
               },
               "mcpServers": {
                 "github": {
@@ -122,3 +124,36 @@ jobs:
               "tools": {}
             }
           prompt: '${{ inputs.gemini_cli_prompt }}'
+
+      - name: 'Compress and cleanup artifacts'
+        if: always() && vars.UPLOAD_ARTIFACTS != 'false'
+        run: |
+          # Remove large telemetry logs to reduce artifact size
+          if [ -f .gemini/telemetry.log ]; then
+            # Keep only last 1000 lines of telemetry
+            tail -n 1000 .gemini/telemetry.log > .gemini/telemetry.log.tmp
+            mv .gemini/telemetry.log.tmp .gemini/telemetry.log
+          fi
+          
+          # Remove any large temp files
+          if [ -d .gemini ]; then
+            find .gemini -type f -size +5M -delete
+          fi
+          
+          # Compress the entire .gemini directory
+          if [ -d .gemini ]; then
+            tar -czf gemini-artifacts.tar.gz .gemini/
+            # Calculate size
+            SIZE=$(du -h gemini-artifacts.tar.gz | cut -f1)
+            echo "Artifact compressed to: $SIZE"
+          fi
+
+      - name: 'Upload Gemini Review Artifacts'
+        if: always() && vars.UPLOAD_ARTIFACTS != 'false'
+        uses: 'actions/upload-artifact@v4'
+        with:
+          name: 'gemini-review-artifacts'
+          path: 'gemini-artifacts.tar.gz'
+          retention-days: 5
+          if-no-files-found: 'warn'
+          

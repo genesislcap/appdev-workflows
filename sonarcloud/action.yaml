@@ -1,0 +1,67 @@
+name: SonarCloud analysis
+description: >
+  Run JaCoCo coverage and SonarCloud analysis in the current job workspace.
+  Intended to run after a Gradle build so classes/test results are already present
+  (no artifact upload/download).
+
+inputs:
+  working-directory:
+    description: Project working directory
+    required: false
+    default: '.'
+  server-path:
+    description: Path containing the server Gradle project (relative to working-directory)
+    required: false
+    default: 'server'
+  java_version:
+    description: Project JDK to restore after Sonar (Sonar itself runs on JDK 21)
+    required: false
+    default: '17'
+  gradle-arguments:
+    description: Extra Gradle flags/properties (cache opts, -Pversion, etc.)
+    required: false
+    default: ''
+  sonar-token:
+    description: SonarCloud token
+    required: true
+  github-token:
+    description: GitHub token for PR decoration (optional)
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Generate JaCoCo reports
+      uses: gradle/gradle-build-action@v2
+      with:
+        arguments: jacocoTestReport --no-configuration-cache ${{ inputs.gradle-arguments }}
+        build-root-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
+        cache-disabled: true
+
+    # Set to 21 temporarily as Sonar stopped support Java 17
+    - name: Set up Java 21 for Sonar
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: temurin
+
+    - name: Run SonarCloud analysis
+      uses: gradle/gradle-build-action@v2
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      with:
+        arguments: >-
+          sonar --no-configuration-cache
+          ${{ inputs.gradle-arguments }}
+          -Dsonar.gradle.skipCompile=true
+          -Dsonar.token=${{ inputs.sonar-token }}
+        build-root-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}
+        cache-disabled: true
+
+    - name: Restore project JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java_version }}
+        distribution: temurin
