@@ -97,14 +97,6 @@ on:
         type: boolean
         required: false
         default: false
-      sonar_java_version:
-        type: string
-        required: false
-        default: '21'
-      sonar_java_distribution:
-        type: string
-        required: false
-        default: 'temurin'
       sast:
         required: false
         default: true
@@ -500,8 +492,6 @@ jobs:
       server-path: '${{ inputs.working-directory }}/server'
       project_java_version: ${{ inputs.java_version }}
       project_java_distribution: temurin
-      sonar_java_version: ${{ inputs.sonar_java_version }}
-      sonar_java_distribution: ${{ inputs.sonar_java_distribution }}
       node_version: ${{ inputs.node_version }}
       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
       SCOPE: ${{ inputs.SCOPE }}

@@ -85,18 +85,6 @@ on:
         required: false
         type: boolean
         default: true
-      sonar_enabled:
-        required: false
-        type: boolean
-        default: false
-      sonar_java_version:
-        required: false
-        type: string
-        default: "21"
-      sonar_java_distribution:
-        required: false
-        type: string
-        default: "temurin"
       include-xray-report:
         required: false
         type: boolean
@@ -700,7 +688,7 @@ jobs:
 
   sonar:
     name: SonarCloud Analysis
-    if: ${{ inputs.sonar_enabled && inputs.build_server && !inputs.skip-tests }}
+    if: ${{ inputs.build_server && !inputs.skip-tests }}
     uses: ./.github/workflows/sonarcloud.yml
     with:
       branch: ${{ inputs.branch }}
@@ -709,8 +697,6 @@ jobs:
       server-path: ${{ inputs.server-path }}
       project_java_version: ${{ inputs.java_version }}
       project_java_distribution: temurin
-      sonar_java_version: ${{ inputs.sonar_java_version }}
-      sonar_java_distribution: ${{ inputs.sonar_java_distribution }}
       node_version: ${{ inputs.node_version }}
     secrets:
       GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
