@@ -193,6 +193,14 @@ runs:
       with:
         json_path: ${{ steps.scan.outputs.full_report_file }}
 
+    - name: Upload JFrog markdown summary
+      if: always() && steps.scan.outputs.full_report_file != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: xray-scan-md--${{ inputs.app-name }}-${{ github.run_number }}
+        path: ${{ github.workspace }}/scan-summary.md
+        if-no-files-found: error
+
     - name: Upload JFrog full scan report
       if: always() && steps.scan.outputs.full_report_file != ''
       uses: actions/upload-artifact@v4
