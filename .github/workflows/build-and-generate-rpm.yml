@@ -85,6 +85,18 @@ on:
         required: false
         type: boolean
         default: true
+      sonar_enabled:
+        required: false
+        type: boolean
+        default: false
+      sonar_java_version:
+        required: false
+        type: string
+        default: "21"
+      sonar_java_distribution:
+        required: false
+        type: string
+        default: "temurin"
       include-xray-report:
         required: false
         type: boolean
@@ -419,35 +431,6 @@ jobs:
           build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
           cache-disabled: true
 
-      - name: Set up Java 21 for Sonar
-        if: inputs.build_server && !inputs.skip-tests
-        uses: actions/setup-java@v4
-        with:
-          java-version: "21"
-          distribution: adopt
-
-      - name: Run Sonar analysis
-        if: inputs.build_server && !inputs.skip-tests
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: >
-            sonarqube --no-build-cache --stacktrace
-            -PpushToCache=${{ inputs.push-to-artifactory-cache }}
-            -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
-            ${{ env.SERVER_BUILD_ARGS }}
-            -PuseDevRepo=true
-            -Dsonar.gradle.skipCompile=true
-            -Dsonar.token=${{ secrets.JENKINSGENESIS_SONAR }}
-          build-root-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
-          cache-disabled: true
-
-      - name: Restore Java 17
-        if: inputs.build_server && !inputs.skip-tests
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.java_version }}
-          distribution: adopt
-
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
         shell: bash
@@ -714,3 +697,25 @@ jobs:
           ls -al
           uploaded_rpm_name=$(ls -1 *.rpm)
           echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+
+  sonar:
+    name: SonarCloud Analysis
+    if: ${{ inputs.sonar_enabled && inputs.build_server && !inputs.skip-tests }}
+    uses: ./.github/workflows/sonarcloud.yml
+    with:
+      branch: ${{ inputs.branch }}
+      version: ${{ inputs.version }}
+      working-directory: ${{ inputs.working-directory }}
+      server-path: ${{ inputs.server-path }}
+      project_java_version: ${{ inputs.java_version }}
+      project_java_distribution: temurin
+      sonar_java_version: ${{ inputs.sonar_java_version }}
+      sonar_java_distribution: ${{ inputs.sonar_java_distribution }}
+      node_version: ${{ inputs.node_version }}
+    secrets:
+      GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+      GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+      JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+      JFROG_EMAIL: ${{ secrets.JFROG_EMAIL }}
+      JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+      JENKINSGENESIS_SONAR: ${{ secrets.JENKINSGENESIS_SONAR }}

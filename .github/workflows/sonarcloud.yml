@@ -26,6 +26,21 @@ on:
         required: false
         type: string
         default: '17'
+      project_java_distribution:
+        description: Distribution used for the application build JDK
+        required: false
+        type: string
+        default: 'temurin'
+      sonar_java_version:
+        description: Java version used to run the Sonar analysis
+        required: false
+        type: string
+        default: '21'
+      sonar_java_distribution:
+        description: Distribution used for the Sonar analysis JDK
+        required: false
+        type: string
+        default: 'temurin'
       node_version:
         description: Node.js version required by the project
         required: false
@@ -71,7 +86,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.project_java_version }}
-          distribution: temurin
+          distribution: ${{ inputs.project_java_distribution }}
       - name: Configure Node
         if: ${{ !inputs.REGISTRY_URL }}
         uses: actions/setup-node@v4
@@ -151,11 +166,11 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch }}
-      - name: Set up JDK 21 for Sonar
+      - name: Set up JDK for Sonar
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: temurin
+          java-version: ${{ inputs.sonar_java_version }}
+          distribution: ${{ inputs.sonar_java_distribution }}
       - name: Configure Node
         if: ${{ !inputs.REGISTRY_URL }}
         uses: actions/setup-node@v4
