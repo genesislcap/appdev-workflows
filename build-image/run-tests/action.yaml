@@ -35,7 +35,7 @@ runs:
       if: always()
       with:
         name: test-reports${{ inputs.test-reports-suffix }}
-        path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/*/build/reports/**/*"
+        path: "${{ format('{0}/*/build/reports/**/*', inputs.working-directory == '.' && format('{0}/{1}', github.workspace, inputs.server-path) || format('{0}/{1}/{2}', github.workspace, replace(inputs.working-directory, './', ''), inputs.server-path)) }}"
 
     - name: Publish All Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
