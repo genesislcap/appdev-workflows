@@ -15,6 +15,10 @@ on:
       app_user:
         required: false
         type: string
+      extra_variables:
+        required: false
+        type: string
+        default: ""
 
       testautomation_build:
         required: false
@@ -54,6 +58,7 @@ jobs:
           echo "genesis_user: ${{ inputs.genesis_user }}"
           echo "startserverdatetime: ${{ inputs.startserverdatetime }}"
           echo "app_user: ${{ inputs.app_user }}"
+          echo "extra_variables: ${{ inputs.extra_variables }}"
 
       - name: Trigger Jenkins Job
         id: trigger_jenkins_job
@@ -61,15 +66,20 @@ jobs:
           set -euo pipefail
           JENKINS_BASE_URL="https://jenkinsdev.cdservice.genesis.global"
           RESPONSE_HEADERS=$(mktemp)
+          EXTRA_VARIABLES_ARG=()
+
+          if [ -n "${{ inputs.extra_variables }}" ]; then
+            EXTRA_VARIABLES_ARG=(--data-urlencode "extra_variables=${{ inputs.extra_variables }}")
+          fi
 
           curl --fail --silent --show-error -D "$RESPONSE_HEADERS" -X POST "$JENKINS_BASE_URL/buildByToken/buildWithParameters?token=${{ secrets.JENKINS_SECURITYTOKEN }}&job=AppDev-CI_CD/PLT_QA_Automation/DB_Refresh_ExistingInstance" \
             --data-urlencode "host_name=${{ inputs.hostname }}" \
             --data-urlencode "s3ImagePath=${{ inputs.s3ImagePath }}" \
             --data-urlencode "genesis_user=${{ inputs.genesis_user }}" \
             --data-urlencode "account=genesisglobalcddev" \
-            --data-urlencode "extra_variables=" \
             --data-urlencode "startserverdatetime=${{ inputs.startserverdatetime }}" \
-            --data-urlencode "app_user=${{ inputs.app_user }}"
+            --data-urlencode "app_user=${{ inputs.app_user }}" \
+            "${EXTRA_VARIABLES_ARG[@]}"
 
           QUEUE_URL=$(awk 'BEGIN { IGNORECASE = 1 } /^Location:/ { print $2 }' "$RESPONSE_HEADERS" | tr -d '\r')
           rm -f "$RESPONSE_HEADERS"
