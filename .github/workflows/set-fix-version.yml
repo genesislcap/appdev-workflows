@@ -101,7 +101,8 @@ jobs:
               COMMIT_MSG=$(echo "$COMMIT" | cut -d ' ' -f 2-)
               echo "Processing commit: $COMMIT_HASH $COMMIT_MSG"
 
-              JIRAS=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
+              # (?!\.\d) so product versions like TAM-8.26 are not parsed as TAM-8.
+              JIRAS=$(echo "$COMMIT_MSG" | grep -oP '[A-Z]+-[0-9]+(?!\.\d)' || true)
               if [ -z "$JIRAS" ]; then
                 echo "Skipping commit (no Jira ID): $COMMIT_HASH - $COMMIT_MSG"
                 continue
