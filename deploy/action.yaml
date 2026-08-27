@@ -138,6 +138,8 @@ runs:
           echo 'export GENESIS_VERSION=${{ inputs.version }}' >> /etc/profile.d/deploy.sh
           echo 'export APP_NAME=${{ inputs.app_name }}' >> /etc/profile.d/deploy.sh
           echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> /etc/profile.d/deploy.sh
+          echo 'export AWS_REGION=${{ inputs.aws-region }}' >> /etc/profile.d/deploy.sh
+          echo 'export AWS_DEFAULT_REGION=${{ inputs.aws-region }}' >> /etc/profile.d/deploy.sh
 
           echo '${{ inputs.custom_env_vars }}' | while IFS='=' read -r key value; do
             if [[ -n $key ]]; then
@@ -257,5 +259,4 @@ runs:
     - shell: bash
       run: |
         echo "- ✅ Docker Pruned" >> $GITHUB_STEP_SUMMARY
-
 
