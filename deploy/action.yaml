@@ -138,6 +138,7 @@ runs:
           echo 'export GENESIS_VERSION=${{ inputs.version }}' >> /etc/profile.d/deploy.sh
           echo 'export APP_NAME=${{ inputs.app_name }}' >> /etc/profile.d/deploy.sh
           echo 'export AWS_ECR_REGISTRY=${{ inputs.ecr_registry }}' >> /etc/profile.d/deploy.sh
+          echo 'export REGION=${{ inputs.aws-region }}' >> /etc/profile.d/deploy.sh
           echo 'export AWS_REGION=${{ inputs.aws-region }}' >> /etc/profile.d/deploy.sh
           echo 'export AWS_DEFAULT_REGION=${{ inputs.aws-region }}' >> /etc/profile.d/deploy.sh
 
