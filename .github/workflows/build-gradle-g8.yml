@@ -322,24 +322,6 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
-      # Same job/workspace as Build — reuses classes, coverage inputs, and Gradle state.
-      # Fully-qualified ref required: local ./ paths resolve to the caller repo, not this one.
-      - name: SonarCloud analysis
-        if: inputs.sonar_enabled
-        uses: genesislcap/appdev-workflows/sonarcloud@develop
-        with:
-          working-directory: ${{ inputs.working-directory }}
-          server-path: server
-          java_version: ${{ inputs.java_version }}
-          gradle-arguments: >-
-            ${{ env.CACHE_OPTS }}
-            --stacktrace
-            -Pversion=${{ env.BUILD_VERSION }}
-            -PpushToCache=${{ env.GRADLE_GENESIS_PUSH_TO_CACHE }}
-            -PdisableRemoteCache=${{ env.GRADLE_GENESIS_DISABLE_REMOTE_CACHE }}
-            ${{ inputs.server-build-gradle-arguments }}
-          sonar-token: ${{ secrets.JENKINSGENESIS_SONAR }}
-          github-token: ${{ github.token }}
 
       - name: Check Auth Permissions task
         id: auth_permissions_task
@@ -498,6 +480,28 @@ jobs:
           SLACK_TITLE: ✅ Server build for ${{ inputs.product_name }} passed
           SLACK_MESSAGE: The server build for ${{ github.workflow }} passed https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}
           SLACK_CHANNEL: ${{ env.REPO_NAME }}-build-notifications
+
+  sonar:
+    name: SonarCloud Analysis
+    if: ${{ inputs.sonar_enabled }}
+    uses: ./.github/workflows/sonarcloud.yml
+    with:
+      branch: ${{ inputs.branch }}
+      version: ${{ inputs.version }}
+      working-directory: ${{ inputs.working-directory }}
+      server-path: '${{ inputs.working-directory }}/server'
+      project_java_version: ${{ inputs.java_version }}
+      project_java_distribution: temurin
+      node_version: ${{ inputs.node_version }}
+      REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+      SCOPE: ${{ inputs.SCOPE }}
+    secrets:
+      GPR_READ_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+      GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+      JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+      JFROG_EMAIL: ${{ secrets.JFROG_EMAIL }}
+      JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+      JENKINSGENESIS_SONAR: ${{ secrets.JENKINSGENESIS_SONAR }}
 
   tag-jiras:
     needs: build-server
