@@ -116,7 +116,7 @@ jobs:
       # then silently dropped.
       - name: 'Acknowledge request'
         if: |-
-          ${{ steps.extract_command.outputs.command == 'review' }}
+          ${{ contains(fromJSON('["review", "triage"]'), steps.extract_command.outputs.command) }}
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -144,15 +144,31 @@ jobs:
 
   # Answers every dispatched request that no job above handled successfully.
   # The previous condition only fired on `fallthrough` or an outright failure,
-  # so a command with no matching job (`triage`, `invoke`) skipped `review`,
-  # skipped here too, and the requester was left with an acknowledgement and
-  # no reply. Firing whenever `review` did not succeed closes that hole.
+  # so a command with no matching job skipped `review`, skipped here too, and
+  # the requester was left with an acknowledgement and no reply. Firing
+  # whenever no handler succeeded closes that hole — including for `invoke`,
+  # which is still unimplemented.
+  triage:
+    needs: 'dispatch'
+    if: |-
+      ${{ needs.dispatch.outputs.command == 'triage' }}
+    uses: './.github/workflows/gemini-triage.yml'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    with:
+      additional_context: '${{ needs.dispatch.outputs.additional_context }}'
+    secrets: 'inherit'
+
   fallthrough:
     needs:
       - 'dispatch'
       - 'review'
+      - 'triage'
     if: |-
-      ${{ always() && !cancelled() && needs.dispatch.result == 'success' && needs.review.result != 'success' }}
+      ${{ always() && !cancelled() && needs.dispatch.result == 'success' && needs.review.result != 'success' && needs.triage.result != 'success' }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -182,8 +198,11 @@ jobs:
             review)
               message="🤖 I'm sorry @${ACTOR}, but the review failed. Please [see the logs](${RUN_URL}) for more details."
               ;;
-            triage|invoke)
-              message="🤖 I'm sorry @${ACTOR}, but \`${COMMAND}\` is not available yet — this workflow only implements \`review\`. Comment \`@gemini-cli /review\` on a pull request instead."
+            triage)
+              message="🤖 I'm sorry @${ACTOR}, but triage failed. Please [see the logs](${RUN_URL}) for more details."
+              ;;
+            invoke)
+              message="🤖 I'm sorry @${ACTOR}, but \`invoke\` is not available yet. Comment \`@gemini-cli /review\` on a pull request to ask for a review."
               ;;
             *)
               message="🤖 I'm sorry @${ACTOR}, but I did not recognise that request. Comment \`@gemini-cli /review\` on a pull request to ask for a review."
