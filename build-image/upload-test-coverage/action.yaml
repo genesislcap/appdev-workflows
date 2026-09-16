@@ -21,6 +21,12 @@ inputs:
     required: false
   sonar-token:
     required: true
+  sonar-java-version:
+    required: false
+    default: "21"
+  sonar-java-distribution:
+    required: false
+    default: "temurin"
 
 runs:
   using: "composite"
@@ -36,19 +42,19 @@ runs:
           exit 1
         fi
 
-    - name: Set up Java 21 for Sonar
+    - name: Set up Java for Sonar
       uses: actions/setup-java@v4
       with:
-        java-version: "21"
-        distribution: adopt
+        java-version: ${{ inputs.sonar-java-version }}
+        distribution: ${{ inputs.sonar-java-distribution }}
 
     - name: Upload test coverage
       shell: bash
       working-directory: ${{ inputs.working-directory }}/${{ inputs.server-path }}/
       run: |
-        ./gradlew jacocoTestReport sonarqube -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token="${{ inputs.sonar-token }}"
+        ./gradlew jacocoTestReport sonar -Pversion=${{ inputs.version }} --no-configuration-cache --no-build-cache --stacktrace -PgenesisArtifactoryUser="${{ inputs.jfrog-username }}" -PgenesisArtifactoryPassword="${{ inputs.jfrog-password }}" -Dsonar.token="${{ inputs.sonar-token }}"
 
-    - name: Restore Java 17
+    - name: Restore Java for build
       if: always()
       uses: actions/setup-java@v4
       with:

@@ -102,6 +102,14 @@ inputs:
     required: false
     default: "false"
 
+  sonar-java-version:
+    required: false
+    default: "21"
+
+  sonar-java-distribution:
+    required: false
+    default: "temurin"
+
   JENKINSGENESIS_SONAR:
     required: false
 
@@ -246,6 +254,8 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         server-path: ${{ inputs.server-path }}
         sonar-token: ${{ inputs.sonar-token }}
+        sonar-java-version: ${{ inputs.sonar-java-version }}
+        sonar-java-distribution: ${{ inputs.sonar-java-distribution }}
 
     - name: Check Auth Permissions task
       id: auth_permissions_task
