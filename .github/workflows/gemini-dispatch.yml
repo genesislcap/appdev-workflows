@@ -88,10 +88,12 @@ jobs:
         with:
           script: |
             const eventType = process.env.EVENT_TYPE;
-            const request = process.env.REQUEST;
+            // The body is absent for `pull_request` events, so default to a
+            // string rather than letting `.startsWith` throw on undefined.
+            const request = process.env.REQUEST || '';
             core.setOutput('request', request);
 
-            if (eventType === 'pull_request.opened') {
+            if (['pull_request.opened', 'pull_request.reopened'].includes(eventType)) {
               core.setOutput('command', 'review');
             } else if (['issues.opened', 'issues.reopened'].includes(eventType)) {
               core.setOutput('command', 'triage');
@@ -109,7 +111,12 @@ jobs:
               core.setOutput('command', 'fallthrough');
             }
 
+      # Only acknowledge commands that have a job to run below. Anything else
+      # is answered once, by `fallthrough`, instead of being promised here and
+      # then silently dropped.
       - name: 'Acknowledge request'
+        if: |-
+          ${{ contains(fromJSON('["review", "triage"]'), steps.extract_command.outputs.command) }}
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
@@ -135,12 +142,33 @@ jobs:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
 
+  # Answers every dispatched request that no job above handled successfully.
+  # The previous condition only fired on `fallthrough` or an outright failure,
+  # so a command with no matching job skipped `review`, skipped here too, and
+  # the requester was left with an acknowledgement and no reply. Firing
+  # whenever no handler succeeded closes that hole — including for `invoke`,
+  # which is still unimplemented.
+  triage:
+    needs: 'dispatch'
+    if: |-
+      ${{ needs.dispatch.outputs.command == 'triage' }}
+    uses: './.github/workflows/gemini-triage.yml'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    with:
+      additional_context: '${{ needs.dispatch.outputs.additional_context }}'
+    secrets: 'inherit'
+
   fallthrough:
     needs:
       - 'dispatch'
       - 'review'
+      - 'triage'
     if: |-
-      ${{ always() && !cancelled() && (failure() || needs.dispatch.outputs.command == 'fallthrough') }}
+      ${{ always() && !cancelled() && needs.dispatch.result == 'success' && needs.review.result != 'success' && needs.triage.result != 'success' }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -159,12 +187,38 @@ jobs:
           permission-issues: 'write'
           permission-pull-requests: 'write'
 
+      - name: 'Compose response'
+        id: 'compose_response'
+        env:
+          ACTOR: '${{ github.actor }}'
+          COMMAND: '${{ needs.dispatch.outputs.command }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        run: |-
+          case "${COMMAND}" in
+            review)
+              message="🤖 I'm sorry @${ACTOR}, but the review failed. Please [see the logs](${RUN_URL}) for more details."
+              ;;
+            triage)
+              message="🤖 I'm sorry @${ACTOR}, but triage failed. Please [see the logs](${RUN_URL}) for more details."
+              ;;
+            invoke)
+              message="🤖 I'm sorry @${ACTOR}, but \`invoke\` is not available yet. Comment \`@gemini-cli /review\` on a pull request to ask for a review."
+              ;;
+            *)
+              message="🤖 I'm sorry @${ACTOR}, but I did not recognise that request. Comment \`@gemini-cli /review\` on a pull request to ask for a review."
+              ;;
+          esac
+          {
+            echo 'message<<EOF'
+            echo "${message}"
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
       - name: 'Send failure comment'
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
-          MESSAGE: |-
-            🤖 I'm sorry @${{ github.actor }}, but I was unable to process your request. Please [see the logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
+          MESSAGE: '${{ steps.compose_response.outputs.message }}'
           REPOSITORY: '${{ github.repository }}'
         run: |-
           gh issue comment "${ISSUE_NUMBER}" \
