@@ -431,7 +431,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: >
-            sonarqube --no-build-cache --stacktrace
+            sonar -x test -x jacocoTestReport --no-build-cache --stacktrace
             -PpushToCache=${{ inputs.push-to-artifactory-cache }}
             -PdisableRemoteCache=${{ !inputs.use-artifactory-cache }}
             ${{ env.SERVER_BUILD_ARGS }}
