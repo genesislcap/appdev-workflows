@@ -180,9 +180,7 @@ runs:
       uses: actions/checkout@v5
       with:
         repository: genesislcap/appdev-workflows
-        # TEMPORARY for the DCD-5332 cddev proof-of-concept test - revert to
-        # develop before/when this merges.
-        ref: feature/DCD-5332-clone-rds-snapshot
+        ref: develop
         path: "appdev-workflows"
 
     - name: Clone RDS cluster
