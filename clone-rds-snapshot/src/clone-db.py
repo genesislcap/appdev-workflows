@@ -2,6 +2,7 @@ import argparse
 import datetime
 import re
 import sys
+import time
 
 import boto3
 from botocore.exceptions import ClientError
@@ -31,6 +32,28 @@ def wait_for_cluster_available(cluster_id):
     waiter = rds.get_waiter("db_cluster_available")
     waiter.wait(DBClusterIdentifier=cluster_id)
     print(f"Cluster {cluster_id} is now available.")
+
+
+def wait_for_secret_active(cluster_id, interval=10, timeout=600):
+    """Wait until the cluster's managed master-user secret itself is fully
+    active - not just until the cluster's own Status flips back to
+    'available'. AWS tracks the secret's creation/rotation as separate,
+    slower-settling internal state: the cluster can report 'available' while
+    the secret is still 'creating', and RotateMasterUserPassword is rejected
+    with InvalidDBClusterStateFault until the secret catches up.
+    """
+    print(f"Waiting for {cluster_id}'s managed secret to become active...")
+    elapsed = 0
+    while elapsed < timeout:
+        cluster = rds.describe_db_clusters(DBClusterIdentifier=cluster_id)["DBClusters"][0]
+        secret_status = cluster.get("MasterUserSecret", {}).get("SecretStatus")
+        if secret_status == "active":
+            print(f"Secret for {cluster_id} is active.")
+            return
+        print(f"Secret status: {secret_status}, waiting {interval}s...")
+        time.sleep(interval)
+        elapsed += interval
+    raise TimeoutError(f"Secret for {cluster_id} did not become active within {timeout} seconds")
 
 
 def wait_for_instance_available(instance_id):
@@ -168,6 +191,7 @@ def rotate_master_credentials(cluster_id):
         ApplyImmediately=True,
     )
     wait_for_cluster_available(cluster_id)
+    wait_for_secret_active(cluster_id)
 
     print(f"Rotating master password for {cluster_id} to a fresh value ...")
     rds.modify_db_cluster(
