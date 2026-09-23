@@ -1,0 +1,117 @@
+name: Clone RDS Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_environment:
+        description: "Value of the EnvironmentName tag on the SOURCE cluster (e.g. prod, uat)"
+        required: true
+        type: string
+      source_app_name:
+        description: "Value of the AppName tag on the source cluster"
+        required: true
+        type: string
+      source_customer:
+        description: "Value of the Customer tag on the source cluster"
+        required: true
+        type: string
+      new_cluster_identifier:
+        description: "Identifier for the new clone - MUST start with 'clone-' (e.g. clone-uat-2), and must not already exist"
+        required: true
+        type: string
+      target_environment:
+        description: "EnvironmentName tag to apply to the clone (e.g. uat-2)"
+        required: true
+        type: string
+      target_security_group_ids:
+        description: "Comma-separated VPC security group IDs for the clone (the TARGET's own, not the source's)"
+        required: true
+        type: string
+      target_subnet_group:
+        description: "DB subnet group name for the clone (the TARGET's own, not the source's)"
+        required: true
+        type: string
+      target_kms_key_id:
+        description: "Optional: re-encrypt the clone with a different KMS key"
+        required: false
+        type: string
+        default: ""
+      instance_class:
+        description: "Optional: override instance class (defaults to source's)"
+        required: false
+        type: string
+        default: ""
+      target_min_acu:
+        description: "Optional: Aurora Serverless v2 minimum ACU override (these clusters are db.serverless - this, not instance_class, controls capacity/cost)"
+        required: false
+        type: string
+        default: ""
+      target_max_acu:
+        description: "Optional: Aurora Serverless v2 maximum ACU override"
+        required: false
+        type: string
+        default: ""
+      snapshot_id:
+        description: "Optional: clone from a specific snapshot (defaults to a fresh snapshot of the source)"
+        required: false
+        type: string
+        default: ""
+      expiry_date:
+        description: "Optional: TTL date (YYYY-MM-DD) tagged onto the clone, for a later cleanup job to find"
+        required: false
+        type: string
+        default: ""
+      aws_region:
+        description: "AWS region of the source and target"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  clone:
+    name: "Clone ${{ inputs.source_customer }}-${{ inputs.source_app_name }}-${{ inputs.source_environment }} -> ${{ inputs.new_cluster_identifier }}"
+    runs-on: ubuntu-latest
+    environment: "${{ inputs.source_customer }}-${{ inputs.source_environment }}"
+    steps:
+      - name: Clone RDS cluster
+        id: clone
+        # TEMPORARY for the DCD-5332 cddev proof-of-concept test - revert to
+        # @develop before/when this merges.
+        uses: genesislcap/appdev-workflows/clone-rds-snapshot@feature/DCD-5332-clone-rds-snapshot
+        with:
+          source-environment: ${{ inputs.source_environment }}
+          source-app-name: ${{ inputs.source_app_name }}
+          source-customer: ${{ inputs.source_customer }}
+          snapshot-id: ${{ inputs.snapshot_id }}
+          new-cluster-identifier: ${{ inputs.new_cluster_identifier }}
+          target-security-group-ids: ${{ inputs.target_security_group_ids }}
+          target-subnet-group: ${{ inputs.target_subnet_group }}
+          target-kms-key-id: ${{ inputs.target_kms_key_id }}
+          instance-class: ${{ inputs.instance_class }}
+          target-min-acu: ${{ inputs.target_min_acu }}
+          target-max-acu: ${{ inputs.target_max_acu }}
+          environment: ${{ inputs.target_environment }}
+          owner: ${{ github.actor }}
+          expiry-date: ${{ inputs.expiry_date }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## RDS Clone"
+            echo ""
+            echo "Requested by @${{ github.actor }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Source | ${{ inputs.source_customer }} / ${{ inputs.source_app_name }} / ${{ inputs.source_environment }} |"
+            echo "| New cluster | \`${{ steps.clone.outputs.cluster-id }}\` |"
+            echo "| Endpoint | \`${{ steps.clone.outputs.endpoint }}\` |"
+            echo "| Credentials | \`${{ steps.clone.outputs.secret-arn }}\` (AWS Secrets Manager, freshly rotated) |"
+            echo "| Expiry tag | ${{ inputs.expiry_date || 'none set' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
