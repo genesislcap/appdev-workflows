@@ -46,7 +46,7 @@ def wait_for_secret_active(cluster_id, interval=10, timeout=600):
     elapsed = 0
     while elapsed < timeout:
         cluster = rds.describe_db_clusters(DBClusterIdentifier=cluster_id)["DBClusters"][0]
-        secret_status = cluster.get("MasterUserSecret", {}).get("SecretStatus")
+        secret_status = (cluster.get("MasterUserSecret") or {}).get("SecretStatus")
         if secret_status == "active":
             print(f"Secret for {cluster_id} is active.")
             return
@@ -202,7 +202,7 @@ def rotate_master_credentials(cluster_id):
     wait_for_cluster_available(cluster_id)
 
     cluster = rds.describe_db_clusters(DBClusterIdentifier=cluster_id)["DBClusters"][0]
-    return cluster.get("MasterUserSecret", {}).get("SecretArn")
+    return (cluster.get("MasterUserSecret") or {}).get("SecretArn")
 
 
 def tag_cluster(cluster_arn, owner, source_cluster_id, environment, expiry_date=None):
