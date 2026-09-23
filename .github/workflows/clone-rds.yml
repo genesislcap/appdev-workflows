@@ -77,9 +77,7 @@ jobs:
     steps:
       - name: Clone RDS cluster
         id: clone
-        # TEMPORARY for the DCD-5332 cddev proof-of-concept test - revert to
-        # @develop before/when this merges.
-        uses: genesislcap/appdev-workflows/clone-rds-snapshot@feature/DCD-5332-clone-rds-snapshot
+        uses: genesislcap/appdev-workflows/clone-rds-snapshot@develop
         with:
           source-environment: ${{ inputs.source_environment }}
           source-app-name: ${{ inputs.source_app_name }}
