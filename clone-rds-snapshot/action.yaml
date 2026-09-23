@@ -1,0 +1,214 @@
+name: RDS Clone To New Name
+description: >
+  Clones an RDS/Aurora cluster into a brand-new, permanent cluster identifier,
+  landing it in a target environment's own networking. Unlike
+  restore-rds-snapshot, the source cluster is never renamed or replaced -
+  both the source and the new clone exist side by side afterward.
+
+inputs:
+  # Source cluster, found by tags (same convention as rds-snapshot / restore-rds-snapshot).
+  source-environment:
+    required: true
+    description: Value of the EnvironmentName tag on the source cluster.
+  source-app-name:
+    required: true
+    description: Value of the AppName tag on the source cluster.
+  source-customer:
+    required: true
+    description: Value of the Customer tag on the source cluster.
+  snapshot-id:
+    required: false
+    description: >
+      Specific cluster snapshot to restore. If omitted, a fresh manual
+      snapshot of the source cluster is taken first (a control-plane
+      operation - it does not read application data, so this is not a write
+      to the source database).
+
+  # Target cluster.
+  new-cluster-identifier:
+    required: true
+    description: >
+      Identifier for the new, permanent clone. Must not already exist, and
+      MUST start with "clone-" - this is enforced both here and by the IAM
+      policy that scopes Delete/Modify permissions to this pattern, so a
+      wrong identifier fails closed rather than risking a real cluster.
+  target-security-group-ids:
+    required: true
+    description: Comma-separated VPC security group IDs for the clone (the target environment's own, not the source's).
+  target-subnet-group:
+    required: true
+    description: DB subnet group name for the clone (the target environment's own, not the source's).
+  target-kms-key-id:
+    required: false
+    description: Optional KMS key to (re-)encrypt the clone with. Defaults to the snapshot's own key.
+  instance-class:
+    required: false
+    description: Optional instance class override. Defaults to the source cluster's instance class.
+  target-min-acu:
+    required: false
+    description: Optional Aurora Serverless v2 minimum ACU override. Defaults to the source's scaling config (these clusters are all db.serverless, so this - not instance-class - is what actually controls capacity/cost).
+  target-max-acu:
+    required: false
+    description: Optional Aurora Serverless v2 maximum ACU override. Defaults to the source's scaling config.
+  environment:
+    required: true
+    description: Value of the EnvironmentName tag applied to the new clone (the target environment, e.g. uat-2).
+  owner:
+    required: true
+    description: Requester identity, tagged onto the new clone for ownership/cleanup tracking.
+  expiry-date:
+    required: false
+    description: Optional TTL tag (e.g. an ISO date) so temporary clones can be identified for later cleanup.
+
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+
+outputs:
+  cluster-id:
+    description: Identifier of the new clone.
+    value: ${{ steps.clone.outputs.cluster-id }}
+  endpoint:
+    description: Writer endpoint of the new clone.
+    value: ${{ steps.clone.outputs.endpoint }}
+  secret-arn:
+    description: Secrets Manager ARN holding the clone's freshly-rotated master password.
+    value: ${{ steps.clone.outputs.secret-arn }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Find source RDS cluster by tags
+      id: find-rds-bytags
+      shell: bash
+      run: |
+        ENVIRONMENT="${{ inputs.source-environment }}"
+        APP_NAME="${{ inputs.source-app-name }}"
+        CUSTOMER="${{ inputs.source-customer }}"
+        REGION="${{ inputs.aws-region }}"
+
+        RDS_ARNS=$(aws resourcegroupstaggingapi get-resources \
+          --resource-type-filters rds:cluster \
+          --tag-filters Key=AppName,Values=$APP_NAME Key=Customer,Values=$CUSTOMER Key=EnvironmentName,Values=$ENVIRONMENT \
+          --query "ResourceTagMappingList[].ResourceARN" --region $REGION \
+          --output text | sed '/^$/d')
+
+        # Collect every ARN that actually still exists - do not just take the
+        # last one found. In a shared multi-client account, silently picking
+        # an arbitrary match on an ambiguous tag set could resolve to the
+        # wrong client's cluster entirely.
+        MATCHED_ARNS=()
+        for arn in $RDS_ARNS; do
+          if aws rds describe-db-clusters --db-cluster-identifier "$arn" >/dev/null 2>&1; then
+            MATCHED_ARNS+=("$arn")
+          fi
+        done
+
+        if [ "${#MATCHED_ARNS[@]}" -eq 0 ]; then
+          echo "Error: No source rds cluster found with the specified tags."
+          exit 1
+        fi
+
+        if [ "${#MATCHED_ARNS[@]}" -gt 1 ]; then
+          echo "Error: Ambiguous tags - ${#MATCHED_ARNS[@]} clusters matched AppName=$APP_NAME Customer=$CUSTOMER EnvironmentName=$ENVIRONMENT:"
+          printf '  %s\n' "${MATCHED_ARNS[@]}"
+          echo "Refusing to guess. Tag the intended source cluster uniquely, or narrow the inputs."
+          exit 1
+        fi
+
+        CLUSTER_ID=$(echo "${MATCHED_ARNS[0]}" | awk -F: '{print $NF}')
+        echo "Source cluster resolved to: $CLUSTER_ID"
+        echo "cluster-id=$CLUSTER_ID" >> $GITHUB_OUTPUT
+        {
+          echo "## RDS Clone - source resolved"
+          echo ""
+          echo "Tags AppName=\`$APP_NAME\` Customer=\`$CUSTOMER\` EnvironmentName=\`$ENVIRONMENT\` resolved to cluster \`$CLUSTER_ID\`."
+          echo "Verify this is the intended source before the restore step runs."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Validate target identifier
+      shell: bash
+      run: |
+        REGION="${{ inputs.aws-region }}"
+        NEW_ID="${{ inputs.new-cluster-identifier }}"
+
+        if [[ ! "$NEW_ID" =~ ^clone-[a-z0-9-]+$ ]]; then
+          echo "Error: new-cluster-identifier '$NEW_ID' must start with 'clone-' (lowercase letters/digits/hyphens only). This is required so IAM can safely restrict delete/modify permissions to clones only."
+          exit 1
+        fi
+
+        if aws rds describe-db-clusters --db-cluster-identifier "$NEW_ID" --region "$REGION" >/dev/null 2>&1; then
+          echo "Error: target cluster $NEW_ID already exists."
+          exit 1
+        fi
+
+    - name: Take a fresh source snapshot
+      if: inputs.snapshot-id == ''
+      id: fresh-snapshot
+      shell: bash
+      run: |
+        REGION="${{ inputs.aws-region }}"
+        CLUSTER_ID="${{ steps.find-rds-bytags.outputs.cluster-id }}"
+        SNAP_ID="$CLUSTER_ID-clone-$(date +%Y%m%d%H%M)"
+
+        STATUS=$(aws rds describe-db-clusters --db-cluster-identifier "$CLUSTER_ID" --query "DBClusters[0].Status" --region "$REGION" --output text)
+        if [[ "$STATUS" != "available" ]]; then
+          echo "Error: source cluster is not available (status=$STATUS)."
+          exit 1
+        fi
+
+        aws rds create-db-cluster-snapshot \
+          --db-cluster-snapshot-identifier "$SNAP_ID" \
+          --db-cluster-identifier "$CLUSTER_ID" \
+          --region "$REGION"
+
+        sleep 5
+        aws rds wait db-cluster-snapshot-available --region "$REGION" --db-cluster-snapshot-identifier "$SNAP_ID"
+        echo "snapshot-id=$SNAP_ID" >> $GITHUB_OUTPUT
+
+    - name: Checkout script
+      uses: actions/checkout@v5
+      with:
+        repository: genesislcap/appdev-workflows
+        # TEMPORARY for the DCD-5332 cddev proof-of-concept test - revert to
+        # develop before/when this merges.
+        ref: feature/DCD-5332-clone-rds-snapshot
+        path: "appdev-workflows"
+
+    - name: Clone RDS cluster
+      id: clone
+      shell: bash
+      run: |
+        cd ./appdev-workflows/clone-rds-snapshot
+        python3 -m venv venv
+        source venv/bin/activate
+        pip3 install boto3
+
+        OUT=$(python3 -u ./src/clone-db.py \
+          "${{ steps.find-rds-bytags.outputs.cluster-id }}" \
+          "${{ inputs.snapshot-id || steps.fresh-snapshot.outputs.snapshot-id }}" \
+          "${{ inputs.new-cluster-identifier }}" \
+          "${{ inputs.target-security-group-ids }}" \
+          "${{ inputs.target-subnet-group }}" \
+          "${{ inputs.owner }}" \
+          "${{ inputs.environment }}" \
+          ${{ inputs.target-kms-key-id != '' && format('--kms-key-id {0}', inputs.target-kms-key-id) || '' }} \
+          ${{ inputs.instance-class != '' && format('--instance-class {0}', inputs.instance-class) || '' }} \
+          ${{ inputs.target-min-acu != '' && format('--min-acu {0}', inputs.target-min-acu) || '' }} \
+          ${{ inputs.target-max-acu != '' && format('--max-acu {0}', inputs.target-max-acu) || '' }} \
+          ${{ inputs.expiry-date != '' && format('--expiry-date {0}', inputs.expiry-date) || '' }})
+
+        echo "$OUT"
+        echo "cluster-id=$(echo "$OUT" | grep CLONE_CLUSTER_ID= | cut -d= -f2)" >> $GITHUB_OUTPUT
+        echo "endpoint=$(echo "$OUT" | grep CLONE_ENDPOINT= | cut -d= -f2)" >> $GITHUB_OUTPUT
+        echo "secret-arn=$(echo "$OUT" | grep CLONE_SECRET_ARN= | cut -d= -f2)" >> $GITHUB_OUTPUT
