@@ -1,0 +1,107 @@
+name: Test gitops-bot-commit
+
+on:
+  push:
+    paths:
+      - "gitops-bot-commit/**"
+      - ".github/workflows/test-gitops-bot-commit.yml"
+  pull_request:
+    paths:
+      - "gitops-bot-commit/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed a throwaway "GitOps repo" and run the scripts against it
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SCRIPTS="$GITHUB_WORKSPACE/gitops-bot-commit/scripts"
+          WORK="$(mktemp -d)"
+          cd "$WORK"
+
+          # Local throwaway repo standing in for the real GitOps target
+          # repo. No GitHub credentials involved anywhere in this test.
+          git init --bare origin.git -b main >/dev/null
+
+          git clone origin.git seed >/dev/null 2>&1
+          cd seed
+          git config user.name "seed"
+          git config user.email "seed@example.com"
+          mkdir -p demo-app
+          cat > demo-app/values.yaml <<'EOF'
+          replicaCount: 1
+          image:
+            repository: example/demo-app
+            tag: old-tag
+          EOF
+          git add demo-app/values.yaml
+          git commit -m "seed values.yaml" >/dev/null
+          git push origin main >/dev/null 2>&1
+          cd "$WORK"
+
+          # Mirrors what actions/checkout hands the real action: a fresh
+          # clone of the target repo, on the branch being written to.
+          git clone origin.git work >/dev/null 2>&1
+          cd work
+
+          echo "--- Test 0: yq is already present, ensure-yq.sh is a clean no-op ---"
+          bash "$SCRIPTS/ensure-yq.sh"
+          command -v yq >/dev/null 2>&1 \
+            || { echo "FAIL: yq should still be available after ensure-yq.sh"; exit 1; }
+          echo "PASS: test 0"
+
+          export APP_PATH="demo-app"
+          export VALUES_FILE="values.yaml"
+          export IMAGE_TAG_YQ_PATH=".image.tag"
+          export GIT_USER_NAME="gitops-bot"
+          export GIT_USER_EMAIL="gitops-bot@users.noreply.github.com"
+          export COMMIT_MESSAGE=""
+          export BRANCH="main"
+          export GITHUB_OUTPUT="$WORK/outputs-1.txt"
+
+          echo "--- Test 1: patch to a new tag produces a commit ---"
+          IMAGE_TAG="v2" bash "$SCRIPTS/patch-values.sh"
+          IMAGE_TAG="v2" bash "$SCRIPTS/commit-and-push.sh"
+
+          grep -q '^changed=true$' "$GITHUB_OUTPUT" \
+            || { echo "FAIL: expected changed=true"; cat "$GITHUB_OUTPUT"; exit 1; }
+          SHA1="$(grep '^commit-sha=' "$GITHUB_OUTPUT" | cut -d= -f2)"
+          [ -n "$SHA1" ] || { echo "FAIL: expected a non-empty commit-sha"; exit 1; }
+
+          grep -q 'tag: v2' demo-app/values.yaml \
+            || { echo "FAIL: values.yaml was not patched to v2"; cat demo-app/values.yaml; exit 1; }
+          grep -q 'repository: example/demo-app' demo-app/values.yaml \
+            || { echo "FAIL: unrelated key was clobbered by the patch"; cat demo-app/values.yaml; exit 1; }
+
+          cd "$WORK"
+          LOG_COUNT_AFTER_1="$(git --git-dir=origin.git log --oneline main | wc -l | tr -d ' ')"
+          [ "$LOG_COUNT_AFTER_1" = "2" ] \
+            || { echo "FAIL: expected 2 commits on origin after test 1, got $LOG_COUNT_AFTER_1"; exit 1; }
+
+          echo "PASS: test 1"
+
+          echo "--- Test 2: re-running with the same tag is a no-op ---"
+          cd "$WORK/work"
+          export GITHUB_OUTPUT="$WORK/outputs-2.txt"
+
+          IMAGE_TAG="v2" bash "$SCRIPTS/patch-values.sh"
+          IMAGE_TAG="v2" bash "$SCRIPTS/commit-and-push.sh"
+
+          grep -q '^changed=false$' "$GITHUB_OUTPUT" \
+            || { echo "FAIL: expected changed=false on a repeat run"; cat "$GITHUB_OUTPUT"; exit 1; }
+          grep -q '^commit-sha=$' "$GITHUB_OUTPUT" \
+            || { echo "FAIL: expected an empty commit-sha on a no-op run"; cat "$GITHUB_OUTPUT"; exit 1; }
+
+          cd "$WORK"
+          LOG_COUNT_AFTER_2="$(git --git-dir=origin.git log --oneline main | wc -l | tr -d ' ')"
+          [ "$LOG_COUNT_AFTER_2" = "2" ] \
+            || { echo "FAIL: no-op run should not have added a commit, got $LOG_COUNT_AFTER_2"; exit 1; }
+
+          echo "PASS: test 2"

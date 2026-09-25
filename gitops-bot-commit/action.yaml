@@ -1,0 +1,88 @@
+name: GitOps Bot Commit
+description: Patches an app's image tag in a GitOps repo and pushes the commit
+
+inputs:
+  gitops-repo:
+    required: true
+    description: "GitOps repo to update, in owner/repo form"
+
+  gitops-token:
+    required: true
+    description: "Token with write access to gitops-repo"
+
+  app-path:
+    required: true
+    description: "Path inside gitops-repo to the app's values file"
+
+  image-tag:
+    required: true
+    description: "New image tag to write"
+
+  branch:
+    required: false
+    default: "main"
+
+  values-file:
+    required: false
+    default: "values.yaml"
+
+  image-tag-yq-path:
+    required: false
+    default: ".image.tag"
+
+  git-user-name:
+    required: false
+    default: "gitops-bot"
+
+  git-user-email:
+    required: false
+    default: "gitops-bot@users.noreply.github.com"
+
+  commit-message:
+    required: false
+    default: ""
+
+outputs:
+  commit-sha:
+    description: "SHA of the commit pushed to gitops-repo, empty if no change was made"
+    value: ${{ steps.commit.outputs.commit-sha }}
+
+  changed:
+    description: "true if a commit was made, false if the tag was already up to date"
+    value: ${{ steps.commit.outputs.changed }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: Checkout GitOps repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.gitops-repo }}
+        token: ${{ inputs.gitops-token }}
+        ref: ${{ inputs.branch }}
+
+    - name: Ensure yq is available
+      shell: bash
+      run: bash "${{ github.action_path }}/scripts/ensure-yq.sh"
+
+    - name: Patch image tag
+      shell: bash
+      env:
+        APP_PATH: ${{ inputs.app-path }}
+        VALUES_FILE: ${{ inputs.values-file }}
+        IMAGE_TAG_YQ_PATH: ${{ inputs.image-tag-yq-path }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      run: bash "${{ github.action_path }}/scripts/patch-values.sh"
+
+    - name: Commit and push
+      id: commit
+      shell: bash
+      env:
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        APP_PATH: ${{ inputs.app-path }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        BRANCH: ${{ inputs.branch }}
+      run: bash "${{ github.action_path }}/scripts/commit-and-push.sh"
