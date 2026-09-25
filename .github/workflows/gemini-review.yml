@@ -95,9 +95,7 @@ jobs:
               "telemetry": {
                 "enabled": true,
                 "target": "local",
-                "outfile": ".gemini/telemetry.log",
-                "maxLogSize": 52428800,
-                "maxLogLines": 10000
+                "outfile": ".gemini/telemetry.log"
               },
               "mcpServers": {
                 "github": {
@@ -128,6 +126,16 @@ jobs:
       - name: 'Compress and cleanup artifacts'
         if: always() && vars.UPLOAD_ARTIFACTS != 'false'
         run: |
+          # Save the per-request token usage before the log is trimmed below. The CLI reports
+          # cached_content_token_count and thoughts_token_count only on its per-request
+          # `api_response` records, and the trim discards those (one periodic metrics dump is
+          # itself ~1000 lines), so the artifact could show an upper bound on a review's cost but
+          # never the real figure -- cached input bills at roughly a tenth of the standard rate.
+          # Six adjacent lines per API call: ~6KB for a 32-call review, measured.
+          if [ -f .gemini/telemetry.log ]; then
+            grep -A5 '"input_token_count"' .gemini/telemetry.log > .gemini/token-usage.txt || true
+          fi
+
           # Remove large telemetry logs to reduce artifact size
           if [ -f .gemini/telemetry.log ]; then
             # Keep only last 1000 lines of telemetry
