@@ -128,6 +128,11 @@ on:
         required: false
         default: false
         type: string
+      upload-jacoco-exec:
+        description: "Upload the server's JaCoCo execution data (**/build/jacoco/*.exec) as the jacoco-exec artifact, so later jobs can build coverage reports without rerunning the tests"
+        required: false
+        default: false
+        type: boolean
 
 
     secrets:
@@ -308,6 +313,15 @@ jobs:
             ${{ inputs.server-build-gradle-arguments }} \
             ${{ env.CACHE_OPTS }}
         working-directory: "${{ inputs.working-directory }}/${{ inputs.server-path }}"
+
+      - name: Upload JaCoCo Execution Data
+        if: always() && inputs.upload-jacoco-exec && !inputs.skip-tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec
+          path: "${{ inputs.working-directory }}/${{ inputs.server-path }}/**/build/jacoco/*.exec"
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Copy Test Reports
         working-directory: "${{ inputs.working-directory }}"
