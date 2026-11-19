@@ -58,7 +58,7 @@ on:
 
 jobs:
   restore-db-schema:
-    runs-on: appdev-small
+    runs-on: appdev-selfhosted-al2023
     environment: master
 
     steps:
