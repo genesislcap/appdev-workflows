@@ -663,6 +663,10 @@ jobs:
           sed -i "s/1.0.0/$VERSION/g" product.spec
           sed -i "s/PRODUCT/${{ inputs.product_name }}/g" product.spec
           sed -i "s/genesisUser/${GENESIS_USER}/g" product.spec
+          # Self-hosted runners are shared across products and keep ~/rpmbuild between jobs.
+          # Start from an empty tree so another build's RPMs/sources can't be packaged or uploaded.
+          # (product.spec hardcodes $HOME/rpmbuild, so the tree can't simply be moved per job.)
+          rm -rf ~/rpmbuild
           mkdir -p ~/rpmbuild/SOURCES/
           mv *.gz ~/rpmbuild/SOURCES/
           if [ "${{ inputs.include-xray-report }}" = "true" ] && [ -d extra-content ] && compgen -G "extra-content/*" > /dev/null; then
@@ -688,22 +692,6 @@ jobs:
             rpmbuild -bb product.spec
           fi
 
-      - name: Upload RPMs to S3
-        if: inputs.build_rpm
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Clear AWS credentials inherited from the environment"
-          unset AWS_ACCESS_KEY_ID
-          unset AWS_SECRET_ACCESS_KEY
-          unset AWS_SESSION_TOKEN
-          cd ~/rpmbuild/SRPMS/
-          ls -al
-          IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
-          for location in "${locations[@]}"; do
-              aws s3 sync ~/rpmbuild/RPMS/noarch/ s3://product-rpms/"$location"
-          done
-
       - name: GET RPM NAME
         if: inputs.build_rpm
         id: upload-rpm
@@ -712,5 +700,27 @@ jobs:
           set -euo pipefail
           cd ~/rpmbuild/RPMS/noarch/
           ls -al
-          uploaded_rpm_name=$(ls -1 *.rpm)
-          echo "uploaded_rpm_name=$uploaded_rpm_name" >> $GITHUB_OUTPUT
+          shopt -s nullglob
+          rpms=( *.rpm )
+          if [ "${#rpms[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly 1 RPM in ~/rpmbuild/RPMS/noarch, found ${#rpms[@]}: ${rpms[*]:-none}"
+            exit 1
+          fi
+          echo "uploaded_rpm_name=${rpms[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload RPM to S3
+        if: inputs.build_rpm
+        shell: bash
+        env:
+          RPM_NAME: ${{ steps.upload-rpm.outputs.uploaded_rpm_name }}
+        run: |
+          set -euo pipefail
+          echo "Clear AWS credentials inherited from the environment"
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+          # Upload only the RPM this job built, never the whole directory.
+          IFS=',' read -ra locations <<< "${{ inputs.artifactory_deploy_locations }}"
+          for location in "${locations[@]}"; do
+              aws s3 cp ~/rpmbuild/RPMS/noarch/"$RPM_NAME" "s3://product-rpms/${location%/}/$RPM_NAME"
+          done
